@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BMS Pro — Universal Business Management System</title>
+<title>Surekha BMS Pro</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f1115">
-<link rel="icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
@@ -726,8 +727,8 @@ textarea.form-control{resize:vertical;min-height:80px}
   <div class="lg-wrap">
     <div class="lg-top">
       <div class="lg-logo" id="login-logo">B</div>
-      <div class="lg-org" id="login-name">BMS Pro</div>
-      <div class="lg-tag" id="login-tag">Business Management System</div>
+      <div class="lg-org" id="login-name">My Business</div>
+      <div class="lg-tag" id="login-business" style="font-size:11px;opacity:.7;margin-top:2px">Surekha BMS Pro</div>
     </div>
     <div class="lg-body" id="lg-body"></div>
   </div>
@@ -804,7 +805,7 @@ textarea.form-control{resize:vertical;min-height:80px}
             <div class="dropdown-item" onclick="showAddSecondary();closeDropdowns()">🏭 Add Supplier</div>
             <div class="dropdown-item" onclick="showAddTransaction();closeDropdowns()">📋 Add Transaction</div>
             <div class="dropdown-item" onclick="showAddAccounting();closeDropdowns()">💰 Add Entry</div>
-            <div class="dropdown-item" onclick="showAddEmployee();closeDropdowns()">🧑‍💼 Add Employee</div>
+            <div class="dropdown-item" onclick="showAddEmployee();closeDropdowns()">👥 Add Employee</div>
           </div>
         </div>
         <div class="dropdown" style="position:relative">
@@ -1253,7 +1254,7 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="tab" onclick="setArchiveTab('suppliers',this)">🏭 Archived Suppliers</div>
           <div class="tab" onclick="setArchiveTab('products',this)">📦 Archived Products</div>
           <div class="tab" onclick="setArchiveTab('rawmaterials',this)">🧱 Archived Raw Materials</div>
-          <div class="tab" onclick="setArchiveTab('employees',this)">🧑‍💼 Archived Employees</div>
+          <div class="tab" onclick="setArchiveTab('employees',this)">👥 Archived Employees</div>
           <div class="tab" onclick="setArchiveTab('deleted',this)">🗑️ Deleted</div>
           <div class="tab" onclick="setArchiveTab('auditlog',this)">🔍 Audit Log</div>
         </div>
@@ -2292,6 +2293,15 @@ textarea.form-control{resize:vertical;min-height:80px}
 <script>
 'use strict';
 /* ══ DB SCHEMA & INIT ══ */
+// ── SOFTWARE IDENTITY (fixed) — never derived from business data ─────────
+// "Surekha BMS Pro" is the name of THIS SOFTWARE. A business's own name
+// (entered in Settings, e.g. "Surekha Metals") is DATA belonging to that
+// business — it only ever appears on invoices, reports, and letterheads,
+// never as the application's own branding (title bar, login screen,
+// sidebar, app icon name). This separation means the exact same software
+// can run for any business without code changes.
+const APP_BRAND_NAME = 'Surekha BMS Pro';
+
 const DB_KEY = 'bms_pro_v1';
 
 // ── CRASH-PROOF STORAGE ──────────────────────────────────────────────────
@@ -2435,7 +2445,7 @@ function defaultDB() {
         { id: 'entities', label: 'Customers', icon: '👥', enabled: true },
         { id: 'secondary', label: 'Suppliers', icon: '🏭', enabled: true },
         { id: 'accounting', label: 'Accounting', icon: '💰', enabled: true },
-        { id: 'hr', label: 'HR & People', icon: '🧑‍💼', enabled: true },
+        { id: 'hr', label: 'HR & People', icon: '👥', enabled: true },
         { id: 'reports', label: 'Reports', icon: '📊', enabled: true },
         { id: 'archive', label: 'Archive', icon: '🗄️', enabled: true },
         { id: 'settings', label: 'Settings', icon: '⚙️', enabled: true }
@@ -3261,26 +3271,27 @@ let lgAttempts = 0, lgLockUntil = 0, lgCountTimer = null;
 function initLoginScreen() {
   const s = db.settings;
   const logo = document.getElementById('login-logo');
-  logo.textContent = s.logoInit || 'B';
+  logo.textContent = (s.orgName || APP_BRAND_NAME).charAt(0);
   logo.style.background = s.accentColor || 'var(--accent)';
   applyLogoEverywhere();
-  document.getElementById('login-name').textContent = s.orgName || 'BMS Pro';
-  document.getElementById('login-tag').textContent = s.orgTag || 'Business Management System';
+  document.getElementById('login-name').textContent = (s.orgName && s.orgName !== 'BMS Pro') ? s.orgName : 'My Business';
+  document.getElementById('login-business').textContent = APP_BRAND_NAME;
   const lo = document.getElementById('login-overlay');
   lo.style.display = 'flex';
   lo.classList.add('show');
   lgShowMain();
 
   // If this device's local copy looks like a fresh/default install, but a
-  // server is configured, fetch the REAL company name for display only —
-  // this does not touch local data, it just fixes the "BMS Pro" flash
-  // before the user has logged in anywhere.
+  // server is configured, fetch the REAL business name for display — this
+  // never touches the fixed software brand line below it, and does not
+  // write to local data; it just shows which business's data this server
+  // holds before anyone has logged in.
   const looksDefault = !s.orgName || s.orgName === 'BMS Pro';
   if (looksDefault && syncConfigured()) {
     fetch(SYNC.apiBase + '/api/public-info').then(r => r.ok ? r.json() : null).then(info => {
       if (!info || !info.orgName) return;
       document.getElementById('login-name').textContent = info.orgName;
-      if (info.orgTag) document.getElementById('login-tag').textContent = info.orgTag;
+      logo.textContent = info.orgName.charAt(0);
       if (info.accentColor) logo.style.background = info.accentColor;
     }).catch(() => {});
   }
@@ -3663,8 +3674,8 @@ function updateTopbar() {
   document.getElementById('sb-logo').textContent = db.settings.logoInit || 'B';
   document.getElementById('sb-logo').style.background = db.settings.accentColor;
   applyLogoEverywhere();
-  document.getElementById('sb-name').textContent = db.settings.orgName || 'BMS Pro';
-  document.getElementById('sb-tag').textContent = db.settings.orgTag || '';
+  document.getElementById('sb-name').textContent = (db.settings.orgName && db.settings.orgName !== 'BMS Pro') ? db.settings.orgName : 'My Business';
+  document.getElementById('sb-tag').textContent = APP_BRAND_NAME;
   document.getElementById('sb-user-av').textContent = initials;
   document.getElementById('sb-user-av').style.background = session.color;
   document.getElementById('sb-user-name').textContent = session.name;
@@ -4537,7 +4548,7 @@ function printReceipt() {
   void target.offsetHeight;
   // Browsers print the page <title> as their own header text unless the person turns
   // that off in the print dialog — blanking it for the moment of printing removes the
-  // unwanted "BMS Pro — Universal Business Management System" line from every printout.
+  // unwanted browser-generated header line from every printout.
   const prevTitle = document.title;
   document.title = '';
   requestAnimationFrame(() => {
@@ -5062,7 +5073,7 @@ function renderEmployees() {
       <td>${esc(e.joinDate||'—')}</td>
       <td><span class="badge ${e.status==='active'?'badge-success':e.status==='resigned'?'badge-warning':'badge-muted'}">${esc(e.status)}</span></td>
       <td><button class="btn btn-xs btn-secondary" onclick="openEmployeeModal('${e.id}')">✏️ Edit</button> <button class="btn btn-xs btn-secondary" onclick="quickArchive('employee','${e.id}')">${e.status==='archived'?'↩️ Unarchive':'🗄️ Archive'}</button></td>
-    </tr>`).join('') : '<tr><td colspan="9"><div class="empty"><div class="empty-icon">🧑‍💼</div><div class="empty-title">No employees yet</div><button class="btn btn-primary btn-sm" onclick="openEmployeeModal()">+ Add Employee</button></div></td></tr>';
+    </tr>`).join('') : '<tr><td colspan="9"><div class="empty"><div class="empty-icon">👥</div><div class="empty-title">No employees yet</div><button class="btn btn-primary btn-sm" onclick="openEmployeeModal()">+ Add Employee</button></div></td></tr>';
 }
 
 function openEmployeeModal(id=null) {
@@ -5651,7 +5662,7 @@ function viewProfile(type, id) {
     const attData = db.attendance[curMonth]?.[id] || {};
     const presentDays = Object.values(attData).filter(v=>v==='P').length;
     const absentDays = Object.values(attData).filter(v=>v==='A').length;
-    body = `<div class="profile-header"><div class="profile-avatar" style="background:var(--accent)">🧑‍💼</div><div><div class="profile-name">${esc(e.name)}</div><div class="profile-sub">${esc(e.role||'')} · ${esc(e.department||'')}</div></div>${archived?'<span class="badge badge-muted" style="margin-left:auto">🗄️ Archived</span>':''}</div>
+    body = `<div class="profile-header"><div class="profile-avatar" style="background:var(--accent)">👥</div><div><div class="profile-name">${esc(e.name)}</div><div class="profile-sub">${esc(e.role||'')} · ${esc(e.department||'')}</div></div>${archived?'<span class="badge badge-muted" style="margin-left:auto">🗄️ Archived</span>':''}</div>
     <div class="info-grid">
       <div class="info-item"><label>Employee ID</label><p class="mono">${esc(e.empId||'—')}</p></div>
       <div class="info-item"><label>Join Date</label><p>${fmtDate(e.joinDate)}</p></div>
@@ -6068,7 +6079,7 @@ const ARCHIVE_CATEGORY = {
   suppliers:    { type:'secondary',  icon:'🏭', label:'Supplier',     store:()=>db.secondary,    isArchived:e=>!!e.archived,        sub:e=>e.category||e.phone||'' },
   products:     { type:'record',     icon:'📦', label:'Product',     store:()=>db.records,      isArchived:r=>r.status==='archived', sub:r=>r.sku||r.category||'' },
   rawmaterials: { type:'rawMaterial',icon:'🧱', label:'Raw Material',store:()=>db.rawMaterials, isArchived:m=>m.status==='archived', sub:m=>m.code||m.category||'' },
-  employees:    { type:'employee',   icon:'🧑‍💼',label:'Employee',    store:()=>db.employees,    isArchived:e=>e.status==='archived', sub:e=>e.role||e.department||'' }
+  employees:    { type:'employee',   icon:'👥',label:'Employee',    store:()=>db.employees,    isArchived:e=>e.status==='archived', sub:e=>e.role||e.department||'' }
 };
 
 function renderArchive() {
@@ -6194,7 +6205,7 @@ const REPORT_CATEGORIES = [
     {v:'entity', label:'Customer / Contact Report'},
     {v:'due-ledger', label:'Customer Due Ledger'}
   ]},
-  { id:'hr', icon:'🧑‍💼', title:'HR Reports', desc:'Strength, attendance, payroll', types:[
+  { id:'hr', icon:'👥', title:'HR Reports', desc:'Strength, attendance, payroll', types:[
     {v:'hr', label:'HR Strength Report'},
     {v:'attendance-report', label:'Attendance Summary'},
     {v:'payroll-report', label:'Payroll Summary'}
@@ -6674,7 +6685,7 @@ function loadSettingsValues() {
 
 function saveProfileSettings() {
   const s = db.settings;
-  s.orgName = document.getElementById('st-org-name').value.trim() || 'BMS Pro';
+  s.orgName = document.getElementById('st-org-name').value.trim() || 'My Business';
   s.orgTag = document.getElementById('st-org-tag').value.trim();
   s.logoInit = document.getElementById('st-logo-init').value.trim().toUpperCase() || 'B';
   s.phone = document.getElementById('st-phone').value.trim();
@@ -9142,7 +9153,7 @@ function doGlobalSearch() {
   
   // Employees
   const emps = db.employees.filter(e=>e.name?.toLowerCase().includes(q)||(e.empId||'').toLowerCase().includes(q)||(e.role||'').toLowerCase().includes(q)||(e.department||'').toLowerCase().includes(q)).slice(0,5);
-  if (emps.length) results['🧑‍💼 Employees'] = emps.map(e=>({ icon:'🧑‍💼', name:e.name, detail:`${e.empId||''} · ${e.role||''} · ${e.department||''}`, module:'hr', id:e.id }));
+  if (emps.length) results['👥 Employees'] = emps.map(e=>({ icon:'👥', name:e.name, detail:`${e.empId||''} · ${e.role||''} · ${e.department||''}`, module:'hr', id:e.id }));
   
   // Accounting
   const accts = db.accounting.filter(a=>(a.description||'').toLowerCase().includes(q)||(a.category||'').toLowerCase().includes(q)||(a.reference||'').toLowerCase().includes(q)).slice(0,5);

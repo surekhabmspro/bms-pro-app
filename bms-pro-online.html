@@ -2757,7 +2757,7 @@ function startSyncLoop() {
   syncRefreshStatusDisplay();
   if (SYNC.token) syncPull();
   if (SYNC.pullTimer) clearInterval(SYNC.pullTimer);
-  SYNC.pullTimer = setInterval(() => { if (document.visibilityState === 'visible') syncPull(); }, 20000);
+  SYNC.pullTimer = setInterval(() => { if (document.visibilityState === 'visible') syncPull(); }, 30000);
   if (SYNC.pending) scheduleSync(1500);
 }
 

@@ -9,6 +9,9 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 /* ══ CSS VARIABLES & RESET ══ */
@@ -20,7 +23,6 @@
   --bg: #0A0F1E;
   --surface: #111827;
   --elevated: #1F2937;
-  --card: #1a2235;
   --border: #2D3748;
   --border-light: #374151;
   --text: #F1F5F9;
@@ -47,7 +49,6 @@
   --bg: #F0F4F8;
   --surface: #FFFFFF;
   --elevated: #F8FAFC;
-  --card: #FFFFFF;
   --border: #E2E8F0;
   --border-light: #EDF2F7;
   --text: #0F172A;
@@ -62,7 +63,7 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{height:100%;overflow:hidden}
-body{height:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+body{height:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:18px;font-weight:500;line-height:1.5}
 button{cursor:pointer;font-family:inherit;border:none;outline:none}
 input,select,textarea{font-family:inherit;outline:none}
 a{color:var(--accent);text-decoration:none}
@@ -76,68 +77,70 @@ a{color:var(--accent);text-decoration:none}
 #sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:width var(--transition);flex-shrink:0;overflow:hidden;z-index:100}
 #sidebar.collapsed{width:56px}
 .sidebar-header{padding:16px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);min-height:var(--topbar-h)}
-.sidebar-logo{width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}
+.sidebar-logo{width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;flex-shrink:0}
 .sidebar-brand{overflow:hidden;white-space:nowrap}
-.sidebar-brand-name{font-weight:700;font-size:14px;color:var(--text)}
-.sidebar-brand-tag{font-size:11px;color:var(--text-muted)}
+.sidebar-brand-name{font-weight:700;font-size:18px;color:var(--text)}
+.sidebar-brand-tag{font-size:14px;color:var(--text-muted)}
 .sidebar-nav{flex:1;overflow-y:auto;padding:8px 0}
-.nav-section-label{padding:8px 12px 4px;font-size:10px;font-weight:600;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;overflow:hidden}
+.nav-section-label{padding:8px 12px 4px;font-size:13px;font-weight:600;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;overflow:hidden}
 #sidebar.collapsed .nav-section-label{opacity:0}
 .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-radius:0;position:relative;transition:background var(--transition);white-space:nowrap;overflow:hidden;color:var(--text-muted)}
 .nav-item:hover{background:var(--elevated);color:var(--text)}
 .nav-item.active{color:var(--accent);background:var(--accent-dim)}
 .nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);border-radius:0 2px 2px 0}
-.nav-icon{font-size:18px;flex-shrink:0;width:20px;text-align:center}
-.nav-label{font-size:13px;font-weight:500;overflow:hidden}
-.nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;flex-shrink:0}
-.sidebar-user{border-top:1px solid var(--border);padding:12px;display:flex;align-items:center;gap:10px;overflow:hidden}
-.user-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0}
-.user-info{overflow:hidden;flex:1}
-.user-name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.user-role{font-size:11px;color:var(--text-muted)}
-.btn-logout{background:none;color:var(--text-dim);font-size:16px;padding:4px;border-radius:4px;flex-shrink:0}
-.btn-logout:hover{color:var(--danger)}
+.nav-icon{font-size:22px;flex-shrink:0;width:20px;text-align:center}
+.nav-label{font-size:17px;font-weight:500;overflow:hidden}
+.nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:13px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;flex-shrink:0}
+.user-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:#fff;flex-shrink:0}
+.sidebar-user{border-top:1px solid var(--border);padding:14px 12px;display:flex;align-items:center;gap:8px;overflow:hidden}
+.user-info{overflow:hidden;flex:1;min-width:0}
+.user-name{font-weight:700;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.user-role{font-size:15px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.btn-logout{background:var(--elevated);border:1px solid var(--border);color:var(--text-muted);font-size:13px;font-weight:600;padding:7px 8px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.btn-logout:hover{color:var(--danger);border-color:var(--danger);background:var(--danger-dim)}
+#sidebar.collapsed .user-info{display:none}
+#sidebar.collapsed .btn-logout span:last-child{display:none}
+#sidebar.collapsed .btn-logout{padding:7px;margin:0 auto}
+#sidebar.collapsed .sidebar-user{justify-content:center}
 /* ══ MAIN AREA ══ */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;min-height:0}
 /* ══ TOPBAR ══ */
 #topbar{height:var(--topbar-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:90}
-.topbar-toggle{background:none;color:var(--text-muted);font-size:18px;padding:6px;border-radius:6px}
+.topbar-toggle{background:none;color:var(--text-muted);font-size:22px;padding:6px;border-radius:6px}
 .topbar-toggle:hover{background:var(--elevated);color:var(--text)}
-.topbar-breadcrumb{font-weight:600;font-size:15px;white-space:nowrap;flex-shrink:0}
+.topbar-breadcrumb{font-weight:600;font-size:18px;white-space:nowrap;flex-shrink:0}
 /* ══ SEARCH ══ */
 .search-wrap{flex:1;max-width:480px;position:relative}
-.search-input{width:100%;background:var(--elevated);border:1px solid var(--border);border-radius:8px;padding:7px 12px 7px 36px;color:var(--text);font-size:13px;transition:border-color var(--transition)}
+.search-input{width:100%;background:var(--elevated);border:1px solid var(--border);border-radius:8px;padding:7px 12px 7px 36px;color:var(--text);font-size:17px;transition:border-color var(--transition)}
 .search-input:focus{border-color:var(--accent)}
 .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none}
-.search-kbd{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--text-dim);background:var(--border);padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace}
+.search-kbd{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text-dim);background:var(--border);padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace}
 #search-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);z-index:999;max-height:400px;overflow-y:auto;display:none}
 #search-results.show{display:block}
 .search-group{padding:8px 0}
-.search-group-header{padding:4px 12px;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}
+.search-group-header{padding:4px 12px;font-size:14px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}
 .search-item{padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background var(--transition)}
 .search-item:hover{background:var(--elevated)}
-.search-item-icon{font-size:16px;width:20px;text-align:center}
+.search-item-icon{font-size:19px;width:20px;text-align:center}
 .search-item-text{flex:1}
-.search-item-name{font-weight:500;font-size:13px}
-.search-item-detail{font-size:11px;color:var(--text-muted)}
+.search-item-name{font-weight:500;font-size:17px}
+.search-item-detail{font-size:14px;color:var(--text-muted)}
 .search-history-chips{padding:8px 12px}
-.chip{display:inline-flex;align-items:center;gap:4px;background:var(--elevated);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer;margin:2px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--elevated);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:15px;cursor:pointer;margin:2px}
 .chip:hover{background:var(--accent-dim);border-color:var(--accent)}
-.chip-x{color:var(--text-dim);font-size:10px}
+.chip-x{color:var(--text-dim);font-size:13px}
 /* ══ TOPBAR ACTIONS ══ */
-.topbar-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
-.live-clock{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);white-space:nowrap}
-.btn-icon{width:36px;height:36px;border-radius:8px;background:none;color:var(--text-muted);font-size:18px;display:flex;align-items:center;justify-content:center;position:relative;transition:background var(--transition)}
+.topbar-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
+.live-clock{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--text-muted);white-space:nowrap}
+.btn-icon{width:36px;height:36px;border-radius:8px;background:none;color:var(--text-muted);font-size:22px;display:flex;align-items:center;justify-content:center;position:relative;transition:background var(--transition)}
 .btn-icon:hover{background:var(--elevated);color:var(--text)}
-.notif-badge{position:absolute;top:4px;right:4px;width:16px;height:16px;background:var(--danger);color:#fff;border-radius:50%;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center}
-.user-btn{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:8px;background:none;color:var(--text);cursor:pointer;transition:background var(--transition)}
-.user-btn:hover{background:var(--elevated)}
+.notif-badge{position:absolute;top:4px;right:4px;width:16px;height:16px;background:var(--danger);color:#fff;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
 /* ══ DROPDOWN ══ */
 .dropdown{position:relative}
 .dropdown-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);min-width:180px;z-index:999;display:none;overflow:hidden}
 .dropdown-menu.show{display:block;animation:dropIn .15s ease}
 @keyframes dropIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-.dropdown-item{padding:9px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);transition:background var(--transition)}
+.dropdown-item{padding:9px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:17px;color:var(--text);transition:background var(--transition)}
 .dropdown-item:hover{background:var(--elevated)}
 .dropdown-item.danger{color:var(--danger)}
 .dropdown-divider{height:1px;background:var(--border);margin:4px 0}
@@ -146,18 +149,18 @@ a{color:var(--accent);text-decoration:none}
 #notif-panel.show{display:block;animation:dropIn .15s ease}
 .notif-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .notif-tabs{display:flex;gap:2px;background:var(--elevated);padding:3px;border-radius:6px}
-.notif-tab{padding:3px 10px;border-radius:4px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text-muted)}
+.notif-tab{padding:3px 10px;border-radius:4px;font-size:15px;font-weight:500;cursor:pointer;color:var(--text-muted)}
 .notif-tab.active{background:var(--surface);color:var(--text)}
 .notif-list{max-height:300px;overflow-y:auto}
 .notif-item{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:10px;transition:background var(--transition)}
 .notif-item:hover{background:var(--elevated)}
 .notif-item.unread{background:var(--accent-dim)}
-.notif-icon{font-size:18px;flex-shrink:0}
+.notif-icon{font-size:22px;flex-shrink:0}
 .notif-text{flex:1}
-.notif-title{font-size:13px;font-weight:500}
-.notif-time{font-size:11px;color:var(--text-muted)}
+.notif-title{font-size:17px;font-weight:500}
+.notif-time{font-size:14px;color:var(--text-muted)}
 /* ══ CONTENT ══ */
-#content{flex:1;overflow-y:auto;overflow-x:auto;padding:20px;background:var(--bg);-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#content{flex:1;overflow-y:auto;overflow-x:hidden;padding:20px;background:var(--bg);-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 /* ══ MODULE VIEWS ══ */
 .module-view{display:none;animation:moduleFade .2s ease}
 @keyframes moduleFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -165,41 +168,34 @@ a{color:var(--accent);text-decoration:none}
 /* ══ CARDS ══ */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:box-shadow var(--transition)}
 .card:hover{box-shadow:var(--shadow-sm)}
-/* Accent-strip card — the signature element: left border in accent color for key panels */
-.card-accent{border-left:3px solid var(--accent)}
-.card-success{border-left:3px solid var(--success)}
-.card-warning{border-left:3px solid var(--warning)}
-.card-danger{border-left:3px solid var(--danger)}
 .card:hover{box-shadow:var(--shadow)}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.card-title{font-weight:600;font-size:15px}
+.card-title{font-weight:600;font-size:18px}
 /* ══ KPI CARDS ══ */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:20px}
 .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden;transition:transform var(--transition),box-shadow var(--transition)}
 .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
 .kpi-card::before{content:'';position:absolute;top:0;right:0;width:80px;height:80px;border-radius:50%;background:var(--accent-dim);transform:translate(25px,-25px);pointer-events:none}
-.kpi-label{font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-.kpi-value{font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1.1}
-.kpi-change{font-size:11px;margin-top:5px;font-weight:500}
+.kpi-label{font-size:14px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.kpi-value{font-size:29px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1.1}
+.kpi-change{font-size:14px;margin-top:5px;font-weight:500}
 .kpi-change.up{color:var(--success)}
 .kpi-change.down{color:var(--danger)}
-.kpi-icon{font-size:24px;margin-bottom:8px}
+.kpi-icon{font-size:27px;margin-bottom:8px}
 /* ══ TABLES ══ */
 .table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
 table{width:100%;border-collapse:collapse;background:var(--surface)}
-thead th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;background:var(--elevated);border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+thead th{padding:10px 14px;text-align:left;font-size:14px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;background:var(--elevated);border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
 thead th:hover{color:var(--text)}
 tbody tr{border-bottom:1px solid var(--border);transition:background var(--transition)}
 tbody tr:last-child{border-bottom:none}
 tbody tr:nth-child(even){background:rgba(255,255,255,0.015)}
 tbody tr:hover{background:var(--elevated);cursor:default}
 tbody tr.row-danger{background:var(--danger-dim)!important}
-tbody tr.row-warning{background:var(--warning-dim)!important}
-tbody tr.row-success{background:var(--success-dim)!important}
-td{padding:10px 14px;font-size:13px;vertical-align:middle}
-td.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
+td{padding:10px 14px;font-size:17px;vertical-align:middle}
+td.mono{font-family:'JetBrains Mono',monospace;font-size:15px}
 /* ══ BADGES ══ */
-.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.03em}
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:14px;font-weight:700;letter-spacing:0.03em}
 .badge-success{background:var(--success-dim);color:var(--success)}
 .badge-warning{background:var(--warning-dim);color:var(--warning)}
 .badge-danger{background:var(--danger-dim);color:var(--danger)}
@@ -207,7 +203,7 @@ td.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
 .badge-muted{background:var(--elevated);color:var(--text-muted)}
 .badge-accent{background:var(--accent-dim);color:var(--accent)}
 /* ══ BUTTONS ══ */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;transition:all var(--transition);border:none;white-space:nowrap;letter-spacing:0.01em}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);font-size:17px;font-weight:600;cursor:pointer;transition:all var(--transition);border:none;white-space:nowrap;letter-spacing:0.01em}
 .btn:active{transform:scale(.97)}
 .btn-primary{background:var(--accent);color:#fff;box-shadow:0 0 0 0 var(--accent-glow)}
 .btn-primary:hover{background:var(--accent-hover);box-shadow:0 0 0 3px var(--accent-glow)}
@@ -217,13 +213,13 @@ td.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
 .btn-danger:hover{background:#dc2626;box-shadow:0 0 0 3px var(--danger-dim)}
 .btn-success{background:var(--success);color:#fff}
 .btn-success:hover{box-shadow:0 0 0 3px var(--success-dim)}
-.btn-sm{padding:5px 10px;font-size:12px;font-weight:500}
-.btn-xs{padding:3px 8px;font-size:11px;font-weight:500;border-radius:var(--radius-xs)}
-.btn-xs{padding:3px 8px;font-size:11px}
+.btn-sm{padding:5px 10px;font-size:15px;font-weight:500}
+.btn-xs{padding:3px 8px;font-size:14px;font-weight:500;border-radius:var(--radius-xs)}
+.btn-xs{padding:3px 8px;font-size:14px}
 /* ══ FORMS ══ */
 .form-group{margin-bottom:14px}
-.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
-.form-control{width:100%;background:var(--elevated);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-size:13px;transition:all var(--transition);outline:none}
+.form-label{display:block;font-size:15px;font-weight:600;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.form-control{width:100%;background:var(--elevated);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-size:17px;transition:all var(--transition);outline:none}
 .form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
 .form-control:hover:not(:focus){border-color:var(--border-light)}
 .form-control::placeholder{color:var(--text-dim)}
@@ -231,15 +227,15 @@ td.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
 .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 select.form-control{cursor:pointer}
 textarea.form-control{resize:vertical;min-height:80px}
-.form-hint{font-size:11px;color:var(--text-dim);margin-top:3px}
+.form-hint{font-size:14px;color:var(--text-dim);margin-top:3px}
 /* Contextual help tooltip — small ? icon next to confusing field labels */
-.help-tip{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--elevated);color:var(--text-dim);font-size:10px;font-weight:700;cursor:help;margin-left:5px;position:relative;flex-shrink:0}
+.help-tip{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--elevated);color:var(--text-dim);font-size:13px;font-weight:700;cursor:help;margin-left:5px;position:relative;flex-shrink:0}
 .help-tip:hover{background:var(--accent);color:#fff}
-.help-tip:hover::after{content:attr(data-tip);position:absolute;bottom:120%;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:400;white-space:normal;width:200px;text-align:left;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.3);line-height:1.4}
+.help-tip:hover::after{content:attr(data-tip);position:absolute;bottom:120%;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:6px 10px;border-radius:6px;font-size:14px;font-weight:400;white-space:normal;width:200px;text-align:left;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.3);line-height:1.4}
 .help-tip:hover::before{content:'';position:absolute;bottom:108%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1a1a1a}
 .input-wrap{position:relative}
 .input-wrap .form-control{padding-right:30px}
-.input-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;color:var(--text-dim);font-size:14px;cursor:pointer}
+.input-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;color:var(--text-dim);font-size:18px;cursor:pointer}
 .input-clear:hover{color:var(--text)}
 /* ══ MODALS ══ */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px}
@@ -248,12 +244,11 @@ textarea.form-control{resize:vertical;min-height:80px}
 @keyframes overlayIn{from{opacity:0}to{opacity:1}}
 .modal{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--shadow);animation:modalIn .22s cubic-bezier(.16,1,.3,1)}
 .modal-lg{max-width:780px}
-.modal-xl{max-width:1000px}
 .modal-sm{max-width:380px}
 @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.modal-title{font-weight:700;font-size:16px;letter-spacing:-0.01em}
-.modal-close{width:30px;height:30px;border-radius:6px;background:none;color:var(--text-muted);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background var(--transition)}
+.modal-title{font-weight:700;font-size:19px;letter-spacing:-0.01em}
+.modal-close{width:30px;height:30px;border-radius:6px;background:none;color:var(--text-muted);font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background var(--transition)}
 .modal-close:hover{background:var(--elevated);color:var(--text)}
 .modal-body{padding:20px;overflow-y:auto;flex:1}
 .modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-shrink:0}
@@ -261,27 +256,27 @@ textarea.form-control{resize:vertical;min-height:80px}
 #toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
 .toast{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;min-width:260px;max-width:360px;display:flex;align-items:flex-start;gap:10px;box-shadow:var(--shadow);animation:toastIn .2s ease}
 @keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
-.toast-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.toast-icon{font-size:22px;flex-shrink:0;margin-top:1px}
 .toast-content{flex:1}
-.toast-title{font-weight:600;font-size:13px}
-.toast-msg{font-size:12px;color:var(--text-muted);margin-top:2px}
+.toast-title{font-weight:600;font-size:17px}
+.toast-msg{font-size:15px;color:var(--text-muted);margin-top:2px}
 .toast.success .toast-icon{color:var(--success)}
 .toast.error .toast-icon{color:var(--danger)}
 .toast.warning .toast-icon{color:var(--warning)}
 .toast.info .toast-icon{color:var(--info)}
 /* ══ TABS ══ */
 .tabs{display:flex;gap:2px;background:var(--elevated);padding:4px;border-radius:var(--radius-sm);margin-bottom:16px;flex-wrap:wrap}
-.tab{padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text-muted);transition:all var(--transition);white-space:nowrap}
+.tab{padding:6px 14px;border-radius:6px;font-size:17px;font-weight:500;cursor:pointer;color:var(--text-muted);transition:all var(--transition);white-space:nowrap}
 .tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.2)}
 /* ══ EMPTY STATE ══ */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center}
-.empty-icon{font-size:48px;margin-bottom:14px;opacity:.5}
-.empty-title{font-size:18px;font-weight:600;margin-bottom:6px}
-.empty-desc{color:var(--text-muted);font-size:13px;margin-bottom:16px}
+.empty-icon{font-size:50px;margin-bottom:14px;opacity:.5}
+.empty-title{font-size:22px;font-weight:600;margin-bottom:6px}
+.empty-desc{color:var(--text-muted);font-size:17px;margin-bottom:16px}
 /* ══ AUTO-SUGGEST ══ */
 .suggest-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow);z-index:1100;max-height:200px;overflow-y:auto;display:none}
 .suggest-dropdown.show{display:block}
-.suggest-item{padding:8px 12px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:space-between;transition:background var(--transition)}
+.suggest-item{padding:8px 12px;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:space-between;transition:background var(--transition)}
 .suggest-item:hover,.suggest-item.focused{background:var(--elevated)}
 .suggest-bold{font-weight:700;color:var(--accent)}
 /* ══ CALENDAR ══ */
@@ -289,26 +284,24 @@ textarea.form-control{resize:vertical;min-height:80px}
 .cal-overlay.show{display:block}
 .cal-panel{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);width:280px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;z-index:1201}
 .cal-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)}
-.cal-nav{background:none;color:var(--text);font-size:16px;padding:4px 8px;border-radius:4px;cursor:pointer}
+.cal-nav{background:none;color:var(--text);font-size:19px;padding:4px 8px;border-radius:4px;cursor:pointer}
 .cal-nav:hover{background:var(--elevated)}
-.cal-month-btn,.cal-year-btn{background:none;color:var(--text);font-weight:600;padding:4px 6px;border-radius:4px;cursor:pointer;font-size:13px}
+.cal-month-btn,.cal-year-btn{background:none;color:var(--text);font-weight:600;padding:4px 6px;border-radius:4px;cursor:pointer;font-size:17px}
 .cal-month-btn:hover,.cal-year-btn:hover{background:var(--elevated)}
-.cal-grid{padding:8px}
 .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
-.cal-wd{text-align:center;font-size:10px;font-weight:600;color:var(--text-dim);padding:4px 0}
+.cal-wd{text-align:center;font-size:13px;font-weight:600;color:var(--text-dim);padding:4px 0}
 .cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.cal-day{text-align:center;padding:6px 4px;border-radius:6px;cursor:pointer;font-size:12px;transition:all var(--transition);border:1px solid transparent}
+.cal-day{text-align:center;padding:6px 4px;border-radius:6px;cursor:pointer;font-size:15px;transition:all var(--transition);border:1px solid transparent}
 .cal-day:hover{background:var(--elevated)}
 .cal-day.other-month{color:var(--text-dim)}
 .cal-day.today{border-color:var(--accent)}
 .cal-day.selected{background:var(--accent);color:#fff}
-.cal-day.in-range{background:var(--accent-dim)}
 .cal-months-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px}
-.cal-mo{padding:8px;text-align:center;border-radius:6px;cursor:pointer;font-size:13px;transition:background var(--transition)}
+.cal-mo{padding:8px;text-align:center;border-radius:6px;cursor:pointer;font-size:17px;transition:background var(--transition)}
 .cal-mo:hover{background:var(--elevated)}
 .cal-mo.selected{background:var(--accent);color:#fff}
 .cal-years-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px}
-.cal-yr{padding:8px;text-align:center;border-radius:6px;cursor:pointer;font-size:13px;transition:background var(--transition)}
+.cal-yr{padding:8px;text-align:center;border-radius:6px;cursor:pointer;font-size:17px;transition:background var(--transition)}
 .cal-yr:hover{background:var(--elevated)}
 .cal-yr.selected{background:var(--accent);color:#fff}
 /* ══ WIZARD ══ */
@@ -316,11 +309,11 @@ textarea.form-control{resize:vertical;min-height:80px}
 #wizard-overlay.show{display:flex}
 .wizard-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:520px;padding:0;overflow:hidden;box-shadow:var(--shadow);margin:auto}
 .wizard-header{padding:28px 32px 20px;text-align:center;border-bottom:1px solid var(--border)}
-.wizard-logo{width:60px;height:60px;border-radius:14px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;margin:0 auto 12px}
-.wizard-title{font-size:20px;font-weight:700}
-.wizard-subtitle{color:var(--text-muted);font-size:13px;margin-top:4px}
+.wizard-logo{width:60px;height:60px;border-radius:14px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:27px;font-weight:700;color:#fff;margin:0 auto 12px}
+.wizard-title{font-size:24px;font-weight:700}
+.wizard-subtitle{color:var(--text-muted);font-size:17px;margin-top:4px}
 .wizard-steps{display:flex;gap:0;border-bottom:1px solid var(--border)}
-.wizard-step-tab{flex:1;text-align:center;padding:10px;font-size:12px;font-weight:600;color:var(--text-dim);border-bottom:2px solid transparent;cursor:default}
+.wizard-step-tab{flex:1;text-align:center;padding:10px;font-size:15px;font-weight:600;color:var(--text-dim);border-bottom:2px solid transparent;cursor:default}
 .wizard-step-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 .wizard-step-tab.done{color:var(--success)}
 .wizard-body{padding:24px 32px}
@@ -330,86 +323,84 @@ textarea.form-control{resize:vertical;min-height:80px}
 #login-overlay.show{display:flex}
 .lg-wrap{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.18);margin:auto}
 .lg-top{padding:32px 32px 24px;text-align:center;border-bottom:1px solid var(--border)}
-.lg-logo{width:68px;height:68px;border-radius:16px;background:var(--accent);color:#fff;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
-.lg-org{font-size:20px;font-weight:700}
-.lg-tag{font-size:12px;color:var(--text-muted);margin-top:3px}
+.lg-logo{width:68px;height:68px;border-radius:16px;background:var(--accent);color:#fff;font-size:31px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+.lg-org{font-size:24px;font-weight:700}
+.lg-tag{font-size:15px;color:var(--text-muted);margin-top:3px}
 .lg-body{padding:24px 32px 28px}
-.lg-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:5px}
-.lg-input{width:100%;padding:10px 14px;background:var(--elevated);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;transition:border-color .15s}
+.lg-label{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:5px}
+.lg-input{width:100%;padding:10px 14px;background:var(--elevated);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:18px;box-sizing:border-box;transition:border-color .15s}
 .lg-input:focus{outline:none;border-color:var(--accent)}
 .lg-pw-wrap{position:relative}
 .lg-pw-wrap .lg-input{padding-right:40px}
-.lg-eye{position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:15px;padding:2px 4px}
-.lg-btn{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px}
+.lg-eye{position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:2px 4px}
+.lg-btn{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:18px;font-weight:600;cursor:pointer;margin-top:6px}
 .lg-btn:hover{opacity:.88}
 .lg-btn:disabled{opacity:.4;cursor:not-allowed}
-.lg-ghost{width:100%;padding:10px;background:transparent;color:var(--text-muted);border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;margin-top:8px}
+.lg-ghost{width:100%;padding:10px;background:transparent;color:var(--text-muted);border:1.5px solid var(--border);border-radius:8px;font-size:17px;cursor:pointer;margin-top:8px}
 .lg-ghost:hover{border-color:var(--accent);color:var(--accent)}
-.lg-err{display:none;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.25);border-radius:7px;padding:9px 13px;color:var(--danger);font-size:13px;margin-bottom:12px}
+.lg-err{display:none;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.25);border-radius:7px;padding:9px 13px;color:var(--danger);font-size:17px;margin-bottom:12px}
 .lg-err.on{display:block}
-.lg-ok{display:none;background:rgba(34,197,94,.09);border:1px solid rgba(34,197,94,.25);border-radius:7px;padding:9px 13px;color:var(--success);font-size:13px;margin-bottom:12px}
-.lg-ok.on{display:block}
-.lg-foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px}
-.lg-foot button{background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-dim);padding:0}
+.lg-foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:15px}
+.lg-foot button{background:none;border:none;cursor:pointer;font-size:15px;color:var(--text-dim);padding:0}
 .lg-foot button:hover{color:var(--accent)}
 /* ══ POS ══ */
 #pos-wrap{display:grid;grid-template-columns:1fr 420px;gap:16px;height:calc(100dvh - var(--topbar-h) - 40px);height:calc(100vh - var(--topbar-h) - 40px);min-height:0}
 .pos-products{overflow-y:auto;padding-right:4px;min-height:0}
 .pos-category-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.pos-chip{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--elevated);font-size:12px;font-weight:500;cursor:pointer;transition:all var(--transition)}
+.pos-chip{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--elevated);font-size:15px;font-weight:500;cursor:pointer;transition:all var(--transition)}
 .pos-chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .pos-product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
 .pos-product{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer;transition:all var(--transition);text-align:center}
 .pos-product:hover{border-color:var(--accent);background:var(--accent-dim)}
-.pos-product-icon{font-size:28px;margin-bottom:6px}
-.pos-product-name{font-size:12px;font-weight:600;margin-bottom:4px}
-.pos-product-price{font-size:14px;font-weight:700;color:var(--accent);font-family:'JetBrains Mono',monospace}
-.pos-product-stock{font-size:11px;color:var(--text-muted)}
+.pos-product-icon{font-size:31px;margin-bottom:6px}
+.pos-product-name{font-size:15px;font-weight:600;margin-bottom:4px}
+.pos-product-price{font-size:18px;font-weight:700;color:var(--accent);font-family:'JetBrains Mono',monospace}
+.pos-product-stock{font-size:14px;color:var(--text-muted)}
 .pos-product.out-of-stock{opacity:.4;cursor:not-allowed}
 .pos-cart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;overflow:hidden;min-height:0}
 .cart-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .cart-items{flex:1 1 auto;overflow-y:auto;padding:10px 14px;min-height:80px}
 .cart-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
 .cart-item:last-child{border-bottom:none}
-.cart-item-name{flex:1;font-size:13px;font-weight:500}
+.cart-item-name{flex:1;font-size:17px;font-weight:500}
 .cart-item-qty{display:flex;align-items:center;gap:4px}
-.qty-btn{width:24px;height:24px;border-radius:4px;background:var(--elevated);color:var(--text);font-size:14px;border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background var(--transition)}
+.qty-btn{width:24px;height:24px;border-radius:4px;background:var(--elevated);color:var(--text);font-size:18px;border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background var(--transition)}
 .cart-qty-input{outline:none}
 .cart-qty-input::-webkit-outer-spin-button,.cart-qty-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .qty-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
-.cart-item-price{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;min-width:70px;text-align:right}
+.cart-item-price{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:600;min-width:70px;text-align:right}
 .cart-footer{padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0;max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .cart-totals{margin-bottom:12px}
-.cart-total-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
-.cart-total-row.grand{font-size:18px;font-weight:700;color:var(--accent);padding-top:8px;border-top:1px solid var(--border);margin-top:6px}
+.cart-total-row{display:flex;justify-content:space-between;font-size:17px;padding:3px 0}
+.cart-total-row.grand{font-size:22px;font-weight:700;color:var(--accent);padding-top:8px;border-top:1px solid var(--border);margin-top:6px}
 /* ══ DASHBOARD CHARTS ══ */
 .chart-bar-wrap{display:flex;align-items:flex-end;gap:4px;height:120px;padding-top:10px}
 .chart-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
 .chart-bar{width:100%;background:var(--accent);border-radius:3px 3px 0 0;transition:height .3s ease;min-height:2px;position:relative}
-.chart-bar:hover::after{content:attr(data-val);position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);padding:2px 6px;border-radius:4px;font-size:11px;white-space:nowrap}
-.chart-label{font-size:10px;color:var(--text-dim)}
+.chart-bar:hover::after{content:attr(data-val);position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);padding:2px 6px;border-radius:4px;font-size:14px;white-space:nowrap}
+.chart-label{font-size:13px;color:var(--text-dim)}
 /* ══ REPORT ══ */
 .report-doc{background:#fff;color:#000;padding:26px;border-radius:var(--radius);border:1px solid var(--border);font-family:'Times New Roman',serif}
 .report-doc-header{border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start}
-.report-org-name{font-size:20px;font-weight:700;letter-spacing:.04em}
-.report-classification{font-size:11px;font-weight:700;letter-spacing:.1em;text-align:center;padding:2px 0;border-top:1px solid #000;border-bottom:1px solid #000;margin-bottom:8px}
+.report-org-name{font-size:24px;font-weight:700;letter-spacing:.04em}
+.report-classification{font-size:14px;font-weight:700;letter-spacing:.1em;text-align:center;padding:2px 0;border-top:1px solid #000;border-bottom:1px solid #000;margin-bottom:8px}
 .report-doc{line-height:1.45}
 .report-doc p{margin:0 0 8px}
-.report-doc table{width:100%;border-collapse:collapse;margin:6px 0 14px;font-size:13px;border:1px solid #999}
-.report-doc th{background:#f0f0f0;padding:6px 10px;text-align:left;font-weight:700;border:1px solid #999;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#222}
+.report-doc table{width:100%;border-collapse:collapse;margin:6px 0 14px;font-size:17px;border:1px solid #999}
+.report-doc th{background:#f0f0f0;padding:6px 10px;text-align:left;font-weight:700;border:1px solid #999;font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:#222}
 .report-doc td{padding:5px 10px;border:1px solid #ccc;line-height:1.3}
 .report-doc tbody tr:last-child td{border-bottom:1px solid #999}
-.report-doc h2{font-size:16px;font-weight:700;margin:14px 0 8px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #999;padding-bottom:5px}
-.report-doc h3{font-size:14px;font-weight:700;margin:10px 0 5px}
+.report-doc h2{font-size:19px;font-weight:700;margin:14px 0 8px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #999;padding-bottom:5px}
+.report-doc h3{font-size:18px;font-weight:700;margin:10px 0 5px}
 /* Signature block: kept out of the table grid look and protected from awkward print splits */
 .report-signature{margin-top:22px;page-break-inside:avoid;break-inside:avoid}
 /* Report category selector grid */
 .report-cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:16px}
 .report-cat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all var(--transition)}
 .report-cat-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.15)}
-.report-cat-icon{font-size:28px;margin-bottom:8px}
-.report-cat-title{font-weight:700;font-size:14px;margin-bottom:4px}
-.report-cat-desc{font-size:12px;color:var(--text-muted)}
+.report-cat-icon{font-size:31px;margin-bottom:8px}
+.report-cat-title{font-weight:700;font-size:18px;margin-bottom:4px}
+.report-cat-desc{font-size:15px;color:var(--text-muted)}
 /* Multi-page printable report: each .report-page forces a page break in print */
 .report-page{page-break-after:always}
 .report-page:last-child{page-break-after:auto}
@@ -440,7 +431,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 .print-compact-2 .profile-header{margin-bottom:8px}
 .print-compact-2 .info-grid{margin-bottom:6px;gap:6px}
 
-.print-compact-3{line-height:1.15;font-size:12px}
+.print-compact-3{line-height:1.15;font-size:15px}
 .print-compact-3 .report-doc-header{padding-bottom:4px;margin-bottom:5px}
 .print-compact-3 .report-doc h2{margin:5px 0 3px;padding-bottom:2px}
 .print-compact-3 .report-doc h3{margin:4px 0 2px}
@@ -472,22 +463,15 @@ textarea.form-control{resize:vertical;min-height:80px}
 /* ══ SETTINGS ══ */
 #settings-wrap{display:grid;grid-template-columns:200px 1fr;gap:16px;height:calc(100vh - var(--topbar-h) - 40px)}
 .settings-nav{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-y:auto}
-.settings-nav-item{padding:10px 14px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);transition:all var(--transition);display:flex;align-items:center;gap:8px;border-left:3px solid transparent}
+.settings-nav-item{padding:10px 14px;cursor:pointer;font-size:17px;font-weight:500;color:var(--text-muted);transition:all var(--transition);display:flex;align-items:center;gap:8px;border-left:3px solid transparent}
 .settings-nav-item:hover{background:var(--elevated);color:var(--text)}
 .settings-nav-item.active{color:var(--accent);background:var(--accent-dim);border-left-color:var(--accent)}
 .settings-content{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-y:auto;padding:24px}
 .settings-section{display:none}
 .settings-section.active{display:block}
-.settings-title{font-size:18px;font-weight:700;margin-bottom:4px}
-.settings-desc{color:var(--text-muted);font-size:13px;margin-bottom:20px}
+.settings-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.settings-desc{color:var(--text-muted);font-size:17px;margin-bottom:20px}
 /* ══ HR MODULE ══ */
-.attendance-matrix{overflow-x:auto}
-.attendance-matrix table th,.attendance-matrix table td{padding:6px 8px;font-size:11px}
-.att-cell{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;transition:all var(--transition)}
-.att-P{background:rgba(16,185,129,.15);color:#10B981}
-.att-A{background:rgba(239,68,68,.15);color:#EF4444}
-.att-L{background:rgba(245,158,11,.15);color:#F59E0B}
-.att-H{background:rgba(99,102,241,.15);color:#6366F1}
 /* ══ COLOR SWATCHES ══ */
 .color-swatches{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 .color-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all var(--transition)}
@@ -498,39 +482,38 @@ textarea.form-control{resize:vertical;min-height:80px}
 .qr-option{background:var(--elevated);border:2px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;cursor:pointer;transition:all var(--transition)}
 .qr-option:hover{border-color:var(--accent)}
 .qr-option.active{border-color:var(--accent);background:var(--accent-dim)}
-.qr-option-label{font-size:12px;font-weight:600;margin-top:6px}
+.qr-option-label{font-size:15px;font-weight:600;margin-top:6px}
 /* ══ CUSTOMER SCREEN ══ */
 .cs-wrap{background:#fff;color:#111;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px;font-family:'Inter',system-ui,sans-serif}
-.cs-logo{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#fff;margin-bottom:12px}
-.cs-biz-name{font-size:24px;font-weight:700;text-align:center}
+.cs-logo{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:35px;font-weight:700;color:#fff;margin-bottom:12px}
+.cs-biz-name{font-size:27px;font-weight:700;text-align:center}
 .cs-biz-tag{color:#666;margin-bottom:24px;text-align:center}
-.cs-total{font-size:72px;font-weight:900;text-align:center;margin:20px 0;line-height:1}
-.cs-qr-img{max-width:280px;max-height:280px;margin:10px auto;display:block;border-radius:8px}
+.cs-total{font-size:76px;font-weight:900;text-align:center;margin:20px 0;line-height:1}
 .cs-success{text-align:center;padding:40px}
-.cs-success-icon{font-size:80px;margin-bottom:16px}
-.cs-success-text{font-size:28px;font-weight:700;color:#10B981}
+.cs-success-icon{font-size:84px;margin-bottom:16px}
+.cs-success-text{font-size:31px;font-weight:700;color:#10B981}
 /* ══ FILTER BAR ══ */
 .filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .filter-bar .form-control{flex:1;min-width:120px;max-width:200px}
 /* ══ PROFILE VIEW ══ */
 .profile-header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
-.profile-avatar{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
-.profile-name{font-size:20px;font-weight:700}
-.profile-sub{color:var(--text-muted);font-size:13px}
+.profile-avatar{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:25px;font-weight:700;color:#fff}
+.profile-name{font-size:24px;font-weight:700}
+.profile-sub{color:var(--text-muted);font-size:17px}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-.info-item label{font-size:11px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-.info-item p{font-size:13px;margin-top:2px}
+.info-item label{font-size:14px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.info-item p{font-size:17px;margin-top:2px}
 /* ══ BACKUP BANNER ══ */
-#backup-banner{background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);padding:8px 16px;display:none;align-items:center;gap:10px;font-size:13px;color:var(--warning)}
-#backup-banner button{margin-left:auto;background:var(--warning);color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;font-weight:500}
+#backup-banner{background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);padding:8px 16px;display:none;align-items:center;gap:10px;font-size:17px;color:var(--warning)}
+#backup-banner button{margin-left:auto;background:var(--warning);color:#fff;padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
 /* ══ ADVANCED SEARCH ══ */
 #adv-search{background:var(--elevated);border-bottom:1px solid var(--border);padding:14px 16px;display:none}
 #adv-search.show{display:block}
 /* ══ PAGINATION ══ */
 .pagination{display:flex;align-items:center;gap:6px;margin-top:14px;justify-content:center}
-.page-btn{width:32px;height:32px;border-radius:6px;background:var(--elevated);border:1px solid var(--border);color:var(--text-muted);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--transition)}
+.page-btn{width:32px;height:32px;border-radius:6px;background:var(--elevated);border:1px solid var(--border);color:var(--text-muted);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--transition)}
 .page-btn:hover,.page-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.page-info{font-size:12px;color:var(--text-muted);padding:0 8px}
+.page-info{font-size:15px;color:var(--text-muted);padding:0 8px}
 /* ══ MOBILE ══ */
 @media(max-width:768px){
   /* Sidebar: hidden off-screen, slides in on .open */
@@ -547,9 +530,10 @@ textarea.form-control{resize:vertical;min-height:80px}
   #sidebar.collapsed.open{transform:translateX(0)}
   /* Main always full width on mobile */
   #main{width:100%}
-  /* Content: vertical scroll, allow horizontal for tables */
+  /* Content: vertical scroll only — the page itself never scrolls sideways.
+     Wide tables still scroll horizontally within their own .table-wrap container. */
   #content{
-    overflow-y:auto;overflow-x:auto;
+    overflow-y:auto;overflow-x:hidden;
     -webkit-overflow-scrolling:touch;
     padding:10px;
   }
@@ -567,7 +551,7 @@ textarea.form-control{resize:vertical;min-height:80px}
   /* Settings: stack */
   #settings-wrap{display:flex!important;flex-direction:column!important}
   .settings-nav{display:flex;flex-wrap:wrap;gap:4px;padding:8px!important;border-right:none!important;border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .settings-nav-item{padding:6px 10px!important;font-size:12px;flex-shrink:0}
+  .settings-nav-item{padding:6px 10px!important;font-size:15px;flex-shrink:0}
   /* KPI 2 columns */
   .kpi-grid{grid-template-columns:1fr 1fr!important}
   /* Modals: slide up from bottom */
@@ -587,7 +571,12 @@ textarea.form-control{resize:vertical;min-height:80px}
   /* Filter bar wraps */
   .filter-bar{flex-wrap:wrap;gap:6px}
   .topbar-actions{gap:4px}
-  .btn-icon{width:32px;height:32px;font-size:16px}
+  .btn-icon{width:32px;height:32px;font-size:19px}
+  /* Top bar: trim anything that can crowd narrow screens so nothing overlaps */
+  #topbar{padding:0 10px;gap:6px}
+  .search-wrap{min-width:0}
+  #sync-label{display:none}
+  #topbar-user-name{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
   /* Bigger tap targets for accent color swatches/picker on small screens */
   .color-swatch{width:34px;height:34px}
   #custom-accent-wheel{width:48px;height:40px}
@@ -597,7 +586,7 @@ textarea.form-control{resize:vertical;min-height:80px}
   /* Default mode: printing a report inside #content */
   #sidebar,#topbar,#backup-banner,.btn,.modal-overlay,.toast-container,#adv-search,
   .filter-bar button,.tabs,nav,.pagination,.dropdown-menu,.notif-panel,.suggest-dropdown,
-  .help-tip,.calendar-popup,#sidebar-backdrop,.live-clock,.search-kbd{display:none!important}
+  .help-tip,#sidebar-backdrop,.live-clock,.search-kbd{display:none!important}
   #content{padding:0;overflow:visible}
   body{background:#fff;color:#000;overflow:visible}
   html{overflow:visible}
@@ -617,9 +606,9 @@ textarea.form-control{resize:vertical;min-height:80px}
   /* Reports already have their own tuned table styling (.report-doc) — restate it here so
      it isn't accidentally overridden by the generic rules above (an ID selector otherwise
      outranks a plain class selector). */
-  #print-target .report-doc table{font-size:13px}
-  #print-target .report-doc th{background:#f0f0f0!important;color:#222!important;font-size:11px}
-  #print-target .report-doc td{font-size:13px}
+  #print-target .report-doc table{font-size:17px}
+  #print-target .report-doc th{background:#f0f0f0!important;color:#222!important;font-size:14px}
+  #print-target .report-doc td{font-size:17px}
 }
 /* ══ A4 / LETTER INVOICE TEMPLATE (full professional business invoice) ══ */
 .invoice-a4{font-family:'Times New Roman',serif;color:#000;background:#fff;max-width:190mm;margin:0 auto;padding:10mm;font-size:12.5px;line-height:1.4}
@@ -661,10 +650,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 .th-item-total{font-weight:600}
 @media print{
   /* Thermal roll: no fixed page size, content-height only, no margins */
-  body.printing-thermal{ }
-  body.printing-thermal #print-target{ }
   @page thermal{size:80mm auto;margin:0}
-  body.printing-thermal{ }
 }
 /* Browsers don't support conditional @page per print call without named pages reliably,
    so width is constrained via the .receipt-thermal element itself; @page margin kept minimal. */
@@ -673,7 +659,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 }
 #print-target{display:none}
 /* ══ MISC UTILS ══ */
-.flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-2{gap:8px}.gap-3{gap:12px}.mb-2{margin-bottom:8px}.mb-3{margin-bottom:12px}.mb-4{margin-bottom:16px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.text-muted{color:var(--text-muted)}.text-sm{font-size:12px}.text-xs{font-size:11px}.font-bold{font-weight:700}.font-mono{font-family:'JetBrains Mono',monospace}.w-full{width:100%}.text-center{text-align:center}.text-right{text-align:right}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.text-warning{color:var(--warning)}.text-accent{color:var(--accent)}.hidden{display:none!important}.divider{height:1px;background:var(--border);margin:16px 0}
+.flex{display:flex}.mb-2{margin-bottom:8px}.mb-4{margin-bottom:16px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.text-muted{color:var(--text-muted)}.text-sm{font-size:15px}.text-xs{font-size:14px}.font-bold{font-weight:700}.font-mono{font-family:'JetBrains Mono',monospace}.w-full{width:100%}.text-center{text-align:center}.text-right{text-align:right}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.text-accent{color:var(--accent)}.hidden{display:none!important}
 </style>
 </head>
 <body>
@@ -728,7 +714,7 @@ textarea.form-control{resize:vertical;min-height:80px}
     <div class="lg-top">
       <div class="lg-logo" id="login-logo">B</div>
       <div class="lg-org" id="login-name">My Business</div>
-      <div class="lg-tag" id="login-business" style="font-size:11px;opacity:.7;margin-top:2px">Surekha BMS Pro</div>
+      <div class="lg-tag" id="login-business" style="font-size:14px;opacity:.7;margin-top:2px">Surekha BMS Pro</div>
     </div>
     <div class="lg-body" id="lg-body"></div>
   </div>
@@ -747,12 +733,11 @@ textarea.form-control{resize:vertical;min-height:80px}
     </div>
     <div class="sidebar-nav" id="sidebar-nav"></div>
     <div class="sidebar-user">
-      <div class="user-avatar" id="sb-user-av" style="background:var(--accent)">A</div>
       <div class="user-info">
         <div class="user-name" id="sb-user-name">Admin</div>
-        <div class="user-role" id="sb-user-role">Administrator</div>
+        <div class="user-role" id="sb-user-role">@admin</div>
       </div>
-      <button class="btn-logout" title="Logout" onclick="logout()">⏻</button>
+      <button class="btn-logout" title="Log out" onclick="logout()"><span>⏻</span><span>Logout</span></button>
     </div>
   </nav>
   <!-- MAIN -->
@@ -761,7 +746,7 @@ textarea.form-control{resize:vertical;min-height:80px}
     <div id="backup-banner">
       ⚠️ No backup in <span id="backup-days"></span> days.
       <button onclick="doBackup()">Backup Now</button>
-      <button onclick="dismissBackupBanner()" style="background:none;color:var(--warning);margin-left:8px;font-size:16px">✕</button>
+      <button onclick="dismissBackupBanner()" style="background:none;color:var(--warning);margin-left:8px;font-size:19px">✕</button>
     </div>
     <!-- TOPBAR -->
     <div id="topbar">
@@ -773,11 +758,11 @@ textarea.form-control{resize:vertical;min-height:80px}
         <span class="search-kbd">Ctrl+K</span>
         <div id="search-results"></div>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="toggleAdvSearch()" title="Advanced Search">⌄</button>
       <div class="topbar-actions">
         <div class="live-clock" id="live-clock"></div>
+        <button class="btn-icon" onclick="toggleAdvSearch()" title="Advanced Search">🎚️</button>
         <div class="dropdown" style="position:relative" title="Online sync status — click to configure">
-          <button class="btn-icon" onclick="openModal('sync-setup-modal-overlay');syncRenderSetupModal()" style="display:flex;align-items:center;gap:6px;width:auto;padding:0 10px;font-size:12px;white-space:nowrap">
+          <button class="btn-icon" onclick="openModal('sync-setup-modal-overlay');syncRenderSetupModal()" style="display:flex;align-items:center;gap:6px;width:auto;padding:0 10px;font-size:15px;white-space:nowrap">
             <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:#9CA3AF;display:inline-block;flex-shrink:0"></span>
             <span id="sync-label">Offline mode</span>
           </button>
@@ -809,14 +794,13 @@ textarea.form-control{resize:vertical;min-height:80px}
           </div>
         </div>
         <div class="dropdown" style="position:relative">
-          <button class="btn-icon" onclick="toggleUserMenu()">
-            <div class="user-avatar" id="topbar-av" style="width:28px;height:28px;font-size:12px;background:var(--accent)">A</div>
-            <span id="topbar-user-name" style="font-size:13px;font-weight:500">Admin</span>
+          <button class="btn-icon" onclick="toggleUserMenu()" style="width:auto;padding:0 8px;gap:5px">
+            <span id="topbar-user-name" style="font-size:17px;font-weight:600">Admin</span>
+            <span style="font-size:11px;color:var(--text-dim)">▾</span>
           </button>
           <div class="dropdown-menu" id="user-menu">
             <div class="dropdown-item" onclick="openMyProfile();closeDropdowns()">👤 My Profile</div>
             <div class="dropdown-item" onclick="openChangePassword();closeDropdowns()">🔑 Change Password</div>
-            <div class="dropdown-item" onclick="openChangePIN();closeDropdowns()">🔢 Change PIN</div>
             <div class="dropdown-divider"></div>
             <div class="dropdown-item" onclick="showKeyboardShortcuts();closeDropdowns()">⌨️ Keyboard Shortcuts</div>
             <div class="dropdown-divider"></div>
@@ -858,7 +842,7 @@ textarea.form-control{resize:vertical;min-height:80px}
     <div id="content">
       <!-- DASHBOARD -->
       <div class="module-view active" id="view-dashboard">
-        <div id="dashboard-greeting" style="font-size:22px;font-weight:700;margin-bottom:4px"></div>
+        <div id="dashboard-greeting" style="font-size:25px;font-weight:700;margin-bottom:4px"></div>
         <div class="text-muted text-sm mb-4" id="dashboard-date"></div>
         <div class="kpi-grid" id="kpi-grid"></div>
         <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px" class="dash-grid-2">
@@ -906,7 +890,7 @@ textarea.form-control{resize:vertical;min-height:80px}
               <div class="input-wrap" style="flex:1">
                 <input class="form-control" id="pos-barcode" placeholder="📷 Scan barcode here (USB scanner supported)..." autocomplete="off" style="border-color:var(--accent)">
               </div>
-              <span id="pos-barcode-status" style="font-size:12px;color:var(--text-muted);min-width:90px"></span>
+              <span id="pos-barcode-status" style="font-size:15px;color:var(--text-muted);min-width:90px"></span>
             </div>
             <div class="pos-category-chips" id="pos-cat-chips"></div>
             <div class="pos-product-grid" id="pos-grid"></div>
@@ -1169,7 +1153,7 @@ textarea.form-control{resize:vertical;min-height:80px}
               <select class="form-control" id="bio-emp-select" style="flex:1"></select>
               <button class="btn btn-primary btn-sm" onclick="biometricCheckInUI()">👆 Simulate Scan (Check-in/out)</button>
             </div>
-            <div id="bio-log" style="margin-top:10px;font-size:12px;color:var(--text-muted);max-height:120px;overflow-y:auto"></div>
+            <div id="bio-log" style="margin-top:10px;font-size:15px;color:var(--text-muted);max-height:120px;overflow-y:auto"></div>
           </div>
           <div id="att-matrix"></div>
         </div>
@@ -1299,7 +1283,7 @@ textarea.form-control{resize:vertical;min-height:80px}
                 <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
                   <div id="logo-preview-wrap" style="width:64px;height:64px;border-radius:12px;overflow:hidden;background:var(--elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0">
                     <img id="logo-preview-img" src="" style="width:100%;height:100%;object-fit:contain;display:none">
-                    <span id="logo-preview-fallback" style="font-size:22px;font-weight:700;color:var(--accent)">B</span>
+                    <span id="logo-preview-fallback" style="font-size:25px;font-weight:700;color:var(--accent)">B</span>
                   </div>
                   <div style="display:flex;flex-direction:column;gap:6px">
                     <input type="file" id="logo-upload-input" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,.png,.jpg,.jpeg,.svg,.webp" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="handleLogoUpload(event)">
@@ -1502,7 +1486,7 @@ textarea.form-control{resize:vertical;min-height:80px}
               <div class="form-group"><label class="form-label"><input type="checkbox" id="st-show-classification"> Show classification line</label></div>
               <div class="form-group"><label class="form-label">Report Reference Prefix</label><input class="form-control" id="st-rpt-prefix" placeholder="RPT"></div>
 
-              <div class="settings-title" style="margin-top:24px;font-size:15px">Signature Settings</div>
+              <div class="settings-title" style="margin-top:24px;font-size:18px">Signature Settings</div>
               <div class="settings-desc">These fields directly drive the Signature Block on every printed report, profile printout, and payslip in the system — Name and Designation are always printed on separate lines, never side-by-side, because they're stored and rendered as separate values, not as free text.</div>
               <div class="form-row">
                 <div class="form-group"><label class="form-label">Prepared By — Name</label><input class="form-control" id="st-sig1-name" placeholder="e.g. John Smith"></div>
@@ -1661,7 +1645,7 @@ textarea.form-control{resize:vertical;min-height:80px}
       </div>
       <div id="rec-tab-variants" style="display:none">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div style="font-size:13px;color:var(--text-muted)">Add variants like sizes, colors, or pack sizes. Each variant has its own SKU and price.</div>
+          <div style="font-size:17px;color:var(--text-muted)">Add variants like sizes, colors, or pack sizes. Each variant has its own SKU and price.</div>
           <button class="btn btn-secondary btn-sm" onclick="addVariantRow()">+ Add Variant</button>
         </div>
         <div id="variants-list"></div>
@@ -1736,8 +1720,8 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="form-group">
         <label class="form-label">Entry Type *</label>
         <div style="display:flex;gap:8px">
-          <button type="button" id="acct-type-income" onclick="setAcctType('income')" style="flex:1;padding:10px;border-radius:8px;border:2px solid var(--success);background:transparent;color:var(--success);font-weight:700;font-size:14px;cursor:pointer">💰 Income</button>
-          <button type="button" id="acct-type-expense" onclick="setAcctType('expense')" style="flex:1;padding:10px;border-radius:8px;border:2px solid var(--border);background:transparent;color:var(--text-muted);font-weight:700;font-size:14px;cursor:pointer">💸 Expense</button>
+          <button type="button" id="acct-type-income" onclick="setAcctType('income')" style="flex:1;padding:10px;border-radius:8px;border:2px solid var(--success);background:transparent;color:var(--success);font-weight:700;font-size:18px;cursor:pointer">💰 Income</button>
+          <button type="button" id="acct-type-expense" onclick="setAcctType('expense')" style="flex:1;padding:10px;border-radius:8px;border:2px solid var(--border);background:transparent;color:var(--text-muted);font-weight:700;font-size:18px;cursor:pointer">💸 Expense</button>
         </div>
         <input type="hidden" id="acct-type-sel" value="income">
       </div>
@@ -1823,7 +1807,6 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="form-group"><label class="form-label">Password *</label><input class="form-control" type="password" id="usr-pw" placeholder="Password"></div>
         <div class="form-group"><label class="form-label">Confirm Password</label><input class="form-control" type="password" id="usr-pw2" placeholder="Confirm"></div>
       </div>
-      <div class="form-group"><label class="form-label">4-Digit PIN</label><input class="form-control" id="usr-pin" maxlength="4" placeholder="4 digits"></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Role *</label><select class="form-control" id="usr-role" required></select></div>
         <div class="form-group"><label class="form-label">Department</label><input class="form-control" id="usr-dept" placeholder="Optional"></div>
@@ -1890,7 +1873,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         </div>
         <div style="text-align:center;margin:12px 0">
           <div id="qr-live-preview" style="display:inline-block;padding:12px;background:#fff;border-radius:8px"></div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:6px">Live preview — amount shown is a sample (Rs. 100). Real QR will use the actual cart total in POS.</div>
+          <div style="font-size:14px;color:var(--text-muted);margin-top:6px">Live preview — amount shown is a sample (Rs. 100). Real QR will use the actual cart total in POS.</div>
         </div>
       </div>
       <div id="qr-mode-static" style="display:none">
@@ -1933,15 +1916,6 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="form-group"><label class="form-label">Confirm New Password</label><input class="form-control" type="password" id="chpw-confirm"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('chpw-overlay')">Cancel</button><button class="btn btn-primary" onclick="doChangePassword()">Update</button></div>
-  </div>
-</div>
-
-<!-- Change PIN Modal -->
-<div class="modal-overlay" id="chpin-overlay" onclick="closeModalOnOverlay(event,'chpin-overlay')">
-  <div class="modal modal-sm">
-    <div class="modal-header"><div class="modal-title">Change PIN</div><button class="modal-close" onclick="closeModal('chpin-overlay')">✕</button></div>
-    <div class="modal-body" id="chpin-body"></div>
-    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('chpin-overlay')">Cancel</button><button class="btn btn-primary" onclick="doChangePIN()">Update PIN</button></div>
   </div>
 </div>
 
@@ -1999,7 +1973,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="form-group"><label class="form-label">Reorder Level<span class="help-tip" data-tip="When stock falls to or below this number, the item appears in Inventory → Reorder Alerts so you know to purchase more.">?</span></label><input class="form-control" type="number" id="mat-reorder" placeholder="10"></div>
         <div class="form-group"><label class="form-label">Warehouse</label><select class="form-control" id="mat-warehouse"></select></div>
       </div>
-      <h3 style="font-size:13px;font-weight:700;margin:14px 0 8px">Supplier Mapping</h3>
+      <h3 style="font-size:17px;font-weight:700;margin:14px 0 8px">Supplier Mapping</h3>
       <div class="form-hint" style="margin-bottom:8px">A material can have multiple suppliers. Mark one as primary.</div>
       <div id="mat-suppliers-list"></div>
       <button class="btn btn-secondary btn-sm" onclick="addMaterialSupplierRow()" style="margin-top:6px">+ Add Supplier</button>
@@ -2031,7 +2005,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="form-group"><label class="form-label">From Warehouse *</label><select class="form-control" id="tr-from"></select></div>
         <div class="form-group"><label class="form-label">To Warehouse *</label><select class="form-control" id="tr-to"></select></div>
       </div>
-      <h3 style="font-size:13px;font-weight:700;margin:12px 0 8px">Items to Transfer</h3>
+      <h3 style="font-size:17px;font-weight:700;margin:12px 0 8px">Items to Transfer</h3>
       <div id="transfer-items-list"></div>
       <button class="btn btn-secondary btn-sm" onclick="addTransferItemRow()">+ Add Item</button>
       <div class="form-group" style="margin-top:12px"><label class="form-label">Notes</label><input class="form-control" id="tr-notes"></div>
@@ -2050,7 +2024,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="form-group"><label class="form-label">Finished Product *</label><select class="form-control" id="bom-product"></select></div>
       </div>
       <div class="form-group"><label class="form-label">Output Quantity (per batch)<span class="help-tip" data-tip="How many finished units this recipe produces in one production run. E.g. if 5kg flour makes 100 cookies, set this to 100.">?</span></label><input class="form-control" type="number" id="bom-output-qty" value="1" placeholder="1"></div>
-      <h3 style="font-size:13px;font-weight:700;margin:12px 0 8px">Raw Materials Required</h3>
+      <h3 style="font-size:17px;font-weight:700;margin:12px 0 8px">Raw Materials Required</h3>
       <div id="bom-items-list"></div>
       <button class="btn btn-secondary btn-sm" onclick="addBOMItemRow()">+ Add Material</button>
       <div class="form-group" style="margin-top:12px"><label class="form-label">Notes</label><textarea class="form-control" id="bom-notes" rows="2"></textarea></div>
@@ -2104,7 +2078,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="form-group"><label class="form-label">Supplier *</label><select class="form-control" id="pord-supplier"></select></div>
         <div class="form-group"><label class="form-label">Expected Delivery Date</label><input class="form-control" id="pord-expected" onfocus="openCalendar('pord-expected','standard')"></div>
       </div>
-      <h3 style="font-size:13px;font-weight:700;margin:12px 0 8px">Items</h3>
+      <h3 style="font-size:17px;font-weight:700;margin:12px 0 8px">Items</h3>
       <div id="pord-items-list"></div>
       <button class="btn btn-secondary btn-sm" onclick="addPOItemRow()">+ Add Item</button>
       <div style="text-align:right;margin-top:10px;font-weight:700" id="pord-total">Total: 0</div>
@@ -2119,7 +2093,7 @@ textarea.form-control{resize:vertical;min-height:80px}
   <div class="modal modal-lg">
     <div class="modal-header"><div class="modal-title">Receive Goods</div><button class="modal-close" onclick="closeModal('grn-modal-overlay')">✕</button></div>
     <div class="modal-body">
-      <div id="grn-po-info" style="margin-bottom:12px;padding:10px;background:var(--elevated);border-radius:8px;font-size:13px"></div>
+      <div id="grn-po-info" style="margin-bottom:12px;padding:10px;background:var(--elevated);border-radius:8px;font-size:17px"></div>
       <div id="grn-items-list"></div>
       <div class="form-group" style="margin-top:12px"><label class="form-label">Received Date</label><input class="form-control" id="grn-date" onfocus="openCalendar('grn-date','standard')"></div>
     </div>
@@ -2147,7 +2121,7 @@ textarea.form-control{resize:vertical;min-height:80px}
   <div class="modal modal-sm">
     <div class="modal-header"><div class="modal-title">Pay Supplier</div><button class="modal-close" onclick="closeModal('spay-modal-overlay')">✕</button></div>
     <div class="modal-body">
-      <div id="spay-info" style="margin-bottom:12px;padding:10px;background:var(--elevated);border-radius:8px;font-size:13px"></div>
+      <div id="spay-info" style="margin-bottom:12px;padding:10px;background:var(--elevated);border-radius:8px;font-size:17px"></div>
       <div class="form-group"><label class="form-label">Payment Type</label>
         <select class="form-control" id="spay-type" onchange="onSPayTypeChange()">
           <option value="full">Full Payment</option>
@@ -2191,7 +2165,7 @@ textarea.form-control{resize:vertical;min-height:80px}
   <div class="modal modal-sm">
     <div class="modal-header"><div class="modal-title">Collect Payment</div><button class="modal-close" onclick="closeModal('due-pay-overlay')">✕</button></div>
     <div class="modal-body">
-      <div id="due-pay-info" style="font-size:13px;margin-bottom:14px;padding:10px;background:var(--elevated);border-radius:8px"></div>
+      <div id="due-pay-info" style="font-size:17px;margin-bottom:14px;padding:10px;background:var(--elevated);border-radius:8px"></div>
       <div class="form-group"><label class="form-label">Amount Received</label><input class="form-control" type="number" id="due-pay-amount" placeholder="0"></div>
       <div class="form-group"><label class="form-label">Payment Method</label><select class="form-control" id="due-pay-method"><option>Cash</option><option>Card</option><option>Bank Transfer</option><option>QR / Scan to Pay</option></select></div>
       <div class="form-group"><label class="form-label">Notes</label><input class="form-control" id="due-pay-notes" placeholder="Optional reference"></div>
@@ -2205,7 +2179,7 @@ textarea.form-control{resize:vertical;min-height:80px}
   <div class="modal modal-sm">
     <div class="modal-header"><div class="modal-title">💳 Credit Sale</div><button class="modal-close" onclick="closeModal('credit-sale-overlay')">✕</button></div>
     <div class="modal-body">
-      <div id="credit-sale-info" style="font-size:13px;margin-bottom:14px;padding:10px;background:var(--elevated);border-radius:8px"></div>
+      <div id="credit-sale-info" style="font-size:17px;margin-bottom:14px;padding:10px;background:var(--elevated);border-radius:8px"></div>
       <div class="form-group"><label class="form-label">Amount Paid Now</label><input class="form-control" id="credit-paid-now" type="number" min="0" value="0" placeholder="0 = Full Credit"></div>
       <div class="form-group"><label class="form-label">Due Date</label><input class="form-control" id="credit-due-date" type="date"></div>
       <div class="form-group"><label class="form-label">Notes</label><input class="form-control" id="credit-notes" placeholder="Optional notes"></div>
@@ -2322,8 +2296,6 @@ function safeRemove(key) {
 }
 let db = null;
 let session = null;
-let calState = {};
-let editingId = {};
 let sortState = {};
 let pageState = {};
 let wizardData = {};
@@ -2801,7 +2773,7 @@ function syncRenderSetupModal() {
 
   if (!isAdmin) {
     body.innerHTML = `
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.6">
+      <div style="font-size:17px;color:var(--text-muted);line-height:1.6">
         ${syncConfigured()
           ? `This device is connected to your organization's online server.<br><br>Status: <b id="sync-modal-status">${SYNC.pending ? 'Changes pending…' : (SYNC.online ? 'Synced' : 'No internet')}</b>`
           : `This device is running in offline mode. Ask your administrator to configure online sync if you need remote access.`}
@@ -2815,13 +2787,13 @@ function syncRenderSetupModal() {
       <input class="form-control" id="sync-url-input" placeholder="https://your-app-name.onrender.com" value="${esc(SYNC.apiBase)}">
       <div class="form-hint">This is the web address of your backend server (you'll get this after deployment).</div>
     </div>
-    <div id="sync-setup-msg" style="font-size:13px;margin:10px 0;min-height:18px"></div>
+    <div id="sync-setup-msg" style="font-size:17px;margin:10px 0;min-height:18px"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
       <button class="btn btn-primary btn-sm" onclick="syncSetupConnect()">🔌 Save & Connect</button>
       <button class="btn btn-secondary btn-sm" onclick="syncSetupBootstrap()">⬆️ Upload Current Data (first time only)</button>
       <button class="btn btn-secondary btn-sm" onclick="syncSetupDisconnect()">🔌 Disconnect / Offline Only</button>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:10px;margin-bottom:14px">
+    <div style="font-size:15px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:10px;margin-bottom:14px">
       Status: <b>${syncConfigured() ? (SYNC.online ? 'Connected' : 'Configured, not reachable right now') : 'Offline mode'}</b><br>
       Use <b>"Upload Current Data"</b> only ONCE, on the very first device you connect — it sends this device's existing data to the brand-new server. Every other device should just use "Save & Connect" and sign in normally.
     </div>
@@ -2834,7 +2806,7 @@ function syncRenderSetupModal() {
     <div class="form-group" style="border-top:1px solid var(--border);padding-top:12px">
       <label class="form-label">Daily Cloud Backups</label>
       <div class="form-hint" style="margin-bottom:8px">A snapshot of your data is automatically saved on the server once per day, the first time anyone uses the app that day. You can restore any of the last 60 days if something goes wrong.</div>
-      <div id="backups-list" style="font-size:13px">Loading…</div>
+      <div id="backups-list" style="font-size:17px">Loading…</div>
     </div>`;
   if (syncConfigured()) loadBackupsList();
 }
@@ -3076,30 +3048,6 @@ function renderWizardStep() {
         <div class="form-group"><label class="form-label">Confirm Password *</label><input class="form-control" type="password" id="w-pw2" value="${esc(wizardData.pw2||'')}"></div>
       </div>
       <div class="form-group">
-        <label class="form-label">4-Digit PIN <span style="font-weight:400;color:var(--text-muted)">(optional — for quick access)</span></label>
-        <div style="display:flex;gap:10px;justify-content:center;margin:10px 0" id="w-pin-display">
-          <div id="wpd-0" style="width:16px;height:16px;border-radius:50%;border:2px solid var(--border);transition:all .15s"></div>
-          <div id="wpd-1" style="width:16px;height:16px;border-radius:50%;border:2px solid var(--border);transition:all .15s"></div>
-          <div id="wpd-2" style="width:16px;height:16px;border-radius:50%;border:2px solid var(--border);transition:all .15s"></div>
-          <div id="wpd-3" style="width:16px;height:16px;border-radius:50%;border:2px solid var(--border);transition:all .15s"></div>
-        </div>
-        <input type="hidden" id="w-pin" value="${esc(wizardData.pin||'')}">
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:220px;margin:0 auto">
-          <button type="button" class="pin-btn" onclick="wizPinPress('1')">1</button>
-          <button type="button" class="pin-btn" onclick="wizPinPress('2')">2</button>
-          <button type="button" class="pin-btn" onclick="wizPinPress('3')">3</button>
-          <button type="button" class="pin-btn" onclick="wizPinPress('4')">4</button>
-          <button type="button" class="pin-btn" onclick="wizPinPress('5')">5</button>
-          <button type="button" class="pin-btn" onclick="wizPinPress('6')">6</button>
-          <button type="button" class="pin-btn" onclick="wizPinPress('7')">7</button>
-          <button type="button" class="pin-btn" onclick="wizPinPress('8')">8</button>
-          <button type="button" class="pin-btn" onclick="wizPinPress('9')">9</button>
-          <button type="button" class="pin-btn" onclick="wizPinPress('C')" style="color:var(--danger);font-size:13px">CLR</button>
-          <button type="button" class="pin-btn" onclick="wizPinPress('0')">0</button>
-          <button type="button" class="pin-btn" onclick="wizPinPress('B')" style="font-size:16px">⌫</button>
-        </div>
-      </div>
-      <div class="form-group">
         <label class="form-label">Security Question</label>
         <select class="form-control" id="w-sq" onchange="onSecQChange(this,'w-sq-custom')">
           ${secQuestions.map(q=>`<option ${wizardData.sq===q?'selected':''}>${esc(q)}</option>`).join('')}
@@ -3108,17 +3056,16 @@ function renderWizardStep() {
       <div class="form-group hidden" id="w-sq-custom-wrap"><label class="form-label">Custom Question</label><input class="form-control" id="w-sq-custom" value="${esc(wizardData.sqCustom||'')}"></div>
       <div class="form-group"><label class="form-label">Security Answer *</label><input class="form-control" id="w-sa" value="${esc(wizardData.sa||'')}"></div>
     `;
-    if (wizardData.pin) updatePinDisplay('w-pin-display', wizardData.pin);
   } else if (wizardStep === 3) {
     const suggested = Math.random().toString(36).slice(2,10).toUpperCase() + '-' + Math.random().toString(36).slice(2,6).toUpperCase();
     wizardData.recoveryKey = wizardData.recoveryKey || suggested;
     body.innerHTML = `
       <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:14px;margin-bottom:16px">
         <div style="font-weight:700;color:var(--danger);margin-bottom:6px">⚠️ IMPORTANT — Save This Key</div>
-        <div style="font-size:12px;color:var(--text-muted)">Write this down and store it securely. This is the <strong>only</strong> way to recover your account if you forget your password and security answer. It cannot be retrieved later.</div>
+        <div style="font-size:15px;color:var(--text-muted)">Write this down and store it securely. This is the <strong>only</strong> way to recover your account if you forget your password and security answer. It cannot be retrieved later.</div>
       </div>
       <div style="text-align:center;margin-bottom:16px">
-        <div style="font-size:24px;font-weight:700;font-family:monospace;letter-spacing:.1em;color:var(--accent);padding:16px;background:var(--elevated);border-radius:8px;border:2px dashed var(--border)">${esc(wizardData.recoveryKey)}</div>
+        <div style="font-size:27px;font-weight:700;font-family:monospace;letter-spacing:.1em;color:var(--accent);padding:16px;background:var(--elevated);border-radius:8px;border:2px dashed var(--border)">${esc(wizardData.recoveryKey)}</div>
       </div>
       <div class="form-group"><label class="form-label">Type the key back to confirm you have saved it *</label><input class="form-control" id="w-recovery-confirm" placeholder="Enter the key above"></div>
     `;
@@ -3163,32 +3110,6 @@ function wizSetAccent(color, el) {
   if (inp) inp.value = color;
 }
 
-function wizPinPress(d) {
-  const pinInput = document.getElementById('w-pin');
-  if (!pinInput) return;
-  let pin = pinInput.value;
-  if (d === 'C' || d === '✕') { pin = ''; }
-  else if (d === 'B' || d === '←') { pin = pin.slice(0, -1); }
-  else if (pin.length < 4) { pin += d; }
-  pinInput.value = pin;
-  // Update dots using new IDs
-  for (let i = 0; i < 4; i++) {
-    const dot = document.getElementById('wpd-' + i);
-    if (dot) {
-      dot.style.background = i < pin.length ? 'var(--accent)' : '';
-      dot.style.borderColor = i < pin.length ? 'var(--accent)' : 'var(--border)';
-    }
-  }
-}
-
-function updatePinDisplay(displayId, pin) {
-  // Legacy support for old dot style
-  const disp = document.getElementById(displayId);
-  if (!disp) return;
-  const dots = disp.querySelectorAll('.pin-dot');
-  dots.forEach((d, i) => d.classList.toggle('filled', i < pin.length));
-}
-
 function wizNext() {
   if (wizardStep === 1) {
     const name = document.getElementById('w-orgname').value.trim();
@@ -3204,16 +3125,14 @@ function wizNext() {
     const un = document.getElementById('w-username').value.trim();
     const pw = document.getElementById('w-pw').value;
     const pw2 = document.getElementById('w-pw2').value;
-    const pin = document.getElementById('w-pin').value;
     const sa = document.getElementById('w-sa').value.trim();
     if (!fn || !un || !pw || !sa) { toast('All required fields must be filled', 'error'); return; }
     if (pw !== pw2) { toast('Passwords do not match', 'error'); return; }
     if (pw.length < 4) { toast('Password must be at least 4 characters', 'error'); return; }
-    if (pin && pin.length !== 4) { toast('PIN must be exactly 4 digits', 'error'); return; }
     let sq = document.getElementById('w-sq').value;
     if (sq === 'Custom question...') { sq = document.getElementById('w-sq-custom').value.trim() || sq; }
     wizardData.fullName = fn; wizardData.username = un; wizardData.pw = pw;
-    wizardData.pin = pin; wizardData.sq = sq; wizardData.sa = sa;
+    wizardData.sq = sq; wizardData.sa = sa;
   } else if (wizardStep === 3) {
     const entered = document.getElementById('w-recovery-confirm').value.trim();
     if (entered !== wizardData.recoveryKey) { toast('Recovery key does not match. Please type it exactly.', 'error'); return; }
@@ -3241,7 +3160,6 @@ async function finishWizard() {
   const admin = {
     id: uid(), fullName: wizardData.fullName, username: wizardData.username,
     passwordHash: await hashPw(wizardData.pw, userSalt), passwordSalt: userSalt,
-    pin: wizardData.pin || '',
     role: 'admin', avatarColor: '#6366F1', department: '',
     securityQuestion: wizardData.sq, securityAnswer: wizardData.sa.toLowerCase().trim(),
     masterRecoveryKey: wizardData.recoveryKey,
@@ -3317,10 +3235,10 @@ function lgShowMain() {
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer">
+      <label style="font-size:17px;display:flex;align-items:center;gap:5px;cursor:pointer">
         <input type="checkbox" id="lg-rem" ${safeGet('bms_remember_user')?'checked':''}> Remember me
       </label>
-      <button onclick="lgShowForgot()" style="background:none;border:none;color:var(--accent);font-size:13px;cursor:pointer">Forgot password?</button>
+      <button onclick="lgShowForgot()" style="background:none;border:none;color:var(--accent);font-size:17px;cursor:pointer">Forgot password?</button>
     </div>
     <button class="lg-btn" id="lg-sign-btn" onclick="lgDoLogin()" ${locked?'disabled':''}>Sign In</button>
     <div class="lg-foot">
@@ -3358,7 +3276,7 @@ async function lgDoLogin() {
   const pw = document.getElementById('lg-pw')?.value || '';
   if (!un || !pw) { lgSetErr('Please enter username and password.'); return; }
   const btn = document.getElementById('lg-sign-btn');
-  let user = db.users.find(u => u.username === un && u.status === 'active');
+  let user = db.users.find(u => u.username.toLowerCase() === un.toLowerCase() && u.status === 'active');
 
   // If this device doesn't have the user locally (e.g. first time on this
   // phone/laptop) and a server is configured, try logging in + pulling data.
@@ -3378,7 +3296,7 @@ async function lgDoLogin() {
       if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
       lgSetErr('Connected, but could not download data. Check your internet and try again.'); return;
     }
-    user = db.users.find(u => u.username === un && u.status === 'active');
+    user = db.users.find(u => u.username.toLowerCase() === un.toLowerCase() && u.status === 'active');
     if (!user) {
       if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
       lgSetErr('Incorrect username or password.'); return;
@@ -3434,7 +3352,7 @@ function lgRunCountdown() {
 // ── FORGOT PASSWORD (admin only via security question) ──
 function lgShowForgot() {
   lgEl().innerHTML = `
-    <div style="font-weight:600;font-size:14px;margin-bottom:16px">Reset Password</div>
+    <div style="font-weight:600;font-size:18px;margin-bottom:16px">Reset Password</div>
     <div id="lg-ferr" class="lg-err"></div>
     <div style="margin-bottom:12px">
       <div class="lg-label">Username</div>
@@ -3443,7 +3361,7 @@ function lgShowForgot() {
     <div id="fp-q-section" style="display:none">
       <div style="margin-bottom:12px">
         <div class="lg-label">Security Question</div>
-        <div id="fp-q-text" style="padding:9px 12px;background:var(--elevated);border-radius:8px;font-size:13px;color:var(--text-muted)"></div>
+        <div id="fp-q-text" style="padding:9px 12px;background:var(--elevated);border-radius:8px;font-size:17px;color:var(--text-muted)"></div>
       </div>
       <div style="margin-bottom:16px">
         <div class="lg-label">Your Answer</div>
@@ -3458,7 +3376,7 @@ function lgShowForgot() {
 
 function lgLoadQ() {
   const un = (document.getElementById('fp-un')?.value || '').trim();
-  const user = db.users.find(u => u.username === un);
+  const user = db.users.find(u => u.username.toLowerCase() === un.toLowerCase());
   const sec = document.getElementById('fp-q-section');
   const qt = document.getElementById('fp-q-text');
   if (user && user.securityQuestion) {
@@ -3471,7 +3389,7 @@ function lgVerifyQ() {
   const un = (document.getElementById('fp-un')?.value || '').trim();
   const ans = (document.getElementById('fp-ans')?.value || '').trim().toLowerCase();
   const err = document.getElementById('lg-ferr');
-  const user = db.users.find(u => u.username === un);
+  const user = db.users.find(u => u.username.toLowerCase() === un.toLowerCase());
   if (!user) { err.textContent = 'Username not found.'; err.classList.add('on'); return; }
   if (!user.securityQuestion) { err.textContent = 'No security question set for this account. Ask admin.'; err.classList.add('on'); return; }
   if (!ans) { err.textContent = 'Please enter your answer.'; err.classList.add('on'); return; }
@@ -3481,8 +3399,8 @@ function lgVerifyQ() {
 
 function lgShowNewPw(un) {
   lgEl().innerHTML = `
-    <div style="font-weight:600;font-size:14px;margin-bottom:4px">Set New Password</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Account: <strong>${esc(un)}</strong></div>
+    <div style="font-weight:600;font-size:18px;margin-bottom:4px">Set New Password</div>
+    <div style="font-size:15px;color:var(--text-muted);margin-bottom:16px">Account: <strong>${esc(un)}</strong></div>
     <div id="lg-nperr" class="lg-err"></div>
     <div style="margin-bottom:12px">
       <div class="lg-label">New Password</div>
@@ -3510,7 +3428,7 @@ async function lgSaveNewPw(un) {
   const err = document.getElementById('lg-nperr');
   if (pw.length < 4) { err.textContent = 'Password must be at least 4 characters.'; err.classList.add('on'); return; }
   if (pw !== pw2) { err.textContent = 'Passwords do not match.'; err.classList.add('on'); return; }
-  const user = db.users.find(u => u.username === un);
+  const user = db.users.find(u => u.username.toLowerCase() === un.toLowerCase());
   if (!user) { err.textContent = 'User not found.'; err.classList.add('on'); return; }
   const s = salt();
   user.passwordSalt = s;
@@ -3519,9 +3437,9 @@ async function lgSaveNewPw(un) {
   audit('Auth', 'Password Reset', user.id, user.username);
   lgEl().innerHTML = `
     <div style="text-align:center;padding:16px 0">
-      <div style="font-size:40px;margin-bottom:12px">✅</div>
+      <div style="font-size:43px;margin-bottom:12px">✅</div>
       <div style="font-weight:700;margin-bottom:8px">Password Updated</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">You can now sign in with your new password.</div>
+      <div style="font-size:17px;color:var(--text-muted);margin-bottom:20px">You can now sign in with your new password.</div>
       <button class="lg-btn" onclick="lgShowMain()">Go to Sign In</button>
     </div>
   `;
@@ -3531,9 +3449,9 @@ async function lgSaveNewPw(un) {
 function lgShowSetup() {
   lgEl().innerHTML = `
     <div style="text-align:center;padding:8px 0">
-      <div style="font-size:40px;margin-bottom:12px">⚙️</div>
+      <div style="font-size:43px;margin-bottom:12px">⚙️</div>
       <div style="font-weight:700;margin-bottom:8px">Run Setup Wizard?</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
+      <div style="font-size:17px;color:var(--text-muted);margin-bottom:20px">
         This will <strong style="color:var(--danger)">erase all data</strong> and restart from scratch.
       </div>
       <button class="lg-btn" style="background:var(--danger);margin-bottom:10px" onclick="lgDoSetup()">Yes — Erase & Setup</button>
@@ -3562,10 +3480,10 @@ function lgShowDiag() {
     try {
       const d = JSON.parse(raw);
       h += `<div style="color:var(--success);margin-bottom:8px">✅ Database found</div>`;
-      h += `<div style="font-size:12px;margin-bottom:4px">Org: <strong>${d.settings?.orgName||'?'}</strong> | Users: <strong>${(d.users||[]).length}</strong></div>`;
+      h += `<div style="font-size:15px;margin-bottom:4px">Org: <strong>${d.settings?.orgName||'?'}</strong> | Users: <strong>${(d.users||[]).length}</strong></div>`;
       (d.users||[]).forEach(u => {
         const ok = u.passwordHash && u.passwordHash.length === 64;
-        h += `<div style="margin-top:8px;padding:8px 10px;background:var(--elevated);border-radius:8px;font-size:12px">
+        h += `<div style="margin-top:8px;padding:8px 10px;background:var(--elevated);border-radius:8px;font-size:15px">
           👤 <strong>${u.username}</strong> · ${u.role} · ${u.status}<br>
           Hash: ${ok ? '✅ SHA-256' : `⚠️ Old format — re-run Setup Wizard`}
         </div>`;
@@ -3662,24 +3580,19 @@ function initApp() {
 function initModuleChecks() {
   const wrap = document.getElementById('adv-module-checks');
   if (!wrap) return;
-  wrap.innerHTML = db.settings.modules.filter(m=>m.enabled).map(m=>`<label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" checked value="${m.id}"> ${m.label}</label>`).join('');
+  wrap.innerHTML = db.settings.modules.filter(m=>m.enabled).map(m=>`<label style="font-size:15px;display:flex;align-items:center;gap:4px"><input type="checkbox" checked value="${m.id}"> ${m.label}</label>`).join('');
 }
 
 function updateTopbar() {
   if (!session) return;
-  const initials = session.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-  document.getElementById('topbar-av').textContent = initials;
-  document.getElementById('topbar-av').style.background = session.color;
   document.getElementById('topbar-user-name').textContent = session.name.split(' ')[0];
   document.getElementById('sb-logo').textContent = db.settings.logoInit || 'B';
   document.getElementById('sb-logo').style.background = db.settings.accentColor;
   applyLogoEverywhere();
   document.getElementById('sb-name').textContent = (db.settings.orgName && db.settings.orgName !== 'BMS Pro') ? db.settings.orgName : 'My Business';
   document.getElementById('sb-tag').textContent = APP_BRAND_NAME;
-  document.getElementById('sb-user-av').textContent = initials;
-  document.getElementById('sb-user-av').style.background = session.color;
   document.getElementById('sb-user-name').textContent = session.name;
-  document.getElementById('sb-user-role').textContent = session.role;
+  document.getElementById('sb-user-role').textContent = '@' + session.username;
 }
 
 /* ══ SIDEBAR ══ */
@@ -3710,7 +3623,6 @@ function section(label, ids) {
 
 let currentModule = 'dashboard';
 let acctUnlocked = false;
-let acctUnlockTimer = null;
 
 function openModule(id) {
   if (!canAccessModule(id)) { toast('You do not have permission to access this module', 'error'); return; }
@@ -3819,11 +3731,24 @@ function applyViewOnlyLock() {
       if (!isViewOnly && btn.dataset.volOrigDisplay === undefined) btn.dataset.volOrigDisplay = '';
     }
   });
+  const lockSelector = '#app input, #app select, #app textarea, .modal input, .modal select, .modal textarea, .modal-overlay input, .modal-overlay select, .modal-overlay textarea';
   if (isViewOnly) {
-    document.querySelectorAll('#app input, #app select, #app textarea, .modal input, .modal select, .modal textarea, .modal-overlay input, .modal-overlay select, .modal-overlay textarea').forEach(el => {
+    document.querySelectorAll(lockSelector).forEach(el => {
       if (el.closest('#global-search, .search-box, [data-always-editable], #sync-setup-modal-overlay')) return;
       if (el.type === 'search' || el.classList.contains('search-input')) return;
       el.setAttribute('disabled', 'disabled');
+      el.dataset.volLocked = '1'; // remember WE disabled this one
+    });
+  } else {
+    // Reverse case: an edit-capable user (e.g. Admin) is now active. Without this,
+    // logging out of a restricted/view-only account and into Admin in the same
+    // browser tab (no page reload in between) left every field this function had
+    // disabled stuck disabled forever — the cause of "Admin can't edit User
+    // Manager fields" reports. Only re-enable fields WE locked, so anything
+    // disabled for unrelated reasons elsewhere in the app is left alone.
+    document.querySelectorAll(lockSelector + '[data-vol-locked="1"]').forEach(el => {
+      el.removeAttribute('disabled');
+      delete el.dataset.volLocked;
     });
   }
 }
@@ -3837,10 +3762,10 @@ function showAccountingPINPrompt(onSuccess) {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center';
   overlay.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 24px;width:300px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)">
-      <div style="font-size:36px;margin-bottom:10px">🔐</div>
-      <div style="font-weight:700;font-size:16px;margin-bottom:4px">Accounting Access</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Enter your 4-digit PIN</div>
-      <div id="acct-pin-err" style="display:none;color:var(--danger);font-size:12px;margin-bottom:10px;padding:6px;background:rgba(239,68,68,.1);border-radius:6px"></div>
+      <div style="font-size:39px;margin-bottom:10px">🔐</div>
+      <div style="font-weight:700;font-size:19px;margin-bottom:4px">Accounting Access</div>
+      <div style="font-size:17px;color:var(--text-muted);margin-bottom:16px">Enter your 4-digit PIN</div>
+      <div id="acct-pin-err" style="display:none;color:var(--danger);font-size:15px;margin-bottom:10px;padding:6px;background:rgba(239,68,68,.1);border-radius:6px"></div>
       <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px" id="acct-dots">
         <div id="apdot-0" style="width:16px;height:16px;border-radius:50%;border:2px solid var(--border);transition:all .15s"></div>
         <div id="apdot-1" style="width:16px;height:16px;border-radius:50%;border:2px solid var(--border);transition:all .15s"></div>
@@ -3849,20 +3774,20 @@ function showAccountingPINPrompt(onSuccess) {
       </div>
       <input type="hidden" id="acct-pin-val" value="">
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:210px;margin:0 auto 14px">
-        <button type="button" onclick="apPress('1')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;color:var(--text);cursor:pointer">1</button>
-        <button type="button" onclick="apPress('2')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;color:var(--text);cursor:pointer">2</button>
-        <button type="button" onclick="apPress('3')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;color:var(--text);cursor:pointer">3</button>
-        <button type="button" onclick="apPress('4')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;color:var(--text);cursor:pointer">4</button>
-        <button type="button" onclick="apPress('5')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;color:var(--text);cursor:pointer">5</button>
-        <button type="button" onclick="apPress('6')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;color:var(--text);cursor:pointer">6</button>
-        <button type="button" onclick="apPress('7')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;color:var(--text);cursor:pointer">7</button>
-        <button type="button" onclick="apPress('8')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;color:var(--text);cursor:pointer">8</button>
-        <button type="button" onclick="apPress('9')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;color:var(--text);cursor:pointer">9</button>
-        <button type="button" onclick="apPress('C')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:16px;font-weight:600;color:var(--danger);cursor:pointer">CLR</button>
-        <button type="button" onclick="apPress('0')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;color:var(--text);cursor:pointer">0</button>
-        <button type="button" onclick="apPress('B')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:18px;font-weight:600;color:var(--text-muted);cursor:pointer">⌫</button>
+        <button type="button" onclick="apPress('1')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:25px;font-weight:600;color:var(--text);cursor:pointer">1</button>
+        <button type="button" onclick="apPress('2')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:25px;font-weight:600;color:var(--text);cursor:pointer">2</button>
+        <button type="button" onclick="apPress('3')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:25px;font-weight:600;color:var(--text);cursor:pointer">3</button>
+        <button type="button" onclick="apPress('4')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:25px;font-weight:600;color:var(--text);cursor:pointer">4</button>
+        <button type="button" onclick="apPress('5')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:25px;font-weight:600;color:var(--text);cursor:pointer">5</button>
+        <button type="button" onclick="apPress('6')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:25px;font-weight:600;color:var(--text);cursor:pointer">6</button>
+        <button type="button" onclick="apPress('7')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:25px;font-weight:600;color:var(--text);cursor:pointer">7</button>
+        <button type="button" onclick="apPress('8')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:25px;font-weight:600;color:var(--text);cursor:pointer">8</button>
+        <button type="button" onclick="apPress('9')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:25px;font-weight:600;color:var(--text);cursor:pointer">9</button>
+        <button type="button" onclick="apPress('C')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:19px;font-weight:600;color:var(--danger);cursor:pointer">CLR</button>
+        <button type="button" onclick="apPress('0')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:25px;font-weight:600;color:var(--text);cursor:pointer">0</button>
+        <button type="button" onclick="apPress('B')" style="height:54px;background:var(--elevated);border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;color:var(--text-muted);cursor:pointer">⌫</button>
       </div>
-      <button type="button" onclick="document.getElementById('acct-pin-overlay').remove()" style="width:100%;padding:10px;background:transparent;border:1.5px solid var(--border);border-radius:8px;color:var(--text-muted);cursor:pointer;font-size:13px">Cancel</button>
+      <button type="button" onclick="document.getElementById('acct-pin-overlay').remove()" style="width:100%;padding:10px;background:transparent;border:1.5px solid var(--border);border-radius:8px;color:var(--text-muted);cursor:pointer;font-size:17px">Cancel</button>
     </div>
   `;
   // Store callback on window temporarily
@@ -4106,16 +4031,16 @@ function renderDashboard() {
   const pct = lastRev ? Math.round((thisRev-lastRev)/lastRev*100) : (thisRev?100:0);
   document.getElementById('mom-compare').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:12px;padding-top:8px">
-      <div><div class="text-xs text-muted">This Month</div><div class="font-mono font-bold" style="font-size:20px">${fmt(thisRev)}</div></div>
-      <div><div class="text-xs text-muted">Last Month</div><div class="font-mono" style="font-size:16px">${fmt(lastRev)}</div></div>
-      <div class="badge ${pct>=0?'badge-success':'badge-danger'}" style="width:fit-content;font-size:14px">${pct>=0?'▲':'▼'} ${Math.abs(pct)}%</div>
+      <div><div class="text-xs text-muted">This Month</div><div class="font-mono font-bold" style="font-size:24px">${fmt(thisRev)}</div></div>
+      <div><div class="text-xs text-muted">Last Month</div><div class="font-mono" style="font-size:19px">${fmt(lastRev)}</div></div>
+      <div class="badge ${pct>=0?'badge-success':'badge-danger'}" style="width:fit-content;font-size:18px">${pct>=0?'▲':'▼'} ${Math.abs(pct)}%</div>
     </div>`;
   
   // Recent transactions
   const recent = [...db.sales].sort((a,b)=>new Date(b.createdAt||b.date)-new Date(a.createdAt||a.date)).slice(0,10);
   document.getElementById('recent-txns').innerHTML = recent.length ? recent.map(s=>`
     <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-      <div><div style="font-size:13px;font-weight:500">${esc(s.customerName||'Walk-in')}</div><div class="text-xs text-muted">${fmtDate(s.date)} · ${esc(s.paymentMethod||'Cash')}</div></div>
+      <div><div style="font-size:17px;font-weight:500">${esc(s.customerName||'Walk-in')}</div><div class="text-xs text-muted">${fmtDate(s.date)} · ${esc(s.paymentMethod||'Cash')}</div></div>
       <div class="font-mono font-bold text-accent">${fmt(s.total)}</div>
     </div>`).join('') : '<div class="empty" style="padding:16px"><div class="empty-icon">🧾</div><div class="empty-desc">No sales yet</div></div>';
   
@@ -4124,7 +4049,7 @@ function renderDashboard() {
   db.records.filter(r=>r.stock<=(r.lowStockThreshold||db.settings.lowStockThreshold||10)).slice(0,5).forEach(r=>alerts.push({icon:'📦',text:`Low stock: ${r.name} (${r.stock} left)`,type:'warning'}));
   const overdue = db.transactions.filter(t=>t.status==='Pending'&&t.dueDate&&new Date(t.dueDate)<new Date()).slice(0,3);
   overdue.forEach(t=>alerts.push({icon:'📋',text:`Overdue: ${t.entityName||'Transaction'} #${t.id.slice(-6)}`,type:'danger'}));
-  document.getElementById('dash-alerts').innerHTML = alerts.length ? alerts.map(a=>`<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:center"><span>${a.icon}</span><span class="text-${a.type}" style="font-size:13px">${esc(a.text)}</span></div>`).join('') : '<div class="empty" style="padding:16px"><div class="empty-icon">✅</div><div class="empty-desc">No alerts</div></div>';
+  document.getElementById('dash-alerts').innerHTML = alerts.length ? alerts.map(a=>`<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:center"><span>${a.icon}</span><span class="text-${a.type}" style="font-size:17px">${esc(a.text)}</span></div>`).join('') : '<div class="empty" style="padding:16px"><div class="empty-icon">✅</div><div class="empty-desc">No alerts</div></div>';
 }
 
 /* ══ POS ══ */
@@ -4179,11 +4104,11 @@ function renderCart() {
       <div class="cart-item-name">${esc(item.name)}</div>
       <div class="cart-item-qty">
         <button class="qty-btn" onclick="changeQty(${i},-1)">−</button>
-        <input type="number" class="cart-qty-input" value="${item.qty}" min="1" onchange="setQty(${i},this.value)" onclick="this.select()" style="width:44px;text-align:center;font-size:13px;background:var(--elevated);border:1px solid var(--border);border-radius:4px;padding:2px">
+        <input type="number" class="cart-qty-input" value="${item.qty}" min="1" onchange="setQty(${i},this.value)" onclick="this.select()" style="width:44px;text-align:center;font-size:17px;background:var(--elevated);border:1px solid var(--border);border-radius:4px;padding:2px">
         <button class="qty-btn" onclick="changeQty(${i},1)">+</button>
       </div>
       <div class="cart-item-price">${fmt(item.price*item.qty)}</div>
-      <button onclick="removeFromCart(${i})" style="background:none;color:var(--text-dim);font-size:14px;padding:2px">✕</button>
+      <button onclick="removeFromCart(${i})" style="background:none;color:var(--text-dim);font-size:18px;padding:2px">✕</button>
     </div>`).join('');
   updateCartTotals();
 }
@@ -4293,7 +4218,7 @@ function renderQROptions() {
   const qrs = (db.settings.pos.qrCodes || []).filter(q=>q.active);
   document.getElementById('qr-options').innerHTML = qrs.length ? qrs.map(q=>`
     <div class="qr-option" onclick="selectQR('${q.id}')">
-      ${q.imageData?`<img src="${q.imageData}" style="width:48px;height:48px;object-fit:contain">`:'<div style="font-size:32px">🔳</div>'}
+      ${q.imageData?`<img src="${q.imageData}" style="width:48px;height:48px;object-fit:contain">`:'<div style="font-size:35px">🔳</div>'}
       <div class="qr-option-label">${esc(q.label)}</div>
     </div>`).join('') : '<div class="text-muted text-sm">No QR codes configured. Add in Settings → POS Settings.</div>';
 }
@@ -4449,12 +4374,12 @@ function startQRCheckout() {
   const body = document.getElementById('qr-waiting-body');
   if (qr && qr.mode === 'dynamic' && qr.payeeId) {
     const payload = buildQRPayload(qr, total, db.settings.currencyCode, ref);
-    body.innerHTML = `<div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Waiting for payment</div><div style="font-size:32px;font-weight:900;color:var(--accent);margin-bottom:16px">${fmt(total)}</div><div id="qr-waiting-canvas" style="display:inline-block;background:#fff;padding:10px;border-radius:8px"></div><div style="margin-top:8px;font-weight:600">${esc(qr.label)}</div><div style="font-size:12px;color:var(--text-muted)">${esc(qr.payeeName||'')}</div>`;
+    body.innerHTML = `<div style="font-size:17px;color:var(--text-muted);margin-bottom:8px">Waiting for payment</div><div style="font-size:35px;font-weight:900;color:var(--accent);margin-bottom:16px">${fmt(total)}</div><div id="qr-waiting-canvas" style="display:inline-block;background:#fff;padding:10px;border-radius:8px"></div><div style="margin-top:8px;font-weight:600">${esc(qr.label)}</div><div style="font-size:15px;color:var(--text-muted)">${esc(qr.payeeName||'')}</div>`;
     setTimeout(()=>renderQRInto(document.getElementById('qr-waiting-canvas'), payload, 200), 30);
   } else if (qr && qr.imageData) {
-    body.innerHTML = `<div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Waiting for payment</div><div style="font-size:32px;font-weight:900;color:var(--accent);margin-bottom:16px">${fmt(total)}</div><img src="${qr.imageData}" style="max-width:200px;border-radius:8px"><div style="margin-top:8px;font-weight:600">${esc(qr.label)}</div><div style="font-size:12px;color:var(--text-muted)">${esc(qr.accountName||'')} ${esc(qr.accountNumber||'')}</div><div style="font-size:11px;color:var(--danger);margin-top:6px">⚠️ Customer must type amount manually</div>`;
+    body.innerHTML = `<div style="font-size:17px;color:var(--text-muted);margin-bottom:8px">Waiting for payment</div><div style="font-size:35px;font-weight:900;color:var(--accent);margin-bottom:16px">${fmt(total)}</div><img src="${qr.imageData}" style="max-width:200px;border-radius:8px"><div style="margin-top:8px;font-weight:600">${esc(qr.label)}</div><div style="font-size:15px;color:var(--text-muted)">${esc(qr.accountName||'')} ${esc(qr.accountNumber||'')}</div><div style="font-size:14px;color:var(--danger);margin-top:6px">⚠️ Customer must type amount manually</div>`;
   } else {
-    body.innerHTML = `<div style="font-size:48px">🔳</div><div style="font-size:32px;font-weight:900;color:var(--accent)">${fmt(total)}</div><div class="text-muted">No QR configured — show this amount to customer</div>`;
+    body.innerHTML = `<div style="font-size:50px">🔳</div><div style="font-size:35px;font-weight:900;color:var(--accent)">${fmt(total)}</div><div class="text-muted">No QR configured — show this amount to customer</div>`;
   }
   document.getElementById('qr-waiting-title').textContent = `QR Payment — ${qr?qr.label:'Scan to Pay'}`;
   openModal('qr-waiting-overlay');
@@ -4950,10 +4875,10 @@ function buildAccountingPrintHtml() {
   const { withBal: items, totalIncome, totalExp, filterDesc } = getFilteredAccountingItems();
   const rows = items.map(a=>`<tr><td>${fmtDate(a.date)}</td><td>${esc(a.type)}</td><td>${esc(a.category||'—')}</td><td>${esc(a.description||'—')}</td><td style="text-align:right" class="mono">${a.type==='income'?'':'-'}${fmt(a.amount)}</td><td class="mono">${esc(a.reference||'—')}</td><td style="text-align:right" class="mono">${fmt(a.runningBal)}</td></tr>`).join('');
   return `
-    <p style="font-size:12px;color:#555;margin-bottom:10px">Filters applied: ${esc(filterDesc)} &nbsp;·&nbsp; Generated: ${today()}</p>
-    <table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th>Reference</th><th style="text-align:right">Balance</th></tr></thead>
+    <p style="font-size:15px;color:#555;margin-bottom:10px">Filters applied: ${esc(filterDesc)} &nbsp;·&nbsp; Generated: ${today()}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:15px"><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th>Reference</th><th style="text-align:right">Balance</th></tr></thead>
     <tbody>${rows || '<tr><td colspan="7" style="text-align:center">No accounting records match the current filters</td></tr>'}</tbody></table>
-    <p style="font-size:12px;margin-top:12px">Total Income: <strong>${fmt(totalIncome)}</strong> &nbsp;|&nbsp; Total Expense: <strong>${fmt(totalExp)}</strong> &nbsp;|&nbsp; Net: <strong>${fmt(totalIncome-totalExp)}</strong></p>`;
+    <p style="font-size:15px;margin-top:12px">Total Income: <strong>${fmt(totalIncome)}</strong> &nbsp;|&nbsp; Total Expense: <strong>${fmt(totalExp)}</strong> &nbsp;|&nbsp; Net: <strong>${fmt(totalIncome-totalExp)}</strong></p>`;
 }
 
 function previewAccountingPrint() {
@@ -5141,15 +5066,15 @@ function renderPayrollTable() {
     <div class="table-wrap"><table>
       <thead><tr>
         <th>Employee</th><th>Basic</th>
-        ${extraEarnings.map(e=>`<th style="font-size:11px;color:var(--success)">${esc(e)}</th>`).join('')}
-        ${deductions.map(d=>`<th style="font-size:11px;color:var(--danger)">${esc(d)}</th>`).join('')}
+        ${extraEarnings.map(e=>`<th style="font-size:14px;color:var(--success)">${esc(e)}</th>`).join('')}
+        ${deductions.map(d=>`<th style="font-size:14px;color:var(--danger)">${esc(d)}</th>`).join('')}
         <th>Net Pay</th>
       </tr></thead>
       <tbody>${employees.map(e=>{
         const ph = db.payrollHistory.find(p=>p.month===month&&p.entries?.find(x=>x.empId===e.id));
         const entry = ph?.entries?.find(x=>x.empId===e.id);
         return `<tr>
-          <td style="font-weight:500">${esc(e.name)}<div style="font-size:11px;color:var(--text-muted)">${esc(e.role||'')}</div></td>
+          <td style="font-weight:500">${esc(e.name)}<div style="font-size:14px;color:var(--text-muted)">${esc(e.role||'')}</div></td>
           <td class="mono">${fmt(e.salary||0)}</td>
           ${extraEarnings.map(earn=>`<td><input type="number" value="${entry?.earnings?.[earn]||0}" id="earn-${e.id}-${earn.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
           ${deductions.map(ded=>`<td><input type="number" value="${entry?.deductions?.[ded]||0}" id="ded-${e.id}-${ded.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
@@ -5227,18 +5152,18 @@ function showPaySlip(entry) {
   sc.deductions.forEach(ded => { const a=entry.deductions?.[ded]||0; if(a) dHTML+=`<tr><td>${esc(ded)}</td><td class="text-right mono text-danger">-${fmt(a)}</td></tr>`; });
   const slipContent = `
     <div style="text-align:center;margin-bottom:16px">
-      <div style="font-size:18px;font-weight:700">${esc(s.orgName)}</div>
+      <div style="font-size:22px;font-weight:700">${esc(s.orgName)}</div>
       <div style="color:var(--text-muted)">${esc(s.orgTag)}</div>
-      <div style="font-weight:600;margin-top:8px;font-size:15px">SALARY SLIP — ${esc(entry.month)}</div>
+      <div style="font-weight:600;margin-top:8px;font-size:18px">SALARY SLIP — ${esc(entry.month)}</div>
     </div>
-    <div class="form-row" style="font-size:13px;margin-bottom:16px">
+    <div class="form-row" style="font-size:17px;margin-bottom:16px">
       <div><b>Employee:</b> ${esc(entry.empName)}<br><b>Designation:</b> ${esc(entry.role||'—')}</div>
       <div><b>Month:</b> ${esc(entry.month)}<br><b>Processed by:</b> ${esc(entry.processedBy||'—')}</div>
     </div>
     <table style="width:100%"><thead><tr style="background:var(--elevated)"><th style="padding:8px">Earnings</th><th style="padding:8px;text-align:right">Amount</th></tr></thead>
     <tbody>${eHTML}</tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--border)"><td style="padding:8px">Total Earnings</td><td style="padding:8px;text-align:right">${fmt((entry.salary||0)+(entry.totalEarnings||0))}</td></tr></tfoot></table>
     ${dHTML?`<table style="width:100%;margin-top:10px"><thead><tr style="background:var(--elevated)"><th style="padding:8px">Deductions</th><th style="padding:8px;text-align:right">Amount</th></tr></thead><tbody>${dHTML}</tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--border)"><td style="padding:8px">Total Deductions</td><td style="padding:8px;text-align:right;color:var(--danger)">-${fmt(entry.totalDeductions||0)}</td></tr></tfoot></table>`:''}
-    <div style="margin-top:16px;padding:12px;background:var(--accent-dim);border-radius:8px;display:flex;justify-content:space-between;font-size:16px;font-weight:700">
+    <div style="margin-top:16px;padding:12px;background:var(--accent-dim);border-radius:8px;display:flex;justify-content:space-between;font-size:19px;font-weight:700">
       <span>NET PAY</span><span class="mono">${fmt(entry.netPay)}</span>
     </div>`;
   document.getElementById('payslip-body').innerHTML = slipContent + signatureBlockHtml();
@@ -5318,7 +5243,7 @@ function renderAttendance() {
     return;
   }
 
-  const dayHeaders = Array.from({length:numDays},(_,i)=>i+1).map(d=>`<th id="att-day-${d}" style="min-width:28px;text-align:center;font-size:10px">${d}</th>`).join('');
+  const dayHeaders = Array.from({length:numDays},(_,i)=>i+1).map(d=>`<th id="att-day-${d}" style="min-width:28px;text-align:center;font-size:13px">${d}</th>`).join('');
   const rows = employees.map(e=>{
     const empAtt = db.attendance[month][e.id] || {};
     const cells = Array.from({length:numDays},(_,i)=>{
@@ -5326,17 +5251,17 @@ function renderAttendance() {
       const dateKey = `${month}-${day}`;
       const status = empAtt[dateKey] || '';
       const colorMap = { P:'var(--success)', A:'var(--danger)', L:'var(--warning)', H:'var(--text-dim)', HD:'#f59e0b' };
-      return `<td style="text-align:center;padding:2px"><button onclick="cycleAttendance('${month}','${e.id}','${dateKey}')" style="width:24px;height:24px;border-radius:4px;border:1px solid var(--border);background:${status?colorMap[status]:'var(--elevated)'};color:${status?'#fff':'var(--text-dim)'};font-size:10px;font-weight:700;cursor:pointer">${status||'·'}</button></td>`;
+      return `<td style="text-align:center;padding:2px"><button onclick="cycleAttendance('${month}','${e.id}','${dateKey}')" style="width:24px;height:24px;border-radius:4px;border:1px solid var(--border);background:${status?colorMap[status]:'var(--elevated)'};color:${status?'#fff':'var(--text-dim)'};font-size:13px;font-weight:700;cursor:pointer">${status||'·'}</button></td>`;
     }).join('');
     const presentCount = Object.values(empAtt).filter(v=>v==='P').length;
     const absentCount = Object.values(empAtt).filter(v=>v==='A').length;
     const leaveCount = Object.values(empAtt).filter(v=>v==='L').length;
-    return `<tr><td style="position:sticky;left:0;background:var(--surface);font-weight:500;padding:4px 8px;white-space:nowrap">${esc(e.name)}</td>${cells}<td style="font-size:11px;padding:0 8px;white-space:nowrap">✅${presentCount} ❌${absentCount} 🏖️${leaveCount}</td></tr>`;
+    return `<tr><td style="position:sticky;left:0;background:var(--surface);font-weight:500;padding:4px 8px;white-space:nowrap">${esc(e.name)}</td>${cells}<td style="font-size:14px;padding:0 8px;white-space:nowrap">✅${presentCount} ❌${absentCount} 🏖️${leaveCount}</td></tr>`;
   }).join('');
 
   document.getElementById('att-matrix').innerHTML = `
     <div class="form-hint" style="margin-bottom:8px">Click a cell to cycle: · → P (Present) → A (Absent) → L (Leave) → H (Holiday) → HD (Half Day) → ·</div>
-    <div class="table-wrap" style="overflow-x:auto"><table style="font-size:11px"><thead><tr><th style="position:sticky;left:0;background:var(--surface);min-width:120px">Employee</th>${dayHeaders}<th>Summary</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    <div class="table-wrap" style="overflow-x:auto"><table style="font-size:14px"><thead><tr><th style="position:sticky;left:0;background:var(--surface);min-width:120px">Employee</th>${dayHeaders}<th>Summary</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 
   // Restore scroll position (clicking a cell / switching tabs back shouldn't jump to Day 1), or —
   // the first time this month's grid is shown — scroll straight to today's column automatically.
@@ -5594,8 +5519,8 @@ function getAuditFor(type, id) {
 
 function profileAuditHtml(type, id) {
   const entries = getAuditFor(type, id);
-  return `<div class="no-print-audit"><h3 style="font-size:14px;font-weight:700;margin:16px 0 8px">Audit History</h3>
-  <div class="table-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Action</th></tr></thead><tbody>${entries.length?entries.map(a=>`<tr><td class="mono" style="font-size:11px">${a.timestamp?.replace('T',' ').slice(0,19)||'—'}</td><td>${esc(a.username||'—')}</td><td><span class="badge badge-info">${esc(a.action||'—')}</span></td></tr>`).join(''):'<tr><td colspan="3" class="text-center text-muted">No audit entries yet</td></tr>'}</tbody></table></div></div>`;
+  return `<div class="no-print-audit"><h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Audit History</h3>
+  <div class="table-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Action</th></tr></thead><tbody>${entries.length?entries.map(a=>`<tr><td class="mono" style="font-size:14px">${a.timestamp?.replace('T',' ').slice(0,19)||'—'}</td><td>${esc(a.username||'—')}</td><td><span class="badge badge-info">${esc(a.action||'—')}</span></td></tr>`).join(''):'<tr><td colspan="3" class="text-center text-muted">No audit entries yet</td></tr>'}</tbody></table></div></div>`;
 }
 
 function viewProfile(type, id) {
@@ -5622,8 +5547,8 @@ function viewProfile(type, id) {
       <div class="info-item"><label>Created</label><p>${fmtDate(r.createdAt)}</p></div>
     </div>
     ${r.description?`<div class="form-group"><label class="form-label">Description</label><p>${esc(r.description)}</p></div>`:''}
-    ${(r.variants&&r.variants.length)?`<h3 style="font-size:14px;font-weight:700;margin:16px 0 8px">Variants</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>SKU</th><th>Retail</th><th>Wholesale</th><th>Stock</th></tr></thead><tbody>${r.variants.map(v=>`<tr><td>${esc(v.name)}</td><td class="mono">${esc(v.sku||'—')}</td><td class="mono">${fmt(v.price||0)}</td><td class="mono">${fmt(v.wholesalePrice||0)}</td><td class="mono">${v.stock||0}</td></tr>`).join('')}</tbody></table></div>`:''}
-    <h3 style="font-size:14px;font-weight:700;margin:16px 0 8px">Stock History</h3>
+    ${(r.variants&&r.variants.length)?`<h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Variants</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>SKU</th><th>Retail</th><th>Wholesale</th><th>Stock</th></tr></thead><tbody>${r.variants.map(v=>`<tr><td>${esc(v.name)}</td><td class="mono">${esc(v.sku||'—')}</td><td class="mono">${fmt(v.price||0)}</td><td class="mono">${fmt(v.wholesalePrice||0)}</td><td class="mono">${v.stock||0}</td></tr>`).join('')}</tbody></table></div>`:''}
+    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Stock History</h3>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Qty</th><th>Balance</th><th>Ref</th></tr></thead><tbody>${sh.length?sh.map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${esc(h.type)}</td><td class="mono ${h.qty>=0?'text-success':'text-danger'}">${h.qty>0?'+':''}${h.qty}</td><td class="mono">${h.balanceAfter}</td><td class="mono">${esc(h.ref||'—')}</td></tr>`).join(''):'<tr><td colspan="5" class="text-center text-muted">No history</td></tr>'}</tbody></table></div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='entity') {
@@ -5644,9 +5569,9 @@ function viewProfile(type, id) {
       <div class="info-item"><label>Address</label><p>${esc(e.address||'—')}</p></div>
     </div>
     ${e.notes?`<div class="form-group"><label class="form-label">Notes</label><p>${esc(e.notes)}</p></div>`:''}
-    <h3 style="font-size:14px;font-weight:700;margin:16px 0 8px">Transaction History</h3>
+    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Transaction History</h3>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Amount</th><th>Payment</th></tr></thead><tbody>${txns.length?txns.map(s=>`<tr><td>${fmtDate(s.date)}</td><td class="mono">${esc(s.receiptNumber||'—')}</td><td class="mono">${fmt(s.total)}</td><td>${esc(s.paymentMethod||'—')}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No transactions</td></tr>'}</tbody></table></div>
-    <h3 style="font-size:14px;font-weight:700;margin:16px 0 8px">Payment History</h3>
+    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Payment History</h3>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Amount</th><th>Method</th></tr></thead><tbody>${payments.length?payments.map(p=>`<tr><td>${fmtDate(p.date)}</td><td class="mono">${esc(p.receiptNumber||'—')}</td><td class="mono text-success">${fmt(p.amount)}</td><td>${esc(p.method||'—')}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No payments recorded</td></tr>'}</tbody></table></div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='employee') {
@@ -5676,11 +5601,11 @@ function viewProfile(type, id) {
     </div>
     ${e.address?`<div class="form-group"><label class="form-label">Address</label><p>${esc(e.address)}</p></div>`:''}
     ${e.notes?`<div class="form-group"><label class="form-label">Notes</label><p>${esc(e.notes)}</p></div>`:''}
-    <h3 style="font-size:14px;font-weight:700;margin:16px 0 8px">Leave Records</h3>
+    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Leave Records</h3>
     <div class="table-wrap"><table><thead><tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th></tr></thead><tbody>${leaves.length?leaves.map(l=>`<tr><td>${esc(l.type)}</td><td>${fmtDate(l.fromDate)}</td><td>${fmtDate(l.toDate)}</td><td class="mono">${l.days}</td><td><span class="badge ${l.status==='approved'?'badge-success':l.status==='rejected'?'badge-danger':'badge-warning'}">${esc(l.status)}</span></td></tr>`).join(''):'<tr><td colspan="5" class="text-center text-muted">No leave records</td></tr>'}</tbody></table></div>
-    <h3 style="font-size:14px;font-weight:700;margin:16px 0 8px">Performance Reviews</h3>
+    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Performance Reviews</h3>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Rating</th><th>Reviewer</th><th>Notes</th></tr></thead><tbody>${reviews.length?reviews.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${'⭐'.repeat(p.rating||0)}</td><td>${esc(p.reviewer||'—')}</td><td class="text-sm">${esc(p.notes||'—')}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No performance reviews</td></tr>'}</tbody></table></div>
-    <h3 style="font-size:14px;font-weight:700;margin:16px 0 8px">Payroll History</h3>
+    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Payroll History</h3>
     <div class="table-wrap"><table><thead><tr><th>Month</th><th>Basic</th><th>Earnings</th><th>Deductions</th><th>Net Pay</th></tr></thead><tbody>${ph.length?ph.map(p=>{ const entry=p.entries.find(x=>x.empId===id); return entry?`<tr><td>${esc(p.month)}</td><td class="mono">${fmt(entry.salary)}</td><td class="mono text-success">+${fmt(entry.totalEarnings||0)}</td><td class="mono text-danger">-${fmt(entry.totalDeductions||0)}</td><td class="mono font-bold">${fmt(entry.netPay)}</td></tr>`:''}).join(''):'<tr><td colspan="5" class="text-center text-muted">No payroll history</td></tr>'}</tbody></table></div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='secondary') {
@@ -5697,7 +5622,7 @@ function viewProfile(type, id) {
       <div class="info-item"><label>Total Supplied</label><p class="font-mono text-accent">${fmt(sp.totalValue||0)}</p></div>
     </div>
     ${sp.notes?`<div class="form-group"><label class="form-label">Notes</label><p>${esc(sp.notes)}</p></div>`:''}
-    <h3 style="font-size:14px;font-weight:700;margin:16px 0 8px">Purchase History</h3>
+    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Purchase History</h3>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead><tbody>${purchases.length?purchases.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${esc(p.description)}</td><td class="mono">${fmt(p.amount)}</td></tr>`).join(''):'<tr><td colspan="3" class="text-center text-muted">No purchases recorded</td></tr>'}</tbody></table></div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='transaction') {
@@ -5727,7 +5652,7 @@ function viewProfile(type, id) {
       <div class="info-item"><label>Tax</label><p class="font-mono">${fmt(sale.taxAmount||0)}</p></div>
       <div class="info-item"><label>Total</label><p class="font-mono text-accent font-bold">${fmt(sale.total)}</p></div>
     </div>
-    <h3 style="font-size:14px;font-weight:700;margin:16px 0 8px">Items</h3>
+    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Items</h3>
     <div class="table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead><tbody>${itemRows}</tbody></table></div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='accounting') {
@@ -5779,12 +5704,12 @@ function printCurrentProfile() {
   const lastPageHtml = `
       <div style="text-align:center;margin-bottom:16px;border-bottom:2px solid #000;padding-bottom:12px">
         ${s.logoData?`<img src="${s.logoData}" style="max-width:64px;max-height:36px;object-fit:contain;margin-bottom:6px">`:''}
-        <div style="font-size:18px;font-weight:700">${esc(s.orgName)}</div>
-        <div style="font-size:12px;color:#555">${esc(s.orgTag)}</div>
-        <div style="font-size:14px;font-weight:600;margin-top:8px">${isProfile?'PROFILE: ':''}${esc(titleEl.textContent)}</div>
-        <div style="font-size:11px;color:#888">Generated: ${today()}</div>
+        <div style="font-size:22px;font-weight:700">${esc(s.orgName)}</div>
+        <div style="font-size:15px;color:#555">${esc(s.orgTag)}</div>
+        <div style="font-size:18px;font-weight:600;margin-top:8px">${isProfile?'PROFILE: ':''}${esc(titleEl.textContent)}</div>
+        <div style="font-size:14px;color:#888">Generated: ${today()}</div>
       </div>
-      <div style="font-size:13px">${bodyClone.innerHTML}</div>`;
+      <div style="font-size:17px">${bodyClone.innerHTML}</div>`;
   universalPrint('', lastPageHtml, {
     wrapperOpen: '<div style="padding:24px;color:#000;background:#fff;font-family:Arial,sans-serif">',
     wrapperClose: '</div>'
@@ -5819,7 +5744,7 @@ function signatureColumnHtml(name, designation) {
 function signatureBlockHtml() {
   const rs = db.settings.reportSettings || {};
   return `
-  <div class="report-signature" style="display:flex;justify-content:space-between;gap:40px;font-size:11px;flex-wrap:wrap">
+  <div class="report-signature" style="display:flex;justify-content:space-between;gap:40px;font-size:14px;flex-wrap:wrap">
     <div style="flex:1;min-width:200px;border-top:1px solid #000;padding-top:8px"><div style="font-weight:600;margin-bottom:2px">Prepared By</div>${signatureColumnHtml(rs.sig1Name, rs.sig1Designation)}</div>
     <div style="flex:1;min-width:200px;border-top:1px solid #000;padding-top:8px"><div style="font-weight:600;margin-bottom:2px">Verified By</div>${signatureColumnHtml(rs.sig2Name, rs.sig2Designation)}</div>
   </div>`;
@@ -6033,7 +5958,7 @@ function showKeyboardShortcuts() {
     ['Enter (in POS barcode field)', 'Look up scanned product'],
     ['Tab', 'Move between form fields'],
   ];
-  const html = `<h3 style="font-size:14px;font-weight:700;margin-bottom:12px">Keyboard Shortcuts</h3><table style="width:100%;border-collapse:collapse">${shortcuts.map(([k,d])=>`<tr><td style="padding:8px 12px 8px 0;width:200px;vertical-align:top"><kbd style="background:var(--elevated);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-family:monospace;font-size:12px;white-space:nowrap">${esc(k)}</kbd></td><td style="padding:8px 0;font-size:13px">${esc(d)}</td></tr>`).join('')}</table>`;
+  const html = `<h3 style="font-size:18px;font-weight:700;margin-bottom:12px">Keyboard Shortcuts</h3><table style="width:100%;border-collapse:collapse">${shortcuts.map(([k,d])=>`<tr><td style="padding:8px 12px 8px 0;width:200px;vertical-align:top"><kbd style="background:var(--elevated);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-family:monospace;font-size:15px;white-space:nowrap">${esc(k)}</kbd></td><td style="padding:8px 0;font-size:17px">${esc(d)}</td></tr>`).join('')}</table>`;
   document.getElementById('profile-view-title').textContent = '⌨️ Keyboard Shortcuts';
   document.getElementById('profile-view-body').innerHTML = html;
   const printBtn = document.getElementById('profile-print-btn');
@@ -6119,7 +6044,7 @@ function renderArchive() {
     if (session?.role!=='admin') { content.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><div class="empty-title">Admin Only</div></div>'; return; }
     let items = db.auditLog.filter(a => (!s || a.username?.toLowerCase().includes(s) || a.action?.toLowerCase().includes(s) || a.module?.toLowerCase().includes(s)) && (!from || a.timestamp>=from) && (!to || a.timestamp<=to+' 99'));
     items = [...items].reverse().slice(0,500);
-    content.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Role</th><th>Module</th><th>Action</th><th>Record</th></tr></thead><tbody>${items.length?items.map(a=>`<tr><td class="mono" style="font-size:11px">${a.timestamp?.replace('T',' ').slice(0,19)||'—'}</td><td>${esc(a.username||'—')}</td><td>${esc(a.role||'—')}</td><td>${esc(a.module||'—')}</td><td><span class="badge badge-info">${esc(a.action||'—')}</span></td><td class="mono" style="font-size:11px">${esc(a.recordName||a.recordId||'—')}</td></tr>`).join(''):'<tr><td colspan="6" class="text-center text-muted">No audit entries</td></tr>'}</tbody></table></div>`;
+    content.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Role</th><th>Module</th><th>Action</th><th>Record</th></tr></thead><tbody>${items.length?items.map(a=>`<tr><td class="mono" style="font-size:14px">${a.timestamp?.replace('T',' ').slice(0,19)||'—'}</td><td>${esc(a.username||'—')}</td><td>${esc(a.role||'—')}</td><td>${esc(a.module||'—')}</td><td><span class="badge badge-info">${esc(a.action||'—')}</span></td><td class="mono" style="font-size:14px">${esc(a.recordName||a.recordId||'—')}</td></tr>`).join(''):'<tr><td colspan="6" class="text-center text-muted">No audit entries</td></tr>'}</tbody></table></div>`;
     return;
   }
 
@@ -6288,7 +6213,7 @@ function reportDocHeader(refNum, from, to) {
   const s = db.settings;
   const rs = s.reportSettings || {};
   const classLine = rs.showClassification&&rs.classification ? `<div class="report-classification">${esc(rs.classification)}</div>` : '';
-  return `<div class="report-doc-header"><div style="display:flex;gap:12px;align-items:flex-start">${s.logoData?`<img src="${s.logoData}" style="width:48px;height:48px;object-fit:contain;flex-shrink:0">`:''}<div><div class="report-org-name">${esc(s.orgName)}</div><div style="font-size:13px">${esc(s.orgTag)}</div>${s.address?`<div style="font-size:11px">${esc(s.address)}</div>`:''}${s.phone?`<div style="font-size:11px">Tel: ${esc(s.phone)}</div>`:''}${s.panNumber?`<div style="font-size:11px">PAN: ${esc(s.panNumber)}</div>`:''}</div></div><div style="text-align:right"><div style="font-size:11px">Ref: ${esc(refNum)}</div><div style="font-size:11px">Date: ${fmtDate(today())}</div><div style="font-size:11px">Period: ${from?fmtDate(from):'All'} – ${to?fmtDate(to):'Present'}</div></div></div>${classLine}`;
+  return `<div class="report-doc-header"><div style="display:flex;gap:12px;align-items:flex-start">${s.logoData?`<img src="${s.logoData}" style="width:48px;height:48px;object-fit:contain;flex-shrink:0">`:''}<div><div class="report-org-name">${esc(s.orgName)}</div><div style="font-size:17px">${esc(s.orgTag)}</div>${s.address?`<div style="font-size:14px">${esc(s.address)}</div>`:''}${s.phone?`<div style="font-size:14px">Tel: ${esc(s.phone)}</div>`:''}${s.panNumber?`<div style="font-size:14px">PAN: ${esc(s.panNumber)}</div>`:''}</div></div><div style="text-align:right"><div style="font-size:14px">Ref: ${esc(refNum)}</div><div style="font-size:14px">Date: ${fmtDate(today())}</div><div style="font-size:14px">Period: ${from?fmtDate(from):'All'} – ${to?fmtDate(to):'Present'}</div></div></div>${classLine}`;
 }
 
 function reportDocFooter() {
@@ -6319,7 +6244,7 @@ function generateReport() {
 
   if (type==='executive' || type==='financial') {
     bodyHtml = `<h2>Executive Summary / Situation Report</h2>
-    <p style="font-size:13px;margin-bottom:16px;line-height:1.7">During the period ${periodLabel}, total income recorded was <strong>${fmt(totalIncome)}</strong>. Total expenditure stood at <strong>${fmt(totalExp)}</strong>, resulting in a net ${netBalance>=0?'surplus':'deficit'} of <strong>${fmt(Math.abs(netBalance))}</strong>. A total of <strong>${periodSales.length}</strong> sales transactions were processed during this period, generating revenue of <strong>${fmt(totalRevenue)}</strong>.</p>
+    <p style="font-size:17px;margin-bottom:16px;line-height:1.7">During the period ${periodLabel}, total income recorded was <strong>${fmt(totalIncome)}</strong>. Total expenditure stood at <strong>${fmt(totalExp)}</strong>, resulting in a net ${netBalance>=0?'surplus':'deficit'} of <strong>${fmt(Math.abs(netBalance))}</strong>. A total of <strong>${periodSales.length}</strong> sales transactions were processed during this period, generating revenue of <strong>${fmt(totalRevenue)}</strong>.</p>
     <h2>Key Performance Indicators</h2>
     <table><thead><tr><th>Metric</th><th>Value</th><th>Period</th></tr></thead><tbody>
       <tr><td>Total Income</td><td>${fmt(totalIncome)}</td><td>${periodLabel}</td></tr>
@@ -6413,7 +6338,7 @@ function generateReport() {
     const totalCost = batches.reduce((a,b)=>a+(b.cost||0),0);
     const totalUnits = batches.reduce((a,b)=>a+b.qtyProduced,0);
     bodyHtml = `<h2>Production Cost Analysis</h2>
-    <p style="font-size:13px;margin-bottom:16px">Total of <strong>${batches.length}</strong> production batches in the selected period, producing <strong>${totalUnits}</strong> units at a total material cost of <strong>${fmt(totalCost)}</strong> (average cost per unit: <strong>${fmt(totalUnits?totalCost/totalUnits:0)}</strong>).</p>
+    <p style="font-size:17px;margin-bottom:16px">Total of <strong>${batches.length}</strong> production batches in the selected period, producing <strong>${totalUnits}</strong> units at a total material cost of <strong>${fmt(totalCost)}</strong> (average cost per unit: <strong>${fmt(totalUnits?totalCost/totalUnits:0)}</strong>).</p>
     <table><thead><tr><th>Batch #</th><th>Product</th><th>Units</th><th>Total Cost</th><th>Cost/Unit</th></tr></thead><tbody>
       ${batches.length?batches.map(b=>{const p=db.records.find(r=>r.id===b.productId); return `<tr><td>${esc(b.batchNumber)}</td><td>${esc(p?.name||'—')}</td><td>${b.qtyProduced}</td><td>${fmt(b.cost||0)}</td><td>${fmt(b.qtyProduced?b.cost/b.qtyProduced:0)}</td></tr>`;}).join(''):'<tr><td colspan="5">No data</td></tr>'}
     </tbody></table>`;
@@ -6465,14 +6390,14 @@ function generateReport() {
     const logs = db.auditLog.filter(a=>(!from||a.timestamp>=from)&&(!to||a.timestamp<=to+'Z'));
     bodyHtml = `<h2>Audit & Compliance Report</h2>
     <table><thead><tr><th>Timestamp</th><th>User</th><th>Module</th><th>Action</th><th>Record</th></tr></thead><tbody>
-      ${logs.slice(-500).reverse().map(a=>`<tr><td class="mono" style="font-size:11px">${(a.timestamp||'').replace('T',' ').slice(0,19)}</td><td>${esc(a.username||'—')}</td><td>${esc(a.module||'—')}</td><td>${esc(a.action||'—')}</td><td>${esc(a.recordName||a.recordId||'—')}</td></tr>`).join('')}
+      ${logs.slice(-500).reverse().map(a=>`<tr><td class="mono" style="font-size:14px">${(a.timestamp||'').replace('T',' ').slice(0,19)}</td><td>${esc(a.username||'—')}</td><td>${esc(a.module||'—')}</td><td>${esc(a.action||'—')}</td><td>${esc(a.recordName||a.recordId||'—')}</td></tr>`).join('')}
     </tbody></table>`;
   } else if (type==='vat-summary' || type==='vat-sales') {
     const sales = db.sales.filter(x=>x.taxAmount>0 && (!from||x.date>=from) && (!to||x.date<=to));
     const totalVAT = sales.reduce((a,x)=>a+(x.taxAmount||0),0);
     const totalTaxable = sales.reduce((a,x)=>a+(x.subtotal||0),0);
     bodyHtml = `<h2>${type==='vat-summary'?'Monthly VAT Summary':'VAT Sales Report'}</h2>
-    <p style="font-size:13px;margin-bottom:12px">PAN: ${esc(s.panNumber||'N/A')} | VAT Reg: ${esc(s.vatNumber||'N/A')} | Rate: ${s.pos?.defaultTax||13}%</p>
+    <p style="font-size:17px;margin-bottom:12px">PAN: ${esc(s.panNumber||'N/A')} | VAT Reg: ${esc(s.vatNumber||'N/A')} | Rate: ${s.pos?.defaultTax||13}%</p>
     <table><thead><tr><th>Date</th><th>Invoice</th><th>Customer</th><th>Taxable Amt</th><th>VAT</th><th>Total</th></tr></thead><tbody>
       ${sales.length?sales.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.receiptNumber)}</td><td>${esc(x.customerName||'Walk-in')}</td><td>${fmt(x.subtotal||0)}</td><td>${fmt(x.taxAmount||0)}</td><td>${fmt(x.total||0)}</td></tr>`).join(''):'<tr><td colspan="6">No taxable sales in period</td></tr>'}
       <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL</strong></td><td><strong>${fmt(totalTaxable)}</strong></td><td><strong>${fmt(totalVAT)}</strong></td><td><strong>${fmt(totalTaxable+totalVAT)}</strong></td></tr>
@@ -6480,14 +6405,14 @@ function generateReport() {
   } else if (type==='vat-purchase') {
     const purchases = db.accounting.filter(a=>a.type==='expense'&&(a.category==='Purchase'||a.category==='Supplies')&&(!from||a.date>=from)&&(!to||a.date<=to));
     bodyHtml = `<h2>VAT Purchase Report</h2>
-    <p style="font-size:13px;margin-bottom:12px">PAN: ${esc(s.panNumber||'N/A')} | VAT Reg: ${esc(s.vatNumber||'N/A')}</p>
+    <p style="font-size:17px;margin-bottom:12px">PAN: ${esc(s.panNumber||'N/A')} | VAT Reg: ${esc(s.vatNumber||'N/A')}</p>
     <table><thead><tr><th>Date</th><th>Description</th><th>Reference</th><th>Amount</th></tr></thead><tbody>
       ${purchases.length?purchases.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${esc(p.description)}</td><td>${esc(p.reference||'—')}</td><td>${fmt(p.amount)}</td></tr>`).join(''):'<tr><td colspan="4">No purchases in period</td></tr>'}
       <tr style="background:#f0f0f0"><td colspan="3"><strong>Total</strong></td><td><strong>${fmt(purchases.reduce((a,p)=>a+p.amount,0))}</strong></td></tr>
     </tbody></table>`;
   } else if (type==='tax-deduction') {
     bodyHtml = `<h2>Tax Deduction Report</h2>
-    <p style="font-size:13px;margin-bottom:12px">Employee tax deductions for the selected period.</p>
+    <p style="font-size:17px;margin-bottom:12px">Employee tax deductions for the selected period.</p>
     <table><thead><tr><th>Employee</th><th>Month</th><th>Tax Deducted</th></tr></thead><tbody>
       ${db.payrollHistory.flatMap(p=>(p.entries||[]).filter(e=>e.deductions?.Tax>0).map(e=>`<tr><td>${esc(e.empName)}</td><td>${esc(p.month)}</td><td>${fmt(e.deductions.Tax)}</td></tr>`)).join('')||'<tr><td colspan="3">No tax deductions recorded</td></tr>'}
     </tbody></table>`;
@@ -6498,7 +6423,7 @@ function generateReport() {
     const purchasesG = db.accounting.filter(a=>a.type==='expense'&&(a.category==='Purchase'||a.category==='Supplies')&&(!from||a.date>=from)&&(!to||a.date<=to));
     const vatPaidOnPurchase = purchasesG.reduce((a,p)=>a+(p.vatAmount||0),0);
     bodyHtml = `<h2>Government Submission Summary</h2>
-    <p style="font-size:13px;margin-bottom:12px">Summary formatted for periodic submission to the Inland Revenue Department (IRD). PAN: ${esc(s.panNumber||'N/A')} | VAT Registration: ${esc(s.vatNumber||'N/A')} | Fiscal Period: ${from?fmtDate(from):'—'} to ${to?fmtDate(to):'—'}</p>
+    <p style="font-size:17px;margin-bottom:12px">Summary formatted for periodic submission to the Inland Revenue Department (IRD). PAN: ${esc(s.panNumber||'N/A')} | VAT Registration: ${esc(s.vatNumber||'N/A')} | Fiscal Period: ${from?fmtDate(from):'—'} to ${to?fmtDate(to):'—'}</p>
     <table><thead><tr><th>Particulars</th><th>Amount</th></tr></thead><tbody>
       <tr><td>Total Taxable Sales</td><td class="mono">${fmt(taxableSales)}</td></tr>
       <tr><td>Output VAT Collected</td><td class="mono">${fmt(vatCollected)}</td></tr>
@@ -6506,7 +6431,7 @@ function generateReport() {
       <tr><td>Input VAT Paid</td><td class="mono">${fmt(vatPaidOnPurchase)}</td></tr>
       <tr style="background:#f0f0f0"><td><strong>Net VAT Payable / (Refundable)</strong></td><td class="mono"><strong>${fmt(vatCollected-vatPaidOnPurchase)}</strong></td></tr>
     </tbody></table>
-    <p style="font-size:12px;color:#666;margin-top:10px">This summary is generated from recorded transactions only. Verify against original tax invoices before submission — Claude/this system does not file returns on your behalf.</p>`;
+    <p style="font-size:15px;color:#666;margin-top:10px">This summary is generated from recorded transactions only. Verify against original tax invoices before submission — Claude/this system does not file returns on your behalf.</p>`;
   } else if (type==='annual-report') {
     const yearFrom = from || `${today().slice(0,4)}-01-01`;
     const yearTo = to || `${today().slice(0,4)}-12-31`;
@@ -6515,7 +6440,7 @@ function generateReport() {
     const yrExpense = db.accounting.filter(a=>a.type==='expense'&&a.date>=yearFrom&&a.date<=yearTo).reduce((a,x)=>a+x.amount,0);
     const yrPurchaseTotal = (db.purchaseOrders||[]).filter(p=>p.date>=yearFrom&&p.date<=yearTo).reduce((a,p)=>a+(p.total||0),0);
     bodyHtml = `<h2>Annual Business Report</h2>
-    <p style="font-size:13px;margin-bottom:12px">Period: ${fmtDate(yearFrom)} to ${fmtDate(yearTo)}</p>
+    <p style="font-size:17px;margin-bottom:12px">Period: ${fmtDate(yearFrom)} to ${fmtDate(yearTo)}</p>
     <table><thead><tr><th>Particulars</th><th>Amount</th></tr></thead><tbody>
       <tr><td>Total Sales Revenue</td><td class="mono">${fmt(yrSales.reduce((a,x)=>a+x.total,0))}</td></tr>
       <tr><td>Number of Sales Transactions</td><td class="mono">${yrSales.length}</td></tr>
@@ -6529,7 +6454,7 @@ function generateReport() {
     </tbody></table>`;
   } else if (type==='audit-support') {
     bodyHtml = `<h2>Audit Support Report</h2>
-    <p style="font-size:13px;margin-bottom:12px">Consolidated summary suitable for tax authority audit support, covering sales, purchases, and VAT for the selected period.</p>
+    <p style="font-size:17px;margin-bottom:12px">Consolidated summary suitable for tax authority audit support, covering sales, purchases, and VAT for the selected period.</p>
     <table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>
       <tr><td>Total Sales Revenue</td><td>${fmt(totalRevenue)}</td></tr>
       <tr><td>Total VAT Collected</td><td>${fmt(periodSales.reduce((a,x)=>a+(x.taxAmount||0),0))}</td></tr>
@@ -6549,7 +6474,7 @@ function generateReport() {
   // against exactly the page the signature will land on.
   let html, priorPagesHtml, lastPageHtml, lastPageInner;
   if (remarks) {
-    lastPageInner = `${reportDocHeader(refNum, from, to)}<h2>Remarks / Key Observations</h2><p style="font-size:13px;line-height:1.7">${esc(remarks)}</p>`;
+    lastPageInner = `${reportDocHeader(refNum, from, to)}<h2>Remarks / Key Observations</h2><p style="font-size:17px;line-height:1.7">${esc(remarks)}</p>`;
     priorPagesHtml = `<div class="report-doc report-page">${header}<div style="padding:8px 0">${bodyHtml}</div></div>`;
   } else {
     lastPageInner = `${header}<div style="padding:8px 0">${bodyHtml}</div>`;
@@ -6791,9 +6716,9 @@ function renderModulesList() {
   if (!list) return;
   list.innerHTML = db.settings.modules.map((m,i)=>`
     <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--elevated);border-radius:8px;margin-bottom:6px">
-      <span style="font-size:18px">${m.icon}</span>
+      <span style="font-size:22px">${m.icon}</span>
       <input class="form-control" value="${esc(m.label)}" id="mod-label-${m.id}" style="flex:1" oninput="saveModuleLabel('${m.id}',this.value)">
-      <label style="white-space:nowrap;font-size:13px"><input type="checkbox" ${m.enabled?'checked':''} onchange="toggleModule('${m.id}',this.checked)"> Enabled</label>
+      <label style="white-space:nowrap;font-size:17px"><input type="checkbox" ${m.enabled?'checked':''} onchange="toggleModule('${m.id}',this.checked)"> Enabled</label>
     </div>`).join('');
 }
 
@@ -6970,7 +6895,7 @@ function renderUsersTable() {
   if (!tbody) return;
   tbody.innerHTML = db.users.map(u=>`
     <tr>
-      <td><div style="display:flex;align-items:center;gap:8px"><div class="user-avatar" style="width:28px;height:28px;font-size:11px;background:${esc(u.avatarColor||'#6366F1')}">${(u.fullName||'?')[0].toUpperCase()}</div>${esc(u.fullName)}</div></td>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="user-avatar" style="width:28px;height:28px;font-size:14px;background:${esc(u.avatarColor||'#6366F1')}">${(u.fullName||'?')[0].toUpperCase()}</div>${esc(u.fullName)}</div></td>
       <td class="mono">${esc(u.username)}</td>
       <td><span class="badge badge-accent">${esc(roleDisplayName(u.role))}</span></td>
       <td>${esc(u.department||'—')}</td>
@@ -6993,7 +6918,6 @@ function openUserModal(id=null) {
   document.getElementById('usr-uname').value = u?.username||'';
   document.getElementById('usr-pw').value = '';
   document.getElementById('usr-pw2').value = '';
-  document.getElementById('usr-pin').value = u?.pin||'';
   populateRoleDropdown(u?.role);
   document.getElementById('usr-dept').value = u?.department||'';
   document.getElementById('usr-sq').value = u?.securityQuestion||secQuestions[0];
@@ -7020,10 +6944,8 @@ async function saveUser() {
   if (!userEditId && !pw) { toast('Password required for new user','error'); return; }
   if (pw && pw!==pw2) { toast('Passwords do not match','error'); return; }
   if (pw && pw.length < 4) { toast('Password must be at least 4 chars','error'); return; }
-  const pin = document.getElementById('usr-pin').value;
-  if (pin && pin.length!==4) { toast('PIN must be 4 digits','error'); return; }
-  // Check username unique
-  const existing = db.users.find(u=>u.username===uname&&u.id!==userEditId);
+  // Check username unique (case-insensitive)
+  const existing = db.users.find(u=>u.username.toLowerCase()===uname.toLowerCase()&&u.id!==userEditId);
   if (existing) { toast('Username already exists','error'); return; }
   
   let sq = document.getElementById('usr-sq').value;
@@ -7035,12 +6957,11 @@ async function saveUser() {
     u.department=document.getElementById('usr-dept').value.trim();
     u.securityQuestion=sq; u.securityAnswer=document.getElementById('usr-sa').value.toLowerCase().trim();
     u.avatarColor=newUserColor;
-    if (pin) u.pin=pin;
     if (pw) { const s=salt(); u.passwordSalt=s; u.passwordHash=await hashPw(pw,s); }
     audit('UserManager','Edit',u.id,u.username);
   } else {
     const s2=salt();
-    const u = { id:uid(), fullName:name, username:uname, passwordHash:await hashPw(pw,s2), passwordSalt:s2, pin, role, department:document.getElementById('usr-dept').value.trim(), securityQuestion:sq, securityAnswer:document.getElementById('usr-sa').value.toLowerCase().trim(), avatarColor:newUserColor, status:'active', createdDate:now(), lastLogin:null };
+    const u = { id:uid(), fullName:name, username:uname, passwordHash:await hashPw(pw,s2), passwordSalt:s2, role, department:document.getElementById('usr-dept').value.trim(), securityQuestion:sq, securityAnswer:document.getElementById('usr-sa').value.toLowerCase().trim(), avatarColor:newUserColor, status:'active', createdDate:now(), lastLogin:null };
     db.users.push(u); audit('UserManager','Create',u.id,u.username);
   }
   saveDB(); closeModal('user-modal-overlay'); renderUsersTable(); toast('User saved','success');
@@ -7084,7 +7005,7 @@ function openMyProfile() {
   document.getElementById('profile-view-title').textContent = 'My Profile';
   document.getElementById('profile-view-body').innerHTML = `
     <div class="profile-header">
-      <div class="user-avatar" style="width:56px;height:56px;font-size:22px;background:${session.color}">${session.name[0]}</div>
+      <div class="user-avatar" style="width:56px;height:56px;font-size:25px;background:${session.color}">${session.name[0]}</div>
       <div><div class="profile-name">${esc(u.fullName)}</div><div class="profile-sub">${esc(u.role)} · ${esc(u.username)}</div></div>
     </div>
     <div class="info-grid">
@@ -7116,57 +7037,6 @@ async function doChangePassword() {
   saveDB(); closeModal('chpw-overlay'); audit('Auth','Password Reset',u.id,u.username); toast('Password changed','success');
 }
 
-function openChangePIN() {
-  document.getElementById('chpin-body').innerHTML = `
-    <div class="form-label" style="margin-bottom:8px">New 4-Digit PIN</div>
-    <div style="display:flex;gap:10px;justify-content:center;margin:10px 0">
-      <div id="cpd-0" style="width:16px;height:16px;border-radius:50%;border:2px solid var(--border);transition:all .15s"></div>
-      <div id="cpd-1" style="width:16px;height:16px;border-radius:50%;border:2px solid var(--border);transition:all .15s"></div>
-      <div id="cpd-2" style="width:16px;height:16px;border-radius:50%;border:2px solid var(--border);transition:all .15s"></div>
-      <div id="cpd-3" style="width:16px;height:16px;border-radius:50%;border:2px solid var(--border);transition:all .15s"></div>
-    </div>
-    <input type="hidden" id="chpin-val">
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:220px;margin:0 auto">
-      <button type="button" class="pin-btn" onclick="chpinPress('1')">1</button>
-      <button type="button" class="pin-btn" onclick="chpinPress('2')">2</button>
-      <button type="button" class="pin-btn" onclick="chpinPress('3')">3</button>
-      <button type="button" class="pin-btn" onclick="chpinPress('4')">4</button>
-      <button type="button" class="pin-btn" onclick="chpinPress('5')">5</button>
-      <button type="button" class="pin-btn" onclick="chpinPress('6')">6</button>
-      <button type="button" class="pin-btn" onclick="chpinPress('7')">7</button>
-      <button type="button" class="pin-btn" onclick="chpinPress('8')">8</button>
-      <button type="button" class="pin-btn" onclick="chpinPress('9')">9</button>
-      <button type="button" class="pin-btn" onclick="chpinPress('C')" style="color:var(--danger);font-size:13px">CLR</button>
-      <button type="button" class="pin-btn" onclick="chpinPress('0')">0</button>
-      <button type="button" class="pin-btn" onclick="chpinPress('B')" style="font-size:16px">⌫</button>
-    </div>`;
-  openModal('chpin-overlay');
-}
-
-function chpinPress(d) {
-  const inp = document.getElementById('chpin-val');
-  if (!inp) return;
-  let pin = inp.value;
-  if (d === 'C' || d === '✕') { pin = ''; }
-  else if (d === 'B' || d === '←') { pin = pin.slice(0, -1); }
-  else if (pin.length < 4) { pin += d; }
-  inp.value = pin;
-  for (let i = 0; i < 4; i++) {
-    const dot = document.getElementById('cpd-' + i);
-    if (dot) {
-      dot.style.background = i < pin.length ? 'var(--accent)' : '';
-      dot.style.borderColor = i < pin.length ? 'var(--accent)' : 'var(--border)';
-    }
-  }
-}
-
-function doChangePIN() {
-  const pin = document.getElementById('chpin-val')?.value;
-  if (!pin || pin.length!==4) { toast('Enter 4-digit PIN','warning'); return; }
-  const u = db.users.find(x=>x.id===session.id);
-  if (u) { u.pin=pin; saveDB(); closeModal('chpin-overlay'); toast('PIN changed','success'); }
-}
-
 /* ══ QR SETTINGS ══ */
 function renderQRCodesList() {
   const list = document.getElementById('qr-codes-list');
@@ -7174,7 +7044,7 @@ function renderQRCodesList() {
   const qrs = db.settings.pos.qrCodes || [];
   list.innerHTML = qrs.length ? qrs.map(q=>`
     <div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--elevated);border-radius:6px;margin-bottom:6px">
-      ${q.mode==='dynamic'?'<div style="width:36px;height:36px;background:var(--accent);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px">⚡</div>':q.imageData?`<img src="${q.imageData}" style="width:36px;height:36px;object-fit:contain;border-radius:4px">`:'<div style="width:36px;height:36px;background:var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center">🔳</div>'}
+      ${q.mode==='dynamic'?'<div style="width:36px;height:36px;background:var(--accent);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px">⚡</div>':q.imageData?`<img src="${q.imageData}" style="width:36px;height:36px;object-fit:contain;border-radius:4px">`:'<div style="width:36px;height:36px;background:var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center">🔳</div>'}
       <div style="flex:1"><div style="font-weight:500">${esc(q.label)}</div><div class="text-xs text-muted">${q.mode==='dynamic'?'Auto-generated · '+esc(q.payeeName||''):esc(q.accountName||'')+' '+esc(q.accountNumber||'')}</div></div>
       <span class="badge ${q.active?'badge-success':'badge-muted'}">${q.active?'Active':'Inactive'}</span>
       <button class="btn btn-xs btn-secondary" onclick="openQRModal('${q.id}')">Edit</button>
@@ -7222,13 +7092,13 @@ function renderQRInto(containerEl, payloadText, size=220) {
   if (!containerEl) return;
   containerEl.innerHTML = '';
   if (typeof QRCode === 'undefined') {
-    containerEl.innerHTML = '<div style="padding:20px;color:var(--danger);font-size:12px">QR library failed to load. Check internet connection.</div>';
+    containerEl.innerHTML = '<div style="padding:20px;color:var(--danger);font-size:15px">QR library failed to load. Check internet connection.</div>';
     return;
   }
   try {
     new QRCode(containerEl, { text: payloadText, width: size, height: size, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
   } catch(e) {
-    containerEl.innerHTML = '<div style="padding:20px;color:var(--danger);font-size:12px">QR generation failed.</div>';
+    containerEl.innerHTML = '<div style="padding:20px;color:var(--danger);font-size:15px">QR generation failed.</div>';
   }
 }
 
@@ -7591,7 +7461,7 @@ function renderVariantsList() {
       <input class="form-control" type="number" placeholder="Wholesale" value="${v.wholesalePrice||''}" oninput="updateVariant(${i},'wholesalePrice',this.value)">
       <input class="form-control" type="number" placeholder="Stock" value="${v.stock||0}" oninput="updateVariant(${i},'stock',this.value)">
       <button class="btn btn-xs btn-danger" onclick="removeVariant(${i})">✕</button>
-    </div>`).join('') : '<div style="color:var(--text-muted);font-size:13px;padding:12px 0">No variants added. Click "+ Add Variant" to add sizes, colors, or pack sizes.</div>';
+    </div>`).join('') : '<div style="color:var(--text-muted);font-size:17px;padding:12px 0">No variants added. Click "+ Add Variant" to add sizes, colors, or pack sizes.</div>';
 }
 
 function addVariantRow() {
@@ -7665,7 +7535,7 @@ function renderRawMaterials() {
       <td class="mono">${fmt(m.cost||0)}</td>
       <td class="mono ${m.stock<=(m.reorderLevel||0)?'text-danger font-bold':''}">${m.stock||0} ${m.stock<=(m.reorderLevel||0)?'⚠️':''}</td>
       <td class="mono">${m.reorderLevel||0}</td>
-      <td>${supplierNames.length?supplierNames.map(n=>`<span class="badge badge-info" style="font-size:10px">${esc(n)}</span>`).join(' '):'<span class="text-muted">—</span>'}</td>
+      <td>${supplierNames.length?supplierNames.map(n=>`<span class="badge badge-info" style="font-size:13px">${esc(n)}</span>`).join(' '):'<span class="text-muted">—</span>'}</td>
       <td><button class="btn btn-xs btn-secondary" onclick="openMaterialModal('${m.id}')">✏️ Edit</button> <button class="btn btn-xs btn-secondary" onclick="quickArchive('rawMaterial','${m.id}')">${m.status==='archived'?'↩️ Unarchive':'🗄️ Archive'}</button></td>
     </tr>`;
   }).join('') : '<tr><td colspan="8"><div class="empty"><div class="empty-icon">🧱</div><div class="empty-title">No raw materials yet</div><button class="btn btn-primary btn-sm" onclick="openMaterialModal()">+ Add Material</button></div></td></tr>';
@@ -7703,7 +7573,7 @@ function renderMaterialSuppliersList() {
         ${db.secondary.map(s=>`<option value="${s.id}" ${r.supplierId===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}
       </select>
       <input class="form-control" type="number" placeholder="Cost" value="${r.cost||''}" oninput="updateMatSupplier(${i},'cost',this.value)">
-      <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" ${r.isPrimary?'checked':''} onchange="setPrimarySupplier(${i})"> Primary</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:15px"><input type="checkbox" ${r.isPrimary?'checked':''} onchange="setPrimarySupplier(${i})"> Primary</label>
       <button class="btn btn-xs btn-danger" onclick="removeMatSupplierRow(${i})">✕</button>
     </div>`).join('') : '<div class="text-muted text-sm">No suppliers linked yet.</div>';
 }
@@ -7780,9 +7650,9 @@ function viewMaterialProfile(id) {
       <div class="info-item"><label>Stock Value</label><p class="font-mono text-accent">${fmt((m.cost||0)*(m.stock||0))}</p></div>
     </div>
     ${m.notes?`<div class="form-group"><label class="form-label">Notes</label><p>${esc(m.notes)}</p></div>`:''}
-    <h3 style="font-size:14px;font-weight:700;margin:16px 0 8px">Suppliers</h3>
+    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Suppliers</h3>
     <div class="table-wrap"><table><thead><tr><th>Supplier</th><th>Cost</th><th>Primary</th></tr></thead><tbody>${links.length?links.map(l=>{const sp=db.secondary.find(s=>s.id===l.supplierId);return `<tr><td>${esc(sp?.name||'—')}</td><td class="mono">${fmt(l.cost||0)}</td><td>${l.isPrimary?'⭐':''}</td></tr>`;}).join(''):'<tr><td colspan="3" class="text-center text-muted">No suppliers linked</td></tr>'}</tbody></table></div>
-    <h3 style="font-size:14px;font-weight:700;margin:16px 0 8px">Stock History</h3>
+    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Stock History</h3>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Qty</th><th>Balance</th><th>Ref</th></tr></thead><tbody>${sh.length?sh.map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${esc(h.type)}</td><td class="mono ${h.qty>=0?'text-success':'text-danger'}">${h.qty>0?'+':''}${h.qty}</td><td class="mono">${h.balanceAfter}</td><td class="mono">${esc(h.ref||'—')}</td></tr>`).join(''):'<tr><td colspan="5" class="text-center text-muted">No history</td></tr>'}</tbody></table></div>
     ${profileAuditHtml('rawMaterial',id)}`;
   currentProfile = { type: 'rawMaterial', id };
@@ -8107,7 +7977,7 @@ function renderBOMItemsList() {
       : db.rawMaterials.map(m=>`<option value="${m.id}" ${it.materialId===m.id?'selected':''}>${esc(m.name)} (${esc(m.unit)})</option>`).join('');
     return `
     <div style="display:grid;grid-template-columns:90px 2fr 1fr auto;gap:6px;margin-bottom:6px">
-      <select class="form-control" onchange="updateBOMItem(${i},'itemType',this.value)" style="font-size:11px">
+      <select class="form-control" onchange="updateBOMItem(${i},'itemType',this.value)" style="font-size:14px">
         <option value="material" ${itemType==='material'?'selected':''}>Raw Material</option>
         <option value="product" ${itemType==='product'?'selected':''}>Semi-Finished</option>
       </select>
@@ -8628,8 +8498,8 @@ function renderRolesList() {
   let html = `
     <div style="background:var(--elevated);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:start;opacity:.85">
       <div>
-        <div style="font-weight:600">Admin <span class="badge badge-info" style="font-size:10px">Built-in</span> <span class="badge badge-success" style="font-size:10px">${adminCount} user${adminCount===1?'':'s'}</span></div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:3px">Always has full, unrestricted access to every module — cannot be edited or removed</div>
+        <div style="font-weight:600">Admin <span class="badge badge-info" style="font-size:13px">Built-in</span> <span class="badge badge-success" style="font-size:13px">${adminCount} user${adminCount===1?'':'s'}</span></div>
+        <div style="font-size:15px;color:var(--text-muted);margin-top:3px">Always has full, unrestricted access to every module — cannot be edited or removed</div>
       </div>
     </div>`;
   html += roles.length ? roles.map(r=>{
@@ -8638,10 +8508,10 @@ function renderRolesList() {
     return `
     <div style="background:var(--elevated);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:start;${active?'':'opacity:.6'}">
       <div>
-        <div style="font-weight:600">${esc(r.name)} ${active?'':'<span class="badge badge-muted" style="font-size:10px">Inactive</span>'} <span class="badge badge-success" style="font-size:10px">${uc} user${uc===1?'':'s'}</span></div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:3px">${esc(r.description||'')}</div>
+        <div style="font-weight:600">${esc(r.name)} ${active?'':'<span class="badge badge-muted" style="font-size:13px">Inactive</span>'} <span class="badge badge-success" style="font-size:13px">${uc} user${uc===1?'':'s'}</span></div>
+        <div style="font-size:15px;color:var(--text-muted);margin-top:3px">${esc(r.description||'')}</div>
         <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
-          ${(r.permissions||[]).map(p=>`<span class="badge badge-info" style="font-size:10px">${esc(p)}</span>`).join('') || '<span class="form-hint">No permissions assigned</span>'}
+          ${(r.permissions||[]).map(p=>`<span class="badge badge-info" style="font-size:13px">${esc(p)}</span>`).join('') || '<span class="form-hint">No permissions assigned</span>'}
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">
@@ -8651,7 +8521,7 @@ function renderRolesList() {
         <button class="btn btn-xs btn-danger" onclick="deleteRole('${r.id}')">Del</button>
       </div>
     </div>`;
-  }).join('') : '<div style="color:var(--text-muted);font-size:13px;padding:8px 0">No custom roles yet — click "+ New Role" to create one.</div>';
+  }).join('') : '<div style="color:var(--text-muted);font-size:17px;padding:8px 0">No custom roles yet — click "+ New Role" to create one.</div>';
   list.innerHTML = html;
 }
 
@@ -8664,7 +8534,7 @@ function openRoleModal(id=null) {
   document.getElementById('role-active').checked = r ? r.active!==false : true;
   const grid = document.getElementById('permission-grid');
   grid.innerHTML = ALL_PERMISSIONS.map(p=>`
-    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--elevated);border-radius:7px;cursor:pointer;font-size:13px">
+    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--elevated);border-radius:7px;cursor:pointer;font-size:17px">
       <input type="checkbox" value="${esc(p)}" ${(r?.permissions||[]).includes(p)?'checked':''}>
       ${esc(p)}
     </label>`).join('');
@@ -8757,12 +8627,12 @@ function renderSalaryComponentsSettings() {
   const dList = document.getElementById('salary-deductions-list');
   if (eList) eList.innerHTML = sc.earnings.map((e,i)=>`
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-      <span style="flex:1;padding:6px 10px;background:var(--elevated);border-radius:6px;font-size:13px">${esc(e)}</span>
-      ${i>0?`<button class="btn btn-xs btn-danger" onclick="removeSalaryComponent('earnings',${i})">✕</button>`:'<span style="font-size:11px;color:var(--text-muted)">base</span>'}
+      <span style="flex:1;padding:6px 10px;background:var(--elevated);border-radius:6px;font-size:17px">${esc(e)}</span>
+      ${i>0?`<button class="btn btn-xs btn-danger" onclick="removeSalaryComponent('earnings',${i})">✕</button>`:'<span style="font-size:14px;color:var(--text-muted)">base</span>'}
     </div>`).join('');
   if (dList) dList.innerHTML = sc.deductions.map((d,i)=>`
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-      <span style="flex:1;padding:6px 10px;background:var(--elevated);border-radius:6px;font-size:13px">${esc(d)}</span>
+      <span style="flex:1;padding:6px 10px;background:var(--elevated);border-radius:6px;font-size:17px">${esc(d)}</span>
       <button class="btn btn-xs btn-danger" onclick="removeSalaryComponent('deductions',${i})">✕</button>
     </div>`).join('');
 }
@@ -8802,7 +8672,7 @@ function renderComplianceToggleList() {
   const cfg = db.settings.complianceReports || {};
   const types = REPORT_CATEGORIES.find(c=>c.id==='tax').types;
   list.innerHTML = types.map(t=>`
-    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--elevated);border-radius:7px;cursor:pointer;font-size:13px">
+    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--elevated);border-radius:7px;cursor:pointer;font-size:17px">
       <input type="checkbox" data-compliance-type="${esc(t.v)}" ${cfg[t.v]===false?'':'checked'}>
       ${esc(t.label)}
     </label>`).join('');
@@ -9160,7 +9030,7 @@ function doGlobalSearch() {
   if (accts.length) results['💰 Accounting'] = accts.map(a=>({ icon:'💰', name:a.description||'Entry', detail:`${a.type} · ${fmt(a.amount)} · ${fmtDate(a.date)}`, module:'accounting', id:a.id }));
   
   if (!Object.keys(results).length) {
-    resultsEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px">No results found for "' + esc(q) + '"</div>';
+    resultsEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:17px">No results found for "' + esc(q) + '"</div>';
     resultsEl.classList.add('show');
     return;
   }
@@ -9168,8 +9038,8 @@ function doGlobalSearch() {
   let html = '';
   for (const [group, items] of Object.entries(results)) {
     html += `<div class="search-group"><div class="search-group-header">${esc(group)} (${items.length})</div>`;
-    html += items.map(item=>`<div class="search-item" onclick="goToSearchResult('${item.module}','${item.id}')"><div class="search-item-icon">${item.icon}</div><div class="search-item-text"><div class="search-item-name">${esc(item.name)}</div><div class="search-item-detail">${esc(item.detail)}</div></div><span class="badge badge-muted" style="font-size:10px">${esc(item.module)}</span></div>`).join('');
-    html += `<div style="padding:4px 12px"><a href="#" onclick="openModule('${items[0].module}');document.getElementById('global-search').value='';hideSearch();return false" style="font-size:11px">View all in ${esc(group.split(' ').slice(1).join(' '))} →</a></div>`;
+    html += items.map(item=>`<div class="search-item" onclick="goToSearchResult('${item.module}','${item.id}')"><div class="search-item-icon">${item.icon}</div><div class="search-item-text"><div class="search-item-name">${esc(item.name)}</div><div class="search-item-detail">${esc(item.detail)}</div></div><span class="badge badge-muted" style="font-size:13px">${esc(item.module)}</span></div>`).join('');
+    html += `<div style="padding:4px 12px"><a href="#" onclick="openModule('${items[0].module}');document.getElementById('global-search').value='';hideSearch();return false" style="font-size:14px">View all in ${esc(group.split(' ').slice(1).join(' '))} →</a></div>`;
     html += '</div>';
   }
   resultsEl.innerHTML = html;
@@ -9197,7 +9067,7 @@ function showSearchHistory() {
   const history = db.searchHistory || [];
   const el = document.getElementById('search-results');
   if (!history.length) { el.classList.remove('show'); return; }
-  el.innerHTML = `<div class="search-history-chips"><div class="text-xs text-muted mb-2">Recent searches</div>${history.map(h=>`<span class="chip" onclick="runHistorySearch('${esc(h)}')">${esc(h)} <span class="chip-x" onclick="removeHistorySearch('${esc(h)}');event.stopPropagation()">✕</span></span>`).join('')}<div style="margin-top:6px"><a href="#" onclick="clearSearchHistory();return false" style="font-size:11px;color:var(--text-muted)">Clear all</a></div></div>`;
+  el.innerHTML = `<div class="search-history-chips"><div class="text-xs text-muted mb-2">Recent searches</div>${history.map(h=>`<span class="chip" onclick="runHistorySearch('${esc(h)}')">${esc(h)} <span class="chip-x" onclick="removeHistorySearch('${esc(h)}');event.stopPropagation()">✕</span></span>`).join('')}<div style="margin-top:6px"><a href="#" onclick="clearSearchHistory();return false" style="font-size:14px;color:var(--text-muted)">Clear all</a></div></div>`;
   el.classList.add('show');
 }
 
@@ -9268,14 +9138,14 @@ function initCustomerScreen() {
   function render() {
     const raw = safeGet('bms_customer_screen');
     if (!raw) {
-      wrap.innerHTML = `<div style="text-align:center;padding:60px 20px"><div style="font-size:80px;margin-bottom:16px">🏪</div><div style="font-size:28px;font-weight:700">Welcome</div><div style="color:#666;margin-top:8px">Ready to serve you</div></div>`;
+      wrap.innerHTML = `<div style="text-align:center;padding:60px 20px"><div style="font-size:84px;margin-bottom:16px">🏪</div><div style="font-size:31px;font-weight:700">Welcome</div><div style="color:#666;margin-top:8px">Ready to serve you</div></div>`;
       return;
     }
     let data;
     try { data = JSON.parse(raw); } catch { return; }
     
     if (data.status === 'paid') {
-      wrap.innerHTML = `<div class="cs-success"><div class="cs-success-icon">✅</div><div class="cs-success-text">Payment Received!</div><div style="margin-top:12px;font-size:18px;color:#333">Thank you for your business!</div><div style="margin-top:8px;font-size:15px;color:#666">${esc(data.biz?.name||'')}</div></div>`;
+      wrap.innerHTML = `<div class="cs-success"><div class="cs-success-icon">✅</div><div class="cs-success-text">Payment Received!</div><div style="margin-top:12px;font-size:22px;color:#333">Thank you for your business!</div><div style="margin-top:8px;font-size:18px;color:#666">${esc(data.biz?.name||'')}</div></div>`;
       setTimeout(()=>{ safeRemove('bms_customer_screen'); render(); }, 10000);
       return;
     }
@@ -9284,7 +9154,7 @@ function initCustomerScreen() {
     const accent = biz.accent || '#6366F1';
     
     if (!data.cart || !data.cart.length) {
-      wrap.innerHTML = `<div class="cs-logo" style="background:${biz.logo?'transparent':accent}">${biz.logo?`<img src="${esc(biz.logo)}" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">`:esc(biz.init||'B')}</div><div class="cs-biz-name">${esc(biz.name||'Business')}</div><div class="cs-biz-tag">${esc(biz.tag||'')}</div><div style="margin-top:40px;font-size:18px;color:#888">${esc(data.welcomeMsg||'Welcome! We are ready to serve you.')}</div>${biz.phone?`<div style="margin-top:20px;color:#666;font-size:14px">📞 ${esc(biz.phone)}</div>`:''}`;
+      wrap.innerHTML = `<div class="cs-logo" style="background:${biz.logo?'transparent':accent}">${biz.logo?`<img src="${esc(biz.logo)}" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">`:esc(biz.init||'B')}</div><div class="cs-biz-name">${esc(biz.name||'Business')}</div><div class="cs-biz-tag">${esc(biz.tag||'')}</div><div style="margin-top:40px;font-size:22px;color:#888">${esc(data.welcomeMsg||'Welcome! We are ready to serve you.')}</div>${biz.phone?`<div style="margin-top:20px;color:#666;font-size:18px">📞 ${esc(biz.phone)}</div>`:''}`;
       return;
     }
     
@@ -9301,20 +9171,20 @@ function initCustomerScreen() {
       qrSectionHtml = `
         <div style="text-align:center;padding:16px">
           <div id="cs-dynamic-qr" style="display:inline-block;background:#fff;padding:8px;border-radius:8px"></div>
-          <div style="font-size:18px;font-weight:700;margin-top:8px">${esc(dynQR.label)}</div>
-          ${dynQR.payeeName?`<div style="color:#666;font-size:14px">${esc(dynQR.payeeName)}</div>`:''}
-          <div style="color:#16a34a;font-size:13px;font-weight:600;margin-top:4px">✓ Amount auto-filled — just scan & confirm</div>
-          ${dynQR.instruction?`<div style="font-style:italic;color:#999;font-size:12px;margin-top:4px">${esc(dynQR.instruction)}</div>`:''}
+          <div style="font-size:22px;font-weight:700;margin-top:8px">${esc(dynQR.label)}</div>
+          ${dynQR.payeeName?`<div style="color:#666;font-size:18px">${esc(dynQR.payeeName)}</div>`:''}
+          <div style="color:#16a34a;font-size:17px;font-weight:600;margin-top:4px">✓ Amount auto-filled — just scan & confirm</div>
+          ${dynQR.instruction?`<div style="font-style:italic;color:#999;font-size:15px;margin-top:4px">${esc(dynQR.instruction)}</div>`:''}
         </div>`;
     } else if (staticQRs.length) {
       qrSectionHtml = staticQRs.map(q=>`
         <div style="text-align:center;padding:16px">
-          ${q.imageData?`<img src="${q.imageData}" style="width:280px;height:280px;object-fit:contain;border-radius:8px;margin:0 auto;display:block" alt="${esc(q.label)}">`:'<div style="font-size:80px">🔳</div>'}
-          <div style="font-size:18px;font-weight:700;margin-top:8px">${esc(q.label)}</div>
-          ${q.accountName?`<div style="color:#666;font-size:14px">${esc(q.accountName)}</div>`:''}
-          ${q.accountNumber?`<div style="color:#888;font-size:13px">${esc(q.accountNumber)}</div>`:''}
-          <div style="color:#d97706;font-size:12px;margin-top:4px">⚠️ Please enter amount manually: ${fmt2(data.total||0,data.currency)}</div>
-          ${q.instruction?`<div style="font-style:italic;color:#999;font-size:12px;margin-top:4px">${esc(q.instruction)}</div>`:''}
+          ${q.imageData?`<img src="${q.imageData}" style="width:280px;height:280px;object-fit:contain;border-radius:8px;margin:0 auto;display:block" alt="${esc(q.label)}">`:'<div style="font-size:84px">🔳</div>'}
+          <div style="font-size:22px;font-weight:700;margin-top:8px">${esc(q.label)}</div>
+          ${q.accountName?`<div style="color:#666;font-size:18px">${esc(q.accountName)}</div>`:''}
+          ${q.accountNumber?`<div style="color:#888;font-size:17px">${esc(q.accountNumber)}</div>`:''}
+          <div style="color:#d97706;font-size:15px;margin-top:4px">⚠️ Please enter amount manually: ${fmt2(data.total||0,data.currency)}</div>
+          ${q.instruction?`<div style="font-style:italic;color:#999;font-size:15px;margin-top:4px">${esc(q.instruction)}</div>`:''}
         </div>`).join('<hr style="border:1px solid #eee">');
     }
     
@@ -9325,19 +9195,19 @@ function initCustomerScreen() {
       <div style="width:100%;max-width:500px;margin:20px 0">
         <div style="background:#f8f8f8;border-radius:12px;padding:20px;margin-bottom:16px">
           <table style="width:100%;border-collapse:collapse">
-            <thead><tr style="color:#999;font-size:12px;border-bottom:1px solid #eee"><th style="text-align:left;padding-bottom:6px">Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Total</th></tr></thead>
+            <thead><tr style="color:#999;font-size:15px;border-bottom:1px solid #eee"><th style="text-align:left;padding-bottom:6px">Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Total</th></tr></thead>
             <tbody>${itemsHtml}</tbody>
           </table>
           <div style="border-top:2px solid #ddd;margin-top:12px;padding-top:8px">
-            ${data.discount?`<div style="display:flex;justify-content:space-between;font-size:13px;color:#666"><span>Discount</span><span>-${fmt2(data.discount,data.currency)}</span></div>`:''}
-            ${data.tax?`<div style="display:flex;justify-content:space-between;font-size:13px;color:#666"><span>Tax</span><span>${fmt2(data.tax,data.currency)}</span></div>`:''}
+            ${data.discount?`<div style="display:flex;justify-content:space-between;font-size:17px;color:#666"><span>Discount</span><span>-${fmt2(data.discount,data.currency)}</span></div>`:''}
+            ${data.tax?`<div style="display:flex;justify-content:space-between;font-size:17px;color:#666"><span>Tax</span><span>${fmt2(data.tax,data.currency)}</span></div>`:''}
           </div>
         </div>
         <div class="cs-total" style="color:${accent}">${fmt2(data.total||0,data.currency)}</div>
       </div>
       ${qrSectionHtml ? `<div style="width:100%;max-width:400px;border:2px solid ${accent};border-radius:16px;overflow:hidden">${qrSectionHtml}</div>` : ''}
-      <div style="margin-top:30px;font-size:13px;color:#999;text-align:center">Please show your payment confirmation to the cashier</div>
-      ${biz.phone?`<div style="margin-top:8px;color:#bbb;font-size:12px">📞 ${esc(biz.phone)}</div>`:''}
+      <div style="margin-top:30px;font-size:17px;color:#999;text-align:center">Please show your payment confirmation to the cashier</div>
+      ${biz.phone?`<div style="margin-top:8px;color:#bbb;font-size:15px">📞 ${esc(biz.phone)}</div>`:''}
     `;
 
     // Generate the dynamic QR image with the live total embedded
@@ -9355,7 +9225,7 @@ function initCustomerScreen() {
         if (target && typeof QRCode !== 'undefined') {
           target.innerHTML = '';
           try { new QRCode(target, { text: payloadFinal, width: 260, height: 260, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M }); }
-          catch(e) { target.innerHTML = '<div style="padding:20px;color:#c00;font-size:12px">QR generation failed</div>'; }
+          catch(e) { target.innerHTML = '<div style="padding:20px;color:#c00;font-size:15px">QR generation failed</div>'; }
         }
       }
     }
@@ -9380,7 +9250,7 @@ function renderAdvModuleChecks() {
   if (!wrap || wrap.children.length) return;
   db.settings.modules.filter(m=>m.enabled).forEach(m=>{
     const lbl = document.createElement('label');
-    lbl.style.cssText = 'font-size:12px;display:flex;align-items:center;gap:4px';
+    lbl.style.cssText = 'font-size:15px;display:flex;align-items:center;gap:4px';
     lbl.innerHTML = `<input type="checkbox" checked value="${m.id}"> ${m.label}`;
     wrap.appendChild(lbl);
   });

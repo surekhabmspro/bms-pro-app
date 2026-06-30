@@ -11,59 +11,66 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+/* QRCode.js (davidshimjs/qrcodejs, MIT) — inlined so QR codes generate
+   even when the device cannot reach the cdnjs CDN. This was the cause of
+   "QR library failed to load" errors on restricted/slow networks. */
+var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this.parsedData=[];for(var b=[],d=0,e=this.data.length;e>d;d++){var f=this.data.charCodeAt(d);f>65536?(b[0]=240|(1835008&f)>>>18,b[1]=128|(258048&f)>>>12,b[2]=128|(4032&f)>>>6,b[3]=128|63&f):f>2048?(b[0]=224|(61440&f)>>>12,b[1]=128|(4032&f)>>>6,b[2]=128|63&f):f>128?(b[0]=192|(1984&f)>>>6,b[1]=128|63&f):b[0]=f,this.parsedData=this.parsedData.concat(b)}this.parsedData.length!=this.data.length&&(this.parsedData.unshift(191),this.parsedData.unshift(187),this.parsedData.unshift(239))}function b(a,b){this.typeNumber=a,this.errorCorrectLevel=b,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]}function i(a,b){if(void 0==a.length)throw new Error(a.length+"/"+b);for(var c=0;c<a.length&&0==a[c];)c++;this.num=new Array(a.length-c+b);for(var d=0;d<a.length-c;d++)this.num[d]=a[d+c]}function j(a,b){this.totalCount=a,this.dataCount=b}function k(){this.buffer=[],this.length=0}function m(){return"undefined"!=typeof CanvasRenderingContext2D}function n(){var a=!1,b=navigator.userAgent;return/android/i.test(b)&&(a=!0,aMat=b.toString().match(/android ([0-9]\.[0-9])/i),aMat&&aMat[1]&&(a=parseFloat(aMat[1]))),a}function r(a,b){for(var c=1,e=s(a),f=0,g=l.length;g>=f;f++){var h=0;switch(b){case d.L:h=l[f][0];break;case d.M:h=l[f][1];break;case d.Q:h=l[f][2];break;case d.H:h=l[f][3]}if(h>=e)break;c++}if(c>l.length)throw new Error("Too long data");return c}function s(a){var b=encodeURI(a).toString().replace(/\%[0-9a-fA-F]{2}/g,"a");return b.length+(b.length!=a?3:0)}a.prototype={getLength:function(){return this.parsedData.length},write:function(a){for(var b=0,c=this.parsedData.length;c>b;b++)a.put(this.parsedData[b],8)}},b.prototype={addData:function(b){var c=new a(b);this.dataList.push(c),this.dataCache=null},isDark:function(a,b){if(0>a||this.moduleCount<=a||0>b||this.moduleCount<=b)throw new Error(a+","+b);return this.modules[a][b]},getModuleCount:function(){return this.moduleCount},make:function(){this.makeImpl(!1,this.getBestMaskPattern())},makeImpl:function(a,c){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var d=0;d<this.moduleCount;d++){this.modules[d]=new Array(this.moduleCount);for(var e=0;e<this.moduleCount;e++)this.modules[d][e]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupPositionAdjustPattern(),this.setupTimingPattern(),this.setupTypeInfo(a,c),this.typeNumber>=7&&this.setupTypeNumber(a),null==this.dataCache&&(this.dataCache=b.createData(this.typeNumber,this.errorCorrectLevel,this.dataList)),this.mapData(this.dataCache,c)},setupPositionProbePattern:function(a,b){for(var c=-1;7>=c;c++)if(!(-1>=a+c||this.moduleCount<=a+c))for(var d=-1;7>=d;d++)-1>=b+d||this.moduleCount<=b+d||(this.modules[a+c][b+d]=c>=0&&6>=c&&(0==d||6==d)||d>=0&&6>=d&&(0==c||6==c)||c>=2&&4>=c&&d>=2&&4>=d?!0:!1)},getBestMaskPattern:function(){for(var a=0,b=0,c=0;8>c;c++){this.makeImpl(!0,c);var d=f.getLostPoint(this);(0==c||a>d)&&(a=d,b=c)}return b},createMovieClip:function(a,b,c){var d=a.createEmptyMovieClip(b,c),e=1;this.make();for(var f=0;f<this.modules.length;f++)for(var g=f*e,h=0;h<this.modules[f].length;h++){var i=h*e,j=this.modules[f][h];j&&(d.beginFill(0,100),d.moveTo(i,g),d.lineTo(i+e,g),d.lineTo(i+e,g+e),d.lineTo(i,g+e),d.endFill())}return d},setupTimingPattern:function(){for(var a=8;a<this.moduleCount-8;a++)null==this.modules[a][6]&&(this.modules[a][6]=0==a%2);for(var b=8;b<this.moduleCount-8;b++)null==this.modules[6][b]&&(this.modules[6][b]=0==b%2)},setupPositionAdjustPattern:function(){for(var a=f.getPatternPosition(this.typeNumber),b=0;b<a.length;b++)for(var c=0;c<a.length;c++){var d=a[b],e=a[c];if(null==this.modules[d][e])for(var g=-2;2>=g;g++)for(var h=-2;2>=h;h++)this.modules[d+g][e+h]=-2==g||2==g||-2==h||2==h||0==g&&0==h?!0:!1}},setupTypeNumber:function(a){for(var b=f.getBCHTypeNumber(this.typeNumber),c=0;18>c;c++){var d=!a&&1==(1&b>>c);this.modules[Math.floor(c/3)][c%3+this.moduleCount-8-3]=d}for(var c=0;18>c;c++){var d=!a&&1==(1&b>>c);this.modules[c%3+this.moduleCount-8-3][Math.floor(c/3)]=d}},setupTypeInfo:function(a,b){for(var c=this.errorCorrectLevel<<3|b,d=f.getBCHTypeInfo(c),e=0;15>e;e++){var g=!a&&1==(1&d>>e);6>e?this.modules[e][8]=g:8>e?this.modules[e+1][8]=g:this.modules[this.moduleCount-15+e][8]=g}for(var e=0;15>e;e++){var g=!a&&1==(1&d>>e);8>e?this.modules[8][this.moduleCount-e-1]=g:9>e?this.modules[8][15-e-1+1]=g:this.modules[8][15-e-1]=g}this.modules[this.moduleCount-8][8]=!a},mapData:function(a,b){for(var c=-1,d=this.moduleCount-1,e=7,g=0,h=this.moduleCount-1;h>0;h-=2)for(6==h&&h--;;){for(var i=0;2>i;i++)if(null==this.modules[d][h-i]){var j=!1;g<a.length&&(j=1==(1&a[g]>>>e));var k=f.getMask(b,d,h-i);k&&(j=!j),this.modules[d][h-i]=j,e--,-1==e&&(g++,e=7)}if(d+=c,0>d||this.moduleCount<=d){d-=c,c=-c;break}}}},b.PAD0=236,b.PAD1=17,b.createData=function(a,c,d){for(var e=j.getRSBlocks(a,c),g=new k,h=0;h<d.length;h++){var i=d[h];g.put(i.mode,4),g.put(i.getLength(),f.getLengthInBits(i.mode,a)),i.write(g)}for(var l=0,h=0;h<e.length;h++)l+=e[h].dataCount;if(g.getLengthInBits()>8*l)throw new Error("code length overflow. ("+g.getLengthInBits()+">"+8*l+")");for(g.getLengthInBits()+4<=8*l&&g.put(0,4);0!=g.getLengthInBits()%8;)g.putBit(!1);for(;;){if(g.getLengthInBits()>=8*l)break;if(g.put(b.PAD0,8),g.getLengthInBits()>=8*l)break;g.put(b.PAD1,8)}return b.createBytes(g,e)},b.createBytes=function(a,b){for(var c=0,d=0,e=0,g=new Array(b.length),h=new Array(b.length),j=0;j<b.length;j++){var k=b[j].dataCount,l=b[j].totalCount-k;d=Math.max(d,k),e=Math.max(e,l),g[j]=new Array(k);for(var m=0;m<g[j].length;m++)g[j][m]=255&a.buffer[m+c];c+=k;var n=f.getErrorCorrectPolynomial(l),o=new i(g[j],n.getLength()-1),p=o.mod(n);h[j]=new Array(n.getLength()-1);for(var m=0;m<h[j].length;m++){var q=m+p.getLength()-h[j].length;h[j][m]=q>=0?p.get(q):0}}for(var r=0,m=0;m<b.length;m++)r+=b[m].totalCount;for(var s=new Array(r),t=0,m=0;d>m;m++)for(var j=0;j<b.length;j++)m<g[j].length&&(s[t++]=g[j][m]);for(var m=0;e>m;m++)for(var j=0;j<b.length;j++)m<h[j].length&&(s[t++]=h[j][m]);return s};for(var c={MODE_NUMBER:1,MODE_ALPHA_NUM:2,MODE_8BIT_BYTE:4,MODE_KANJI:8},d={L:1,M:0,Q:3,H:2},e={PATTERN000:0,PATTERN001:1,PATTERN010:2,PATTERN011:3,PATTERN100:4,PATTERN101:5,PATTERN110:6,PATTERN111:7},f={PATTERN_POSITION_TABLE:[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],G15:1335,G18:7973,G15_MASK:21522,getBCHTypeInfo:function(a){for(var b=a<<10;f.getBCHDigit(b)-f.getBCHDigit(f.G15)>=0;)b^=f.G15<<f.getBCHDigit(b)-f.getBCHDigit(f.G15);return(a<<10|b)^f.G15_MASK},getBCHTypeNumber:function(a){for(var b=a<<12;f.getBCHDigit(b)-f.getBCHDigit(f.G18)>=0;)b^=f.G18<<f.getBCHDigit(b)-f.getBCHDigit(f.G18);return a<<12|b},getBCHDigit:function(a){for(var b=0;0!=a;)b++,a>>>=1;return b},getPatternPosition:function(a){return f.PATTERN_POSITION_TABLE[a-1]},getMask:function(a,b,c){switch(a){case e.PATTERN000:return 0==(b+c)%2;case e.PATTERN001:return 0==b%2;case e.PATTERN010:return 0==c%3;case e.PATTERN011:return 0==(b+c)%3;case e.PATTERN100:return 0==(Math.floor(b/2)+Math.floor(c/3))%2;case e.PATTERN101:return 0==b*c%2+b*c%3;case e.PATTERN110:return 0==(b*c%2+b*c%3)%2;case e.PATTERN111:return 0==(b*c%3+(b+c)%2)%2;default:throw new Error("bad maskPattern:"+a)}},getErrorCorrectPolynomial:function(a){for(var b=new i([1],0),c=0;a>c;c++)b=b.multiply(new i([1,g.gexp(c)],0));return b},getLengthInBits:function(a,b){if(b>=1&&10>b)switch(a){case c.MODE_NUMBER:return 10;case c.MODE_ALPHA_NUM:return 9;case c.MODE_8BIT_BYTE:return 8;case c.MODE_KANJI:return 8;default:throw new Error("mode:"+a)}else if(27>b)switch(a){case c.MODE_NUMBER:return 12;case c.MODE_ALPHA_NUM:return 11;case c.MODE_8BIT_BYTE:return 16;case c.MODE_KANJI:return 10;default:throw new Error("mode:"+a)}else{if(!(41>b))throw new Error("type:"+b);switch(a){case c.MODE_NUMBER:return 14;case c.MODE_ALPHA_NUM:return 13;case c.MODE_8BIT_BYTE:return 16;case c.MODE_KANJI:return 12;default:throw new Error("mode:"+a)}}},getLostPoint:function(a){for(var b=a.getModuleCount(),c=0,d=0;b>d;d++)for(var e=0;b>e;e++){for(var f=0,g=a.isDark(d,e),h=-1;1>=h;h++)if(!(0>d+h||d+h>=b))for(var i=-1;1>=i;i++)0>e+i||e+i>=b||(0!=h||0!=i)&&g==a.isDark(d+h,e+i)&&f++;f>5&&(c+=3+f-5)}for(var d=0;b-1>d;d++)for(var e=0;b-1>e;e++){var j=0;a.isDark(d,e)&&j++,a.isDark(d+1,e)&&j++,a.isDark(d,e+1)&&j++,a.isDark(d+1,e+1)&&j++,(0==j||4==j)&&(c+=3)}for(var d=0;b>d;d++)for(var e=0;b-6>e;e++)a.isDark(d,e)&&!a.isDark(d,e+1)&&a.isDark(d,e+2)&&a.isDark(d,e+3)&&a.isDark(d,e+4)&&!a.isDark(d,e+5)&&a.isDark(d,e+6)&&(c+=40);for(var e=0;b>e;e++)for(var d=0;b-6>d;d++)a.isDark(d,e)&&!a.isDark(d+1,e)&&a.isDark(d+2,e)&&a.isDark(d+3,e)&&a.isDark(d+4,e)&&!a.isDark(d+5,e)&&a.isDark(d+6,e)&&(c+=40);for(var k=0,e=0;b>e;e++)for(var d=0;b>d;d++)a.isDark(d,e)&&k++;var l=Math.abs(100*k/b/b-50)/5;return c+=10*l}},g={glog:function(a){if(1>a)throw new Error("glog("+a+")");return g.LOG_TABLE[a]},gexp:function(a){for(;0>a;)a+=255;for(;a>=256;)a-=255;return g.EXP_TABLE[a]},EXP_TABLE:new Array(256),LOG_TABLE:new Array(256)},h=0;8>h;h++)g.EXP_TABLE[h]=1<<h;for(var h=8;256>h;h++)g.EXP_TABLE[h]=g.EXP_TABLE[h-4]^g.EXP_TABLE[h-5]^g.EXP_TABLE[h-6]^g.EXP_TABLE[h-8];for(var h=0;255>h;h++)g.LOG_TABLE[g.EXP_TABLE[h]]=h;i.prototype={get:function(a){return this.num[a]},getLength:function(){return this.num.length},multiply:function(a){for(var b=new Array(this.getLength()+a.getLength()-1),c=0;c<this.getLength();c++)for(var d=0;d<a.getLength();d++)b[c+d]^=g.gexp(g.glog(this.get(c))+g.glog(a.get(d)));return new i(b,0)},mod:function(a){if(this.getLength()-a.getLength()<0)return this;for(var b=g.glog(this.get(0))-g.glog(a.get(0)),c=new Array(this.getLength()),d=0;d<this.getLength();d++)c[d]=this.get(d);for(var d=0;d<a.getLength();d++)c[d]^=g.gexp(g.glog(a.get(d))+b);return new i(c,0).mod(a)}},j.RS_BLOCK_TABLE=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],j.getRSBlocks=function(a,b){var c=j.getRsBlockTable(a,b);if(void 0==c)throw new Error("bad rs block @ typeNumber:"+a+"/errorCorrectLevel:"+b);for(var d=c.length/3,e=[],f=0;d>f;f++)for(var g=c[3*f+0],h=c[3*f+1],i=c[3*f+2],k=0;g>k;k++)e.push(new j(h,i));return e},j.getRsBlockTable=function(a,b){switch(b){case d.L:return j.RS_BLOCK_TABLE[4*(a-1)+0];case d.M:return j.RS_BLOCK_TABLE[4*(a-1)+1];case d.Q:return j.RS_BLOCK_TABLE[4*(a-1)+2];case d.H:return j.RS_BLOCK_TABLE[4*(a-1)+3];default:return void 0}},k.prototype={get:function(a){var b=Math.floor(a/8);return 1==(1&this.buffer[b]>>>7-a%8)},put:function(a,b){for(var c=0;b>c;c++)this.putBit(1==(1&a>>>b-c-1))},getLengthInBits:function(){return this.length},putBit:function(a){var b=Math.floor(this.length/8);this.buffer.length<=b&&this.buffer.push(0),a&&(this.buffer[b]|=128>>>this.length%8),this.length++}};var l=[[17,14,11,7],[32,26,20,14],[53,42,32,24],[78,62,46,34],[106,84,60,44],[134,106,74,58],[154,122,86,64],[192,152,108,84],[230,180,130,98],[271,213,151,119],[321,251,177,137],[367,287,203,155],[425,331,241,177],[458,362,258,194],[520,412,292,220],[586,450,322,250],[644,504,364,280],[718,560,394,310],[792,624,442,338],[858,666,482,382],[929,711,509,403],[1003,779,565,439],[1091,857,611,461],[1171,911,661,511],[1273,997,715,535],[1367,1059,751,593],[1465,1125,805,625],[1528,1190,868,658],[1628,1264,908,698],[1732,1370,982,742],[1840,1452,1030,790],[1952,1538,1112,842],[2068,1628,1168,898],[2188,1722,1228,958],[2303,1809,1283,983],[2431,1911,1351,1051],[2563,1989,1423,1093],[2699,2099,1499,1139],[2809,2213,1579,1219],[2953,2331,1663,1273]],o=function(){var a=function(a,b){this._el=a,this._htOption=b};return a.prototype.draw=function(a){function g(a,b){var c=document.createElementNS("http://www.w3.org/2000/svg",a);for(var d in b)b.hasOwnProperty(d)&&c.setAttribute(d,b[d]);return c}var b=this._htOption,c=this._el,d=a.getModuleCount();Math.floor(b.width/d),Math.floor(b.height/d),this.clear();var h=g("svg",{viewBox:"0 0 "+String(d)+" "+String(d),width:"100%",height:"100%",fill:b.colorLight});h.setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:xlink","http://www.w3.org/1999/xlink"),c.appendChild(h),h.appendChild(g("rect",{fill:b.colorDark,width:"1",height:"1",id:"template"}));for(var i=0;d>i;i++)for(var j=0;d>j;j++)if(a.isDark(i,j)){var k=g("use",{x:String(i),y:String(j)});k.setAttributeNS("http://www.w3.org/1999/xlink","href","#template"),h.appendChild(k)}},a.prototype.clear=function(){for(;this._el.hasChildNodes();)this._el.removeChild(this._el.lastChild)},a}(),p="svg"===document.documentElement.tagName.toLowerCase(),q=p?o:m()?function(){function a(){this._elImage.src=this._elCanvas.toDataURL("image/png"),this._elImage.style.display="block",this._elCanvas.style.display="none"}function d(a,b){var c=this;if(c._fFail=b,c._fSuccess=a,null===c._bSupportDataURI){var d=document.createElement("img"),e=function(){c._bSupportDataURI=!1,c._fFail&&_fFail.call(c)},f=function(){c._bSupportDataURI=!0,c._fSuccess&&c._fSuccess.call(c)};return d.onabort=e,d.onerror=e,d.onload=f,d.src="data:image/gif;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==",void 0}c._bSupportDataURI===!0&&c._fSuccess?c._fSuccess.call(c):c._bSupportDataURI===!1&&c._fFail&&c._fFail.call(c)}if(this._android&&this._android<=2.1){var b=1/window.devicePixelRatio,c=CanvasRenderingContext2D.prototype.drawImage;CanvasRenderingContext2D.prototype.drawImage=function(a,d,e,f,g,h,i,j){if("nodeName"in a&&/img/i.test(a.nodeName))for(var l=arguments.length-1;l>=1;l--)arguments[l]=arguments[l]*b;else"undefined"==typeof j&&(arguments[1]*=b,arguments[2]*=b,arguments[3]*=b,arguments[4]*=b);c.apply(this,arguments)}}var e=function(a,b){this._bIsPainted=!1,this._android=n(),this._htOption=b,this._elCanvas=document.createElement("canvas"),this._elCanvas.width=b.width,this._elCanvas.height=b.height,a.appendChild(this._elCanvas),this._el=a,this._oContext=this._elCanvas.getContext("2d"),this._bIsPainted=!1,this._elImage=document.createElement("img"),this._elImage.style.display="none",this._el.appendChild(this._elImage),this._bSupportDataURI=null};return e.prototype.draw=function(a){var b=this._elImage,c=this._oContext,d=this._htOption,e=a.getModuleCount(),f=d.width/e,g=d.height/e,h=Math.round(f),i=Math.round(g);b.style.display="none",this.clear();for(var j=0;e>j;j++)for(var k=0;e>k;k++){var l=a.isDark(j,k),m=k*f,n=j*g;c.strokeStyle=l?d.colorDark:d.colorLight,c.lineWidth=1,c.fillStyle=l?d.colorDark:d.colorLight,c.fillRect(m,n,f,g),c.strokeRect(Math.floor(m)+.5,Math.floor(n)+.5,h,i),c.strokeRect(Math.ceil(m)-.5,Math.ceil(n)-.5,h,i)}this._bIsPainted=!0},e.prototype.makeImage=function(){this._bIsPainted&&d.call(this,a)},e.prototype.isPainted=function(){return this._bIsPainted},e.prototype.clear=function(){this._oContext.clearRect(0,0,this._elCanvas.width,this._elCanvas.height),this._bIsPainted=!1},e.prototype.round=function(a){return a?Math.floor(1e3*a)/1e3:a},e}():function(){var a=function(a,b){this._el=a,this._htOption=b};return a.prototype.draw=function(a){for(var b=this._htOption,c=this._el,d=a.getModuleCount(),e=Math.floor(b.width/d),f=Math.floor(b.height/d),g=['<table style="border:0;border-collapse:collapse;">'],h=0;d>h;h++){g.push("<tr>");for(var i=0;d>i;i++)g.push('<td style="border:0;border-collapse:collapse;padding:0;margin:0;width:'+e+"px;height:"+f+"px;background-color:"+(a.isDark(h,i)?b.colorDark:b.colorLight)+';"></td>');g.push("</tr>")}g.push("</table>"),c.innerHTML=g.join("");var j=c.childNodes[0],k=(b.width-j.offsetWidth)/2,l=(b.height-j.offsetHeight)/2;k>0&&l>0&&(j.style.margin=l+"px "+k+"px")},a.prototype.clear=function(){this._el.innerHTML=""},a}();QRCode=function(a,b){if(this._htOption={width:256,height:256,typeNumber:4,colorDark:"#000000",colorLight:"#ffffff",correctLevel:d.H},"string"==typeof b&&(b={text:b}),b)for(var c in b)this._htOption[c]=b[c];"string"==typeof a&&(a=document.getElementById(a)),this._android=n(),this._el=a,this._oQRCode=null,this._oDrawing=new q(this._el,this._htOption),this._htOption.text&&this.makeCode(this._htOption.text)},QRCode.prototype.makeCode=function(a){this._oQRCode=new b(r(a,this._htOption.correctLevel),this._htOption.correctLevel),this._oQRCode.addData(a),this._oQRCode.make(),this._el.title=a,this._oDrawing.draw(this._oQRCode),this.makeImage()},QRCode.prototype.makeImage=function(){"function"==typeof this._oDrawing.makeImage&&(!this._android||this._android>=3)&&this._oDrawing.makeImage()},QRCode.prototype.clear=function(){this._oDrawing.clear()},QRCode.CorrectLevel=d}();
+</script>
 <style>
 /* ══ CSS VARIABLES & RESET ══ */
 :root {
-  --accent: #6366F1;
-  --accent-dim: rgba(99,102,241,0.12);
-  --accent-hover: #4f46e5;
-  --accent-glow: rgba(99,102,241,0.25);
-  --bg: #0A0F1E;
-  --surface: #111827;
-  --elevated: #1F2937;
-  --border: #2D3748;
-  --border-light: #374151;
-  --text: #F1F5F9;
-  --text-muted: #9CA3AF;
-  --text-dim: #6B7280;
-  --success: #10B981;
-  --success-dim: rgba(16,185,129,0.12);
-  --warning: #F59E0B;
-  --warning-dim: rgba(245,158,11,0.12);
-  --danger: #EF4444;
-  --danger-dim: rgba(239,68,68,0.12);
-  --info: #3B82F6;
-  --info-dim: rgba(59,130,246,0.12);
-  --sidebar-w: 240px;
-  --topbar-h: 56px;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-xs: 5px;
-  --shadow: 0 8px 32px rgba(0,0,0,0.5);
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --accent: #10B981;
+  --accent-dim: rgba(16,185,129,0.16);
+  --accent-hover: #0d9c6f;
+  --accent-glow: rgba(16,185,129,0.32);
+  /* Dark: Forest Night — each layer is visibly distinct */
+  --bg:          #0E1612;   /* page canvas — near black-green */
+  --sidebar-bg:  #192B22;   /* sidebar — clearly brighter than bg */
+  --surface:     #22382C;   /* cards — pop against bg */
+  --elevated:    #2C4A3A;   /* modals, dropdowns — above cards */
+  --border:      #3A5E49;
+  --border-light:#4D7A62;
+  --text:        #E4EEE9;
+  --text-muted:  #85AB99;
+  --text-dim:    #527A67;
+  --success: #34D399;  --success-dim: rgba(52,211,153,0.16);
+  --warning: #FCD34D;  --warning-dim: rgba(252,211,77,0.16);
+  --danger:  #F87171;  --danger-dim:  rgba(248,113,113,0.16);
+  --info:    #67E8F9;  --info-dim:    rgba(103,232,249,0.16);
+  --sidebar-w: 240px;  --topbar-h: 56px;
+  --radius: 12px;  --radius-sm: 8px;  --radius-xs: 5px;
+  --shadow:    0 8px 32px rgba(0,0,0,0.65);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.45);
   --transition: 0.18s ease;
 }
 .light-mode {
-  --bg: #F0F4F8;
-  --surface: #FFFFFF;
-  --elevated: #F8FAFC;
-  --border: #E2E8F0;
-  --border-light: #EDF2F7;
-  --text: #0F172A;
-  --text-muted: #4A5568;
-  --text-dim: #A0AEC0;
-  --shadow: 0 4px 16px rgba(0,0,0,0.08);
-  --shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
-  --success-dim: rgba(16,185,129,0.08);
-  --warning-dim: rgba(245,158,11,0.08);
-  --danger-dim: rgba(239,68,68,0.08);
-  --info-dim: rgba(59,130,246,0.08);
+  --accent: #059669;
+  --accent-dim: rgba(5,150,105,0.12);
+  --accent-hover: #047857;
+  --accent-glow: rgba(5,150,105,0.26);
+  /* Light: richer bg so white cards clearly lift off the page */
+  --bg:          #C8DED3;   /* stronger sage-green canvas */
+  --sidebar-bg:  #E6F3EC;   /* sidebar — warm white-green */
+  --surface:     #FFFFFF;   /* cards — clean white, stands out clearly */
+  --elevated:    #EEF7F2;   /* dropdowns/inputs */
+  --border:      #AECFBE;
+  --border-light:#C5E0D1;
+  --text:        #0B2016;
+  --text-muted:  #2E5C44;
+  --text-dim:    #628F78;
+  --success: #059669;
+  --shadow:    0 4px 20px rgba(8,36,22,0.13);
+  --shadow-sm: 0 1px 5px rgba(8,36,22,0.08);
+  --success-dim: rgba(5,150,105,0.11);
+  --warning-dim: rgba(245,158,11,0.11);
+  --danger-dim:  rgba(239,68,68,0.11);
+  --info-dim:    rgba(56,189,248,0.11);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{height:100%;overflow:hidden}
-body{height:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:18px;font-weight:500;line-height:1.5}
+body{height:100%;overflow:hidden;font-family:'DM Sans','Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:18px;font-weight:400;line-height:1.5}
 button{cursor:pointer;font-family:inherit;border:none;outline:none}
 input,select,textarea{font-family:inherit;outline:none}
 a{color:var(--accent);text-decoration:none}
@@ -74,7 +81,7 @@ a{color:var(--accent);text-decoration:none}
 /* ══ LAYOUT ══ */
 #app{display:flex;height:100vh;height:100dvh;overflow:hidden}
 /* ══ SIDEBAR ══ */
-#sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:width var(--transition);flex-shrink:0;overflow:hidden;z-index:100}
+#sidebar{width:var(--sidebar-w);background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:width var(--transition);flex-shrink:0;overflow:hidden;z-index:100}
 #sidebar.collapsed{width:56px}
 .sidebar-header{padding:16px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);min-height:var(--topbar-h)}
 .sidebar-logo{width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;flex-shrink:0}
@@ -105,12 +112,16 @@ a{color:var(--accent);text-decoration:none}
 /* ══ MAIN AREA ══ */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;min-height:0}
 /* ══ TOPBAR ══ */
-#topbar{height:var(--topbar-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:90}
+#topbar{height:var(--topbar-h);background:var(--sidebar-bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:90;position:relative}
 .topbar-toggle{background:none;color:var(--text-muted);font-size:22px;padding:6px;border-radius:6px}
 .topbar-toggle:hover{background:var(--elevated);color:var(--text)}
 .topbar-breadcrumb{font-weight:600;font-size:18px;white-space:nowrap;flex-shrink:0}
 /* ══ SEARCH ══ */
-.search-wrap{flex:1;max-width:480px;position:relative}
+.search-wrap{flex:1;max-width:480px;position:relative;transition:max-width .18s ease}
+@media(max-width:768px){
+  .search-wrap.expanded{position:absolute!important;left:8px;right:8px;top:6px;width:auto!important;max-width:none!important;z-index:200}
+  .search-wrap.expanded .search-kbd{display:none}
+}
 .search-input{width:100%;background:var(--elevated);border:1px solid var(--border);border-radius:8px;padding:7px 12px 7px 36px;color:var(--text);font-size:17px;transition:border-color var(--transition)}
 .search-input:focus{border-color:var(--accent)}
 .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none}
@@ -172,16 +183,36 @@ a{color:var(--accent);text-decoration:none}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .card-title{font-weight:600;font-size:18px}
 /* ══ KPI CARDS ══ */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:20px}
-.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden;transition:transform var(--transition),box-shadow var(--transition)}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:20px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;display:flex;gap:12px;align-items:flex-start;transition:transform var(--transition),box-shadow var(--transition)}
 .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
-.kpi-card::before{content:'';position:absolute;top:0;right:0;width:80px;height:80px;border-radius:50%;background:var(--accent-dim);transform:translate(25px,-25px);pointer-events:none}
-.kpi-label{font-size:14px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-.kpi-value{font-size:29px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1.1}
-.kpi-change{font-size:14px;margin-top:5px;font-weight:500}
+.kpi-card::before{content:'';position:absolute;top:0;right:0;width:80px;height:80px;border-radius:50%;background:var(--accent-dim);transform:translate(25px,-25px);pointer-events:none;z-index:0}
+.kpi-card>*{position:relative;z-index:1}
+.kpi-card .kpi-body{flex:1;min-width:0}
+.kpi-value{font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1.15;white-space:nowrap;overflow:hidden;display:block;width:100%}
+.kpi-label{font-size:13px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-change{font-size:13px;margin-top:5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-icon{font-size:22px;width:42px;height:42px;flex-shrink:0;border-radius:10px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center}
+/* ══ TOP PRODUCTS LIST ══ */
+.top-prod-row{display:flex;align-items:center;gap:10px;padding:8px 4px}
+.top-prod-rank{width:22px;height:22px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.top-prod-body{flex:1;min-width:0}
+.top-prod-name{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-prod-track{height:6px;border-radius:3px;background:var(--elevated);margin-top:5px;overflow:hidden}
+.top-prod-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .4s ease}
+.top-prod-val{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;white-space:nowrap;flex-shrink:0}
+/* ══ DONUT CHART (pure CSS conic-gradient — no external chart library) ══ */
+.donut{width:120px;height:120px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.donut-hole{width:62%;height:62%;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut-hole b{font-size:18px;font-family:'JetBrains Mono',monospace}
+.donut-hole span{font-size:11px;color:var(--text-muted)}
+.donut-legend{flex:1;min-width:140px;display:flex;flex-direction:column;gap:6px}
+.donut-legend-row{display:flex;align-items:center;gap:7px;font-size:14px}
+.donut-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.donut-legend-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.donut-legend-pct{font-weight:700;font-family:'JetBrains Mono',monospace;font-size:13px}
 .kpi-change.up{color:var(--success)}
 .kpi-change.down{color:var(--danger)}
-.kpi-icon{font-size:27px;margin-bottom:8px}
 /* ══ TABLES ══ */
 .table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
 table{width:100%;border-collapse:collapse;background:var(--surface)}
@@ -208,6 +239,21 @@ td.mono{font-family:'JetBrains Mono',monospace;font-size:15px}
 .btn-primary{background:var(--accent);color:#fff;box-shadow:0 0 0 0 var(--accent-glow)}
 .btn-primary:hover{background:var(--accent-hover);box-shadow:0 0 0 3px var(--accent-glow)}
 .btn-secondary{background:transparent;color:var(--text);border:1.5px solid var(--border)}
+/* ══ ACTION BUTTON COLORS — muted, easy-to-tell-apart tints for common row actions.
+   Chained with .btn-secondary for higher specificity so these reliably win
+   over the base secondary-button style regardless of stylesheet order. ══ */
+.btn-secondary.btn-edit{background:var(--info-dim);color:#3B82F6;border-color:rgba(59,130,246,.35)}
+.btn-secondary.btn-edit:hover{background:rgba(59,130,246,.22)}
+.btn-secondary.btn-view{background:rgba(99,102,241,.12);color:#818CF8;border-color:rgba(99,102,241,.35)}
+.btn-secondary.btn-view:hover{background:rgba(99,102,241,.22)}
+.btn-secondary.btn-archive{background:var(--warning-dim);color:#F59E0B;border-color:rgba(245,158,11,.35)}
+.btn-secondary.btn-archive:hover{background:rgba(245,158,11,.22)}
+.btn-secondary.btn-delete{background:var(--danger-dim);color:#EF4444;border-color:rgba(239,68,68,.35)}
+.btn-secondary.btn-delete:hover{background:rgba(239,68,68,.22)}
+.btn-secondary.btn-print{background:var(--success-dim);color:#10B981;border-color:rgba(16,185,129,.35)}
+.btn-secondary.btn-print:hover{background:rgba(16,185,129,.22)}
+.btn-secondary.btn-adjust{background:rgba(168,85,247,.12);color:#A855F7;border-color:rgba(168,85,247,.35)}
+.btn-secondary.btn-adjust:hover{background:rgba(168,85,247,.22)}
 .btn-secondary:hover{background:var(--elevated);border-color:var(--border-light)}
 .btn-danger{background:var(--danger);color:#fff}
 .btn-danger:hover{background:#dc2626;box-shadow:0 0 0 3px var(--danger-dim)}
@@ -242,7 +288,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 @media(min-width:769px){.modal-overlay{align-items:center}}
 .modal-overlay.show{display:flex;animation:overlayIn .15s ease}
 @keyframes overlayIn{from{opacity:0}to{opacity:1}}
-.modal{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--shadow);animation:modalIn .22s cubic-bezier(.16,1,.3,1)}
+.modal{background:var(--elevated);border-radius:var(--radius);border:1px solid var(--border-light);width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--shadow);animation:modalIn .22s cubic-bezier(.16,1,.3,1)}
 .modal-lg{max-width:780px}
 .modal-sm{max-width:380px}
 @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
@@ -375,25 +421,29 @@ textarea.form-control{resize:vertical;min-height:80px}
 .cart-total-row.grand{font-size:22px;font-weight:700;color:var(--accent);padding-top:8px;border-top:1px solid var(--border);margin-top:6px}
 /* ══ DASHBOARD CHARTS ══ */
 .chart-bar-wrap{display:flex;align-items:flex-end;gap:4px;height:120px;padding-top:10px}
-.chart-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
-.chart-bar{width:100%;background:var(--accent);border-radius:3px 3px 0 0;transition:height .3s ease;min-height:2px;position:relative}
+.chart-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%}
+.chart-bar-track{width:100%;height:96px;display:flex;align-items:flex-end}
+.chart-bar{width:100%;background:var(--accent);border-radius:3px 3px 0 0;transition:height .3s ease;min-height:3px;position:relative}
 .chart-bar:hover::after{content:attr(data-val);position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);padding:2px 6px;border-radius:4px;font-size:14px;white-space:nowrap}
 .chart-label{font-size:13px;color:var(--text-dim)}
 /* ══ REPORT ══ */
 .report-doc{background:#fff;color:#000;padding:26px;border-radius:var(--radius);border:1px solid var(--border);font-family:'Times New Roman',serif}
+.report-doc *{color:#000}
+.report-doc table{width:100%;border-collapse:collapse;margin:6px 0 14px;font-size:13px;border:1px solid #999;background:#fff!important}
+.report-doc thead th{background:#f0f0f0!important;padding:6px 10px;text-align:left;font-weight:700;border:1px solid #999!important;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#222!important}
+.report-doc tbody tr{background:#fff!important}
+.report-doc tbody tr:nth-child(even){background:#f9f9f9!important}
+.report-doc td{padding:5px 10px;border:1px solid #ccc!important;color:#000!important;background:transparent;line-height:1.3}
 .report-doc-header{border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start}
 .report-org-name{font-size:24px;font-weight:700;letter-spacing:.04em}
 .report-classification{font-size:14px;font-weight:700;letter-spacing:.1em;text-align:center;padding:2px 0;border-top:1px solid #000;border-bottom:1px solid #000;margin-bottom:8px}
 .report-doc{line-height:1.45}
 .report-doc p{margin:0 0 8px}
-.report-doc table{width:100%;border-collapse:collapse;margin:6px 0 14px;font-size:17px;border:1px solid #999}
-.report-doc th{background:#f0f0f0;padding:6px 10px;text-align:left;font-weight:700;border:1px solid #999;font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:#222}
-.report-doc td{padding:5px 10px;border:1px solid #ccc;line-height:1.3}
 .report-doc tbody tr:last-child td{border-bottom:1px solid #999}
 .report-doc h2{font-size:19px;font-weight:700;margin:14px 0 8px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #999;padding-bottom:5px}
 .report-doc h3{font-size:18px;font-weight:700;margin:10px 0 5px}
 /* Signature block: kept out of the table grid look and protected from awkward print splits */
-.report-signature{margin-top:22px;page-break-inside:avoid;break-inside:avoid}
+.report-signature{margin-top:60px;page-break-inside:avoid;break-inside:avoid}
 /* Report category selector grid */
 .report-cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:16px}
 .report-cat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all var(--transition)}
@@ -484,14 +534,6 @@ textarea.form-control{resize:vertical;min-height:80px}
 .qr-option.active{border-color:var(--accent);background:var(--accent-dim)}
 .qr-option-label{font-size:15px;font-weight:600;margin-top:6px}
 /* ══ CUSTOMER SCREEN ══ */
-.cs-wrap{background:#fff;color:#111;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px;font-family:'Inter',system-ui,sans-serif}
-.cs-logo{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:35px;font-weight:700;color:#fff;margin-bottom:12px}
-.cs-biz-name{font-size:27px;font-weight:700;text-align:center}
-.cs-biz-tag{color:#666;margin-bottom:24px;text-align:center}
-.cs-total{font-size:76px;font-weight:900;text-align:center;margin:20px 0;line-height:1}
-.cs-success{text-align:center;padding:40px}
-.cs-success-icon{font-size:84px;margin-bottom:16px}
-.cs-success-text{font-size:31px;font-weight:700;color:#10B981}
 /* ══ FILTER BAR ══ */
 .filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .filter-bar .form-control{flex:1;min-width:120px;max-width:200px}
@@ -554,6 +596,11 @@ textarea.form-control{resize:vertical;min-height:80px}
   .settings-nav-item{padding:6px 10px!important;font-size:15px;flex-shrink:0}
   /* KPI 2 columns */
   .kpi-grid{grid-template-columns:1fr 1fr!important}
+  .kpi-card{padding:12px;gap:8px;min-height:84px}
+  .kpi-icon{display:none}
+  .kpi-label{white-space:normal;font-size:12px;line-height:1.25;margin-bottom:4px}
+  .kpi-value{font-size:20px}
+  .kpi-change{white-space:normal;font-size:11.5px}
   /* Modals: slide up from bottom */
   .modal-overlay{align-items:flex-end!important;padding:0!important}
   .modal{max-width:100%!important;border-radius:16px 16px 0 0!important;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -609,6 +656,15 @@ textarea.form-control{resize:vertical;min-height:80px}
   #print-target .report-doc table{font-size:17px}
   #print-target .report-doc th{background:#f0f0f0!important;color:#222!important;font-size:14px}
   #print-target .report-doc td{font-size:17px}
+  /* Universal pagination rules for EVERY printed table, not just .report-doc — this is what
+     repeats the header row on every page and stops a row from being split in half across a
+     page break. Without this scoped only to .report-doc, profile printouts (e.g. HR Employee
+     Profile) that aren't built with the .report-doc wrapper lost their table header on
+     subsequent pages. */
+  #print-target table{page-break-inside:auto}
+  #print-target thead{display:table-header-group}
+  #print-target tr{page-break-inside:avoid;page-break-after:auto}
+  #print-target tbody tr:first-child{page-break-before:avoid}
 }
 /* ══ A4 / LETTER INVOICE TEMPLATE (full professional business invoice) ══ */
 .invoice-a4{font-family:'Times New Roman',serif;color:#000;background:#fff;max-width:190mm;margin:0 auto;padding:10mm;font-size:12.5px;line-height:1.4}
@@ -853,6 +909,16 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="card">
             <div class="card-header"><div class="card-title">📈 Month vs Last Month</div></div>
             <div id="mom-compare"></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" class="dash-grid-1-1">
+          <div class="card">
+            <div class="card-header"><div class="card-title">🏆 Top Products (this month)</div></div>
+            <div id="top-products"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">📦 Inventory by Category</div></div>
+            <div id="category-donut" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:8px 0"></div>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="dash-grid-1-1">
@@ -1109,7 +1175,7 @@ textarea.form-control{resize:vertical;min-height:80px}
           <input class="form-control" id="acct-from" placeholder="From" style="width:120px" onfocus="openCalendar('acct-from','standard')">
           <input class="form-control" id="acct-to" placeholder="To" style="width:120px" onfocus="openCalendar('acct-to','standard')">
           <button class="btn btn-secondary btn-sm" onclick="exportCSV('accounting')">📤 Export CSV</button>
-          <button class="btn btn-secondary btn-sm" onclick="previewAccountingPrint()">🖨️ Print</button>
+          <button class="btn btn-secondary btn-sm btn-print" onclick="previewAccountingPrint()">🖨️ Print</button>
           <button class="btn btn-secondary btn-sm" onclick="exportAccountingPDF()">📄 Export PDF</button>
           <button class="btn btn-primary btn-sm" onclick="openAccountingModal()">+ Add Entry</button>
         </div>
@@ -1144,7 +1210,7 @@ textarea.form-control{resize:vertical;min-height:80px}
               <option value="biometric">👆 Biometric</option>
             </select>
             <button class="btn btn-secondary btn-sm" onclick="bulkMarkAttendance('P')">✅ Mark All Present (Today)</button>
-            <button class="btn btn-secondary btn-sm" onclick="openAttendanceCorrection()">✏️ Correct Entry</button>
+            <button class="btn btn-secondary btn-sm btn-edit" onclick="openAttendanceCorrection()">✏️ Correct Entry</button>
           </div>
           <div id="att-biometric-panel" style="display:none;margin-bottom:12px;padding:14px;background:var(--elevated);border-radius:10px">
             <div style="font-weight:600;margin-bottom:8px">👆 Biometric Check-in Simulation</div>
@@ -1289,7 +1355,7 @@ textarea.form-control{resize:vertical;min-height:80px}
                     <input type="file" id="logo-upload-input" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,.png,.jpg,.jpeg,.svg,.webp" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="handleLogoUpload(event)">
                     <div style="display:flex;gap:8px">
                       <label for="logo-upload-input" class="btn btn-secondary btn-sm" style="margin:0">📤 Upload Logo</label>
-                      <button class="btn btn-secondary btn-sm" id="logo-remove-btn" onclick="removeLogo()" style="display:none">🗑️ Remove</button>
+                      <button class="btn btn-secondary btn-sm btn-delete" id="logo-remove-btn" onclick="removeLogo()" style="display:none">🗑️ Remove</button>
                     </div>
                     <div class="settings-desc" style="margin:0">PNG, JPG, JPEG, SVG or WEBP, up to 1MB. Used in the sidebar, login screen, and report/print headers. Falls back to the initial below if no logo is uploaded.</div>
                   </div>
@@ -1938,7 +2004,6 @@ textarea.form-control{resize:vertical;min-height:80px}
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('sec-modal-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveSecondary()">💾 Save Supplier</button></div>
   </div>
 </div>
-
 
 <!-- QR Payment Waiting Modal -->
 <div class="modal-overlay" id="qr-waiting-overlay">
@@ -2798,6 +2863,11 @@ function syncRenderSetupModal() {
       Use <b>"Upload Current Data"</b> only ONCE, on the very first device you connect — it sends this device's existing data to the brand-new server. Every other device should just use "Save & Connect" and sign in normally.
     </div>
     <div class="form-group" style="border-top:1px solid var(--border);padding-top:12px">
+      <label class="form-label">👆 Fingerprint Unlock (this device)</label>
+      <div class="form-hint" style="margin-bottom:8px">Lets you sign back in on THIS device using your fingerprint/face unlock instead of typing your password. This is per-device — it must be set up again on any other phone or computer.</div>
+      <div id="biometric-status" style="font-size:17px"></div>
+    </div>
+    <div class="form-group" style="border-top:1px solid var(--border);padding-top:12px">
       <label class="form-label">Auto-Logout After Inactivity (minutes)</label>
       <input class="form-control" id="inactivity-timeout-input" type="number" min="0" step="5" value="${db.settings.security.inactivityTimeoutMin}" style="max-width:120px">
       <div class="form-hint">Automatically logs out any device left open and unused for this long. Set to 0 to disable.</div>
@@ -2809,6 +2879,38 @@ function syncRenderSetupModal() {
       <div id="backups-list" style="font-size:17px">Loading…</div>
     </div>`;
   if (syncConfigured()) loadBackupsList();
+  renderBiometricStatus();
+}
+
+async function renderBiometricStatus() {
+  const el = document.getElementById('biometric-status');
+  if (!el || !session) return;
+  const enrolled = !!safeGet(biometricKey(session.username));
+  const available = await biometricAvailable();
+  if (enrolled) {
+    el.innerHTML = `<span style="color:var(--success)">✅ Enabled for ${esc(session.username)} on this device</span>
+      <button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="disableBiometricForCurrentUser()">Disable</button>`;
+  } else if (available) {
+    el.innerHTML = `<span style="color:var(--text-muted)">Not enabled on this device yet</span>
+      <button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="enableBiometricForCurrentUser()">Enable</button>`;
+  } else {
+    el.innerHTML = `<span style="color:var(--text-muted)">Not available — this device/browser has no fingerprint or face unlock, or the app isn't running over HTTPS.</span>`;
+  }
+}
+
+async function enableBiometricForCurrentUser() {
+  if (!session) return;
+  const ok = await enrollBiometric(session.username);
+  toast(ok ? 'Fingerprint unlock enabled on this device.' : 'Fingerprint unlock was not enabled.', ok ? 'success' : 'warning');
+  if (ok) safeSet('bms_remember_user', session.username); // unlock screen needs to know who to greet
+  renderBiometricStatus();
+}
+
+function disableBiometricForCurrentUser() {
+  if (!session) return;
+  forgetBiometric(session.username);
+  toast('Fingerprint unlock disabled on this device.', 'info');
+  renderBiometricStatus();
 }
 
 async function loadBackupsList() {
@@ -2924,6 +3026,14 @@ function fmt(n) {
   parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, s.thousands || ',');
   return s.currency + parts.join('.');
 }
+// Whole-number version for the Dashboard's quick-glance KPI cards only — printed
+// documents (receipts, reports, invoices) keep full decimal precision via fmt().
+function fmtWhole(n) {
+  if (n === null || n === undefined || isNaN(n)) return '0';
+  const s = db.settings;
+  const rounded = Math.round(Number(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, s.thousands || ',');
+  return s.currency + rounded;
+}
 function fmtDate(d) {
   if (!d) return '';
   const dt = new Date(d);
@@ -2934,11 +3044,26 @@ function fmtDate(d) {
   const fmt = (db && db.settings && db.settings.dateFormat) || 'DD/MM/YYYY';
   return fmt.replace('DD',dd).replace('MM',mm).replace('YYYY',yyyy);
 }
-function today() { return new Date().toISOString().slice(0,10); }
+function today() { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function now() { return new Date().toISOString(); }
 function clearInput(id) { const el = document.getElementById(id); if (el) el.value = ''; }
 
 /* ══ TOAST ══ */
+function fitKpiValues() {
+  document.querySelectorAll('.kpi-value').forEach(el => {
+    el.style.fontSize = '';
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    const minSize = 13;
+    let guard = 0;
+    while (el.scrollWidth > el.clientWidth && size > minSize && guard < 30) {
+      size -= 1;
+      el.style.fontSize = size + 'px';
+      guard++;
+    }
+  });
+}
+window.addEventListener('resize', () => { clearTimeout(window._kpiFitDebounce); window._kpiFitDebounce = setTimeout(fitKpiValues, 150); });
+
 function toast(msg, type='success', title='') {
   const icons = { success:'✅', error:'❌', warning:'⚠️', info:'ℹ️' };
   const titles = { success:'Success', error:'Error', warning:'Warning', info:'Info' };
@@ -3217,12 +3342,99 @@ function initLoginScreen() {
 
 function lgEl() { return document.getElementById('lg-body'); }
 
+// ── BIOMETRIC / FINGERPRINT UNLOCK (WebAuthn) ──
+// Uses the device's own fingerprint/face unlock (via the platform authenticator)
+// as a fast way back in on a device that's already been signed into once.
+// This never replaces the password — it's strictly an opt-in, per-device
+// convenience layered on top of the existing username+password system, and
+// only becomes available on a real secure (HTTPS) origin where the browser
+// reports a platform authenticator (fingerprint/face) is actually present.
+function biometricKey(username) { return 'bms_biometric_' + username.toLowerCase(); }
+
+async function biometricAvailable() {
+  if (!window.PublicKeyCredential || !window.isSecureContext) return false;
+  try { return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); }
+  catch (e) { return false; }
+}
+
+async function enrollBiometric(username) {
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userId = crypto.getRandomValues(new Uint8Array(16));
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: (db.settings && db.settings.orgName) || 'BMS Pro' },
+        user: { id: userId, name: username, displayName: username },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+        timeout: 60000
+      }
+    });
+    if (!cred) return false;
+    const rawId = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+    safeSet(biometricKey(username), rawId);
+    return true;
+  } catch (e) {
+    toast('Could not enable fingerprint unlock: ' + (e.message || 'cancelled'), 'warning');
+    return false;
+  }
+}
+
+function forgetBiometric(username) { safeRemove(biometricKey(username)); }
+
+async function unlockWithBiometric(username) {
+  const rawIdB64 = safeGet(biometricKey(username));
+  if (!rawIdB64) return false;
+  try {
+    const rawId = Uint8Array.from(atob(rawIdB64), c => c.charCodeAt(0));
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const assertion = await navigator.credentials.get({
+      publicKey: { challenge, allowCredentials: [{ id: rawId, type: 'public-key' }], userVerification: 'required', timeout: 60000 }
+    });
+    if (!assertion) return false;
+    const user = db.users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.status === 'active');
+    if (!user) { lgSetErr('That user no longer exists on this device.'); return false; }
+    user.lastLogin = now(); saveDB();
+    createSession(user);
+    audit('Auth', 'Login (Fingerprint)', user.id, user.username);
+    const lo = document.getElementById('login-overlay');
+    lo.classList.remove('show'); lo.style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    initApp();
+    startSyncLoop();
+    return true;
+  } catch (e) {
+    // User cancelled, fingerprint didn't match, or the OS dialog timed out —
+    // just fall back to the normal password form, no need to alarm them.
+    return false;
+  }
+}
+
+async function lgTryBiometricButton() {
+  const saved = safeGet('bms_remember_user');
+  const slot = document.getElementById('lg-bio-slot');
+  if (!slot) return;
+  const isInstalled = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if (!isInstalled || !saved || !safeGet(biometricKey(saved)) || !(await biometricAvailable())) { slot.innerHTML = ''; return; }
+  slot.innerHTML = `<button type="button" class="lg-btn" style="background:var(--elevated);color:var(--text);border:1.5px solid var(--border);margin-bottom:10px" onclick="lgDoBiometric()">👆 Unlock with Fingerprint</button>`;
+}
+
+async function lgDoBiometric() {
+  const saved = safeGet('bms_remember_user');
+  if (!saved) return;
+  lgSetErr('');
+  const ok = await unlockWithBiometric(saved);
+  if (!ok) lgSetErr('Fingerprint not recognized. Use your password instead.');
+}
+
 // ── MAIN SIGN-IN ──
 function lgShowMain() {
   const locked = lgLockUntil > Date.now();
   lgEl().innerHTML = `
     <div id="lg-err" class="lg-err"></div>
     ${locked ? `<div class="lg-err on" id="lg-lock-msg">🔒 Too many attempts. Wait <span id="lg-cd"></span></div>` : ''}
+    <div id="lg-bio-slot"></div>
     <div style="margin-bottom:14px">
       <div class="lg-label">Username</div>
       <input class="lg-input" id="lg-un" placeholder="Enter username" autocomplete="username" ${locked?'disabled':''}>
@@ -3253,6 +3465,7 @@ function lgShowMain() {
     if (saved) { un.value = saved; pw.focus(); } else un.focus();
     un.onkeydown = e => { if (e.key==='Enter') pw.focus(); };
     pw.onkeydown = e => { if (e.key==='Enter') lgDoLogin(); };
+    lgTryBiometricButton();
   } else { lgRunCountdown(); }
 }
 
@@ -3327,6 +3540,25 @@ async function lgDoLogin() {
   document.getElementById('app').style.display = 'flex';
   initApp();
   startSyncLoop();
+  // Offer fingerprint unlock only when running as an installed PWA (home screen app),
+  // not in a regular browser tab — it only makes sense as a quick-unlock for the
+  // installed app experience, and the prompt is unexpected/confusing in a browser.
+  const isInstalled = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if (isInstalled && document.getElementById('lg-rem')?.checked && !safeGet(biometricKey(un)) && await biometricAvailable()) {
+    setTimeout(() => offerBiometricEnroll(un), 600);
+  }
+}
+
+function offerBiometricEnroll(username) {
+  confirm(
+    'Use your fingerprint/face unlock to sign back in faster on this device next time, instead of typing your password?',
+    async () => {
+      const ok = await enrollBiometric(username);
+      toast(ok ? 'Fingerprint unlock enabled on this device.' : 'Fingerprint unlock was not enabled.', ok ? 'success' : 'warning');
+    },
+    '',
+    'Enable'
+  );
 }
 
 function lgFail() {
@@ -3837,7 +4069,6 @@ function apPress(d) {
   }
 }
 
-
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   const isMobile = window.innerWidth <= 768;
@@ -3980,6 +4211,62 @@ function checkBackupBanner() {
 }
 function dismissBackupBanner() { document.getElementById('backup-banner').style.display = 'none'; }
 
+function renderTopProducts() {
+  const el = document.getElementById('top-products');
+  if (!el) return;
+  const monthPrefix = today().slice(0,7);
+  const monthSales = db.sales.filter(s=>s.date&&s.date.startsWith(monthPrefix));
+  const totals = {};
+  monthSales.forEach(s => (s.items||[]).forEach(i => {
+    const key = i.name||'Unknown';
+    totals[key] = (totals[key]||0) + (i.price||0)*(i.qty||0);
+  }));
+  const ranked = Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  if (!ranked.length) { el.innerHTML = '<div class="empty" style="padding:24px 0"><div class="empty-icon">🏆</div><div class="empty-title">No sales yet this month</div></div>'; return; }
+  const max = ranked[0][1] || 1;
+  el.innerHTML = ranked.map(([name,val],i) => `
+    <div class="top-prod-row">
+      <div class="top-prod-rank">${i+1}</div>
+      <div class="top-prod-body">
+        <div class="top-prod-name">${esc(name)}</div>
+        <div class="top-prod-track"><div class="top-prod-fill" style="width:${Math.max(4,Math.round(val/max*100))}%"></div></div>
+      </div>
+      <div class="top-prod-val">${fmtWhole(val)}</div>
+    </div>`).join('');
+}
+
+function renderCategoryDonut() {
+  const el = document.getElementById('category-donut');
+  if (!el) return;
+  const totals = {};
+  db.records.filter(r=>r.status!=='archived').forEach(r => {
+    const key = r.category || 'Uncategorized';
+    totals[key] = (totals[key]||0) + (r.stock||0);
+  });
+  const entries = Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const total = entries.reduce((a,[,v])=>a+v,0);
+  if (!total) { el.innerHTML = '<div class="empty" style="padding:24px 0"><div class="empty-icon">📦</div><div class="empty-title">No stock recorded yet</div></div>'; return; }
+  const palette = ['#6366F1','#10B981','#F59E0B','#3B82F6','#A855F7','#EF4444'];
+  let acc = 0;
+  const stops = entries.map(([,v],i) => {
+    const start = acc/total*360; acc += v;
+    const end = acc/total*360;
+    return `${palette[i%palette.length]} ${start}deg ${end}deg`;
+  }).join(',');
+  el.innerHTML = `
+    <div class="donut" style="background:conic-gradient(${stops})">
+      <div class="donut-hole"><b>${total}</b><span>units</span></div>
+    </div>
+    <div class="donut-legend">
+      ${entries.map(([name,v],i) => `
+        <div class="donut-legend-row">
+          <span class="donut-dot" style="background:${palette[i%palette.length]}"></span>
+          <span class="donut-legend-name">${esc(name)}</span>
+          <span class="donut-legend-pct">${Math.round(v/total*100)}%</span>
+        </div>`).join('')}
+    </div>`;
+}
+
 /* ══ DASHBOARD ══ */
 function renderDashboard() {
   const hour = new Date().getHours();
@@ -3999,26 +4286,31 @@ function renderDashboard() {
   const totalRecords = db.records.length;
   
   document.getElementById('kpi-grid').innerHTML = `
-    <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-label">Today's Revenue</div><div class="kpi-value">${fmt(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div>
-    <div class="kpi-card"><div class="kpi-icon">📅</div><div class="kpi-label">Month Revenue</div><div class="kpi-value">${fmt(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div></div>
-    <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-label">Net Balance</div><div class="kpi-value">${fmt(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div>
-    <div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-label">${esc(db.settings.labels.entities||'Customers')}</div><div class="kpi-value">${totalEntities}</div><div class="kpi-change">Active contacts</div></div>
-    <div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-label">${esc(db.settings.labels.records||'Records')}</div><div class="kpi-value">${totalRecords}</div><div class="kpi-change">In inventory</div></div>
-    <div class="kpi-card"><div class="kpi-icon">⚠️</div><div class="kpi-label">Low Stock</div><div class="kpi-value" style="color:var(--warning)">${db.records.filter(r=>r.stock<=(r.lowStockThreshold||db.settings.lowStockThreshold||10)).length}</div><div class="kpi-change">Items to reorder</div></div>
+    <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue</div><div class="kpi-value">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">Month Revenue</div><div class="kpi-value">${fmtWhole(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value">${fmtWhole(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.entities||'Customers')}</div><div class="kpi-value">${totalEntities}</div><div class="kpi-change">Active contacts</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.records||'Records')}</div><div class="kpi-value">${totalRecords}</div><div class="kpi-change">In inventory</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">⚠️</div><div class="kpi-body"><div class="kpi-label">Low Stock</div><div class="kpi-value" style="color:var(--warning)">${db.records.filter(r=>r.stock<=(r.lowStockThreshold||db.settings.lowStockThreshold||10)).length}</div><div class="kpi-change">Items to reorder</div></div></div>
   `;
+  setTimeout(fitKpiValues, 0);
+  renderTopProducts();
+  renderCategoryDonut();
   
   // 7-day chart
   const days7 = [];
   for (let i=6;i>=0;i--) {
     const d = new Date(); d.setDate(d.getDate()-i);
-    const ds = d.toISOString().slice(0,10);
+    const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     const rev = db.sales.filter(s=>s.date===ds).reduce((a,x)=>a+x.total,0);
     days7.push({ label: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()], val: rev });
   }
   const maxVal = Math.max(...days7.map(d=>d.val), 1);
   document.getElementById('revenue-chart').innerHTML = days7.map(d=>`
     <div class="chart-bar-col">
-      <div class="chart-bar" data-val="${fmt(d.val)}" style="height:${Math.max(4,Math.round(d.val/maxVal*100))}%;background:var(--accent)"></div>
+      <div class="chart-bar-track">
+        <div class="chart-bar" data-val="${fmtWhole(d.val)}" style="height:${Math.max(4,Math.round(d.val/maxVal*100))}%"></div>
+      </div>
       <div class="chart-label">${d.label}</div>
     </div>`).join('');
   
@@ -4031,8 +4323,8 @@ function renderDashboard() {
   const pct = lastRev ? Math.round((thisRev-lastRev)/lastRev*100) : (thisRev?100:0);
   document.getElementById('mom-compare').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:12px;padding-top:8px">
-      <div><div class="text-xs text-muted">This Month</div><div class="font-mono font-bold" style="font-size:24px">${fmt(thisRev)}</div></div>
-      <div><div class="text-xs text-muted">Last Month</div><div class="font-mono" style="font-size:19px">${fmt(lastRev)}</div></div>
+      <div><div class="text-xs text-muted">This Month</div><div class="font-mono font-bold" style="font-size:24px">${fmtWhole(thisRev)}</div></div>
+      <div><div class="text-xs text-muted">Last Month</div><div class="font-mono" style="font-size:19px">${fmtWhole(lastRev)}</div></div>
       <div class="badge ${pct>=0?'badge-success':'badge-danger'}" style="width:fit-content;font-size:18px">${pct>=0?'▲':'▼'} ${Math.abs(pct)}%</div>
     </div>`;
   
@@ -4041,7 +4333,7 @@ function renderDashboard() {
   document.getElementById('recent-txns').innerHTML = recent.length ? recent.map(s=>`
     <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
       <div><div style="font-size:17px;font-weight:500">${esc(s.customerName||'Walk-in')}</div><div class="text-xs text-muted">${fmtDate(s.date)} · ${esc(s.paymentMethod||'Cash')}</div></div>
-      <div class="font-mono font-bold text-accent">${fmt(s.total)}</div>
+      <div class="font-mono font-bold text-accent">${fmtWhole(s.total)}</div>
     </div>`).join('') : '<div class="empty" style="padding:16px"><div class="empty-icon">🧾</div><div class="empty-desc">No sales yet</div></div>';
   
   // Alerts
@@ -4142,10 +4434,58 @@ function changeQty(i, delta) {
 function removeFromCart(i) { cart.splice(i,1); renderCart(); updateCustomerScreen(); }
 function clearCart() { cart = []; renderCart(); updateCustomerScreen(); document.getElementById('pos-customer-input').value = ''; }
 
-/* ══ BARCODE SCANNER ══ */
+/* ══ BARCODE SCANNER ══
+   USB/Bluetooth barcode scanners work as "keyboard wedges" — they type the
+   scanned code as fast keystrokes and then send Enter, exactly like a human
+   typing very quickly. The dedicated #pos-barcode field (auto-focused when
+   POS opens) handles the normal case. As a safety net, this also listens
+   globally while the POS view is open: if a fast burst of characters ending
+   in Enter arrives while focus is NOT on a text field, it's almost
+   certainly a scanner (no human types a 6+ digit barcode in under 80ms),
+   so it's redirected to the same lookup instead of being lost. */
+let _scanBuffer = '';
+let _scanLastTime = 0;
+function handleGlobalScannerKey(e) {
+  if (currentModule !== 'pos') return; // only act as a safety net while on the POS screen
+  const active = document.activeElement;
+  const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+  if (isTyping) return; // dedicated field (or any other input) already handles its own typing
+  const now2 = Date.now();
+  if (now2 - _scanLastTime > 100) _scanBuffer = ''; // gap too long — not a scanner burst, reset
+  _scanLastTime = now2;
+  if (e.key === 'Enter') {
+    const code = _scanBuffer.trim();
+    _scanBuffer = '';
+    if (code.length >= 3) {
+      e.preventDefault();
+      lookupBarcodeAndAdd(code);
+    }
+    return;
+  }
+  if (e.key.length === 1) _scanBuffer += e.key;
+}
+document.addEventListener('keydown', handleGlobalScannerKey);
+
+function lookupBarcodeAndAdd(code) {
+  const status = document.getElementById('pos-barcode-status');
+  const rec = db.records.find(r => r.barcode === code || r.sku === code);
+  if (rec) {
+    if (rec.stock <= 0) {
+      if (status) { status.textContent = '⚠️ Out of stock'; status.style.color = 'var(--danger)'; }
+      toast(`${rec.name} is out of stock`, 'warning');
+    } else {
+      addToCart(rec.id);
+      if (status) { status.textContent = '✅ ' + rec.name; status.style.color = 'var(--success)'; }
+    }
+  } else {
+    if (status) { status.textContent = '❌ Not found'; status.style.color = 'var(--danger)'; }
+    toast(`No product found for code: ${code}`, 'warning');
+  }
+  setTimeout(() => { if (status) status.textContent = ''; }, 1500);
+}
+
 function initBarcodeScanner() {
   const input = document.getElementById('pos-barcode');
-  const status = document.getElementById('pos-barcode-status');
   if (!input) return;
   // Auto-focus when POS opens
   setTimeout(() => input.focus(), 100);
@@ -4156,20 +4496,8 @@ function initBarcodeScanner() {
       const code = input.value.trim();
       input.value = '';
       if (!code) return;
-      const rec = db.records.find(r => r.barcode === code || r.sku === code);
-      if (rec) {
-        if (rec.stock <= 0) {
-          if (status) { status.textContent = '⚠️ Out of stock'; status.style.color = 'var(--danger)'; }
-          toast(`${rec.name} is out of stock`, 'warning');
-        } else {
-          addToCart(rec.id);
-          if (status) { status.textContent = '✅ ' + rec.name; status.style.color = 'var(--success)'; }
-        }
-      } else {
-        if (status) { status.textContent = '❌ Not found'; status.style.color = 'var(--danger)'; }
-        toast(`No product found for code: ${code}`, 'warning');
-      }
-      setTimeout(() => { input.focus(); if(status) status.textContent=''; }, 1500);
+      lookupBarcodeAndAdd(code);
+      setTimeout(() => input.focus(), 1500);
     }
   };
 }
@@ -4407,6 +4735,14 @@ function openCustomerScreen() {
     qrRef: ref
   };
   safeSet('bms_customer_screen', JSON.stringify(data));
+  // On a phone there's no second screen for a customer to look at — and
+  // window.open() with a named target doesn't reliably open a real popup
+  // on mobile, it can navigate THIS tab away instead. So on small screens
+  // we just skip opening anything (this is meant for a second device/monitor).
+  if (window.innerWidth < 820) {
+    toast('Customer Screen is for a second monitor/device — not needed on this screen size.', 'info');
+    return;
+  }
   const url = window.location.href.split('#')[0] + '#cs';
   window.open(url, 'bms_cs', 'width=800,height=1100');
 }
@@ -4424,6 +4760,9 @@ function openCustomerScreenWithQR(qr, total, ref) {
     qrRef: ref || ''
   };
   safeSet('bms_customer_screen', JSON.stringify(data));
+  // Same reasoning as above: never navigate the cashier's own tab away on
+  // a phone — this was breaking the QR checkout modal entirely.
+  if (window.innerWidth < 820) return;
   // Open window only if not already open (avoid re-opening every click)
   if (!window._csWinOpen) {
     const url = window.location.href.split('#')[0] + '#cs';
@@ -4453,7 +4792,6 @@ function notifyCustomerScreenPaid() {
   safeSet('bms_customer_screen', JSON.stringify(data));
   setTimeout(()=>safeRemove('bms_customer_screen'), 12000);
 }
-
 
 let lastReceiptSale = null;
 
@@ -4650,7 +4988,7 @@ function renderTransactions() {
       <td><span class="badge ${statusBadge(t.status)}" onclick="quickStatusUpdate('${t.id}')" style="cursor:pointer">${esc(t.status||'Pending')}</span></td>
       <td>${fmtDate(t.date)}</td>
       <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.notes||'—')}</td>
-      <td><button class="btn btn-xs btn-secondary" onclick="openTransactionModal('${t.id}')">Edit</button> <button class="btn btn-xs btn-danger" onclick="deleteRecord('transaction','${t.id}')">Del</button></td>
+      <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openTransactionModal('${t.id}')">Edit</button> <button class="btn btn-xs btn-danger" onclick="deleteRecord('transaction','${t.id}')">Del</button></td>
     </tr>`).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">No transactions</div><button class="btn btn-primary btn-sm" onclick="openTransactionModal()">+ Add Transaction</button></div></td></tr>';
   
   renderPagination('txn', items.length, perPage, page);
@@ -4771,7 +5109,7 @@ function renderSecondary() {
       <td>${esc(c.phone||'—')}</td>
       <td>${esc(c.email||'—')}</td>
       <td>${esc(c.type||'—')}</td>
-      <td><button class="btn btn-xs btn-secondary" onclick="openSecondaryModal('${c.id}')">Edit</button> <button class="btn btn-xs btn-secondary" onclick="quickArchive('secondary','${c.id}')">${c.archived?'↩️ Unarchive':'🗄️ Archive'}</button></td>
+      <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openSecondaryModal('${c.id}')">Edit</button> <button class="btn btn-xs btn-secondary btn-archive" onclick="quickArchive('secondary','${c.id}')">${c.archived?'↩️ Unarchive':'🗄️ Archive'}</button></td>
     </tr>`).join('') : '<tr><td colspan="5"><div class="empty"><div class="empty-icon">🏭</div><div class="empty-title">No suppliers yet</div><button class="btn btn-primary btn-sm" onclick="openSecondaryModal()">+ Add Supplier</button></div></td></tr>';
 }
 
@@ -4841,11 +5179,12 @@ function renderAccounting() {
   const mInc = db.accounting.filter(a=>a.type==='income'&&a.date?.startsWith(month)).reduce((s,x)=>s+x.amount,0);
   const mExp = db.accounting.filter(a=>a.type==='expense'&&a.date?.startsWith(month)).reduce((s,x)=>s+x.amount,0);
   document.getElementById('acct-kpi').innerHTML = `
-    <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-label">Total Income</div><div class="kpi-value">${fmt(totalIncome)}</div></div>
-    <div class="kpi-card"><div class="kpi-icon">📉</div><div class="kpi-label">Total Expenses</div><div class="kpi-value">${fmt(totalExp)}</div></div>
-    <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-label">Net Balance</div><div class="kpi-value ${net>=0?'text-success':'text-danger'}">${fmt(net)}</div></div>
-    <div class="kpi-card"><div class="kpi-icon">📅</div><div class="kpi-label">This Month Net</div><div class="kpi-value ${(mInc-mExp)>=0?'text-success':'text-danger'}">${fmt(mInc-mExp)}</div></div>
+    <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-body"><div class="kpi-label">Total Income</div><div class="kpi-value">${fmt(totalIncome)}</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">📉</div><div class="kpi-body"><div class="kpi-label">Total Expenses</div><div class="kpi-value">${fmt(totalExp)}</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value ${net>=0?'text-success':'text-danger'}">${fmt(net)}</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">This Month Net</div><div class="kpi-value ${(mInc-mExp)>=0?'text-success':'text-danger'}">${fmt(mInc-mExp)}</div></div></div>
   `;
+  setTimeout(fitKpiValues, 0);
   
   const ss = sortState.acct;
   const { withBal: filtered } = getFilteredAccountingItems();
@@ -4864,7 +5203,7 @@ function renderAccounting() {
       <td class="mono ${a.type==='income'?'text-success':'text-danger'}">${a.type==='income'?'+':'-'}${fmt(a.amount)}</td>
       <td class="mono">${esc(a.reference||'—')}</td>
       <td class="mono">${fmt(a.runningBal)}</td>
-      <td><button class="btn btn-xs btn-secondary" onclick="openAccountingModal('${a.id}')">Edit</button> <button class="btn btn-xs btn-danger" onclick="deleteRecord('accounting','${a.id}')">Del</button></td>
+      <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openAccountingModal('${a.id}')">Edit</button> <button class="btn btn-xs btn-danger" onclick="deleteRecord('accounting','${a.id}')">Del</button></td>
     </tr>`).join('') : '<tr><td colspan="8"><div class="empty"><div class="empty-icon">💰</div><div class="empty-title">No entries yet</div><button class="btn btn-primary btn-sm" onclick="openAccountingModal()">+ Add Entry</button></div></td></tr>';
   
   renderPagination('acct', withBal.length, perPage, page);
@@ -4997,7 +5336,7 @@ function renderEmployees() {
       <td class="mono">${fmt(e.salary||0)}</td>
       <td>${esc(e.joinDate||'—')}</td>
       <td><span class="badge ${e.status==='active'?'badge-success':e.status==='resigned'?'badge-warning':'badge-muted'}">${esc(e.status)}</span></td>
-      <td><button class="btn btn-xs btn-secondary" onclick="openEmployeeModal('${e.id}')">✏️ Edit</button> <button class="btn btn-xs btn-secondary" onclick="quickArchive('employee','${e.id}')">${e.status==='archived'?'↩️ Unarchive':'🗄️ Archive'}</button></td>
+      <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openEmployeeModal('${e.id}')">✏️ Edit</button> <button class="btn btn-xs btn-secondary btn-archive" onclick="quickArchive('employee','${e.id}')">${e.status==='archived'?'↩️ Unarchive':'🗄️ Archive'}</button></td>
     </tr>`).join('') : '<tr><td colspan="9"><div class="empty"><div class="empty-icon">👥</div><div class="empty-title">No employees yet</div><button class="btn btn-primary btn-sm" onclick="openEmployeeModal()">+ Add Employee</button></div></td></tr>';
 }
 
@@ -5138,7 +5477,7 @@ function renderSalaryHistory() {
       <td class="mono text-danger">-${fmt(e.totalDeductions||0)}</td>
       <td class="mono font-bold">${fmt(e.netPay)}</td>
       <td><span class="badge badge-success">Paid</span></td>
-      <td><button class="btn btn-xs btn-secondary" onclick="showPaySlip(${JSON.stringify(e).replace(/"/g,'\'')})">📄 Slip</button></td>
+      <td><button class="btn btn-xs btn-secondary btn-view" onclick="showPaySlip(${JSON.stringify(e).replace(/"/g,'\'')})">📄 Slip</button></td>
     </tr>`).join('') : '<tr><td colspan="8"><div class="empty"><div class="empty-icon">💵</div><div class="empty-title">No salary records</div></div></td></tr>';
 }
 
@@ -5390,7 +5729,7 @@ function renderLeaveRecords() {
       <td class="mono">${l.days}</td>
       <td><span class="badge ${l.status==='approved'?'badge-success':l.status==='rejected'?'badge-danger':'badge-warning'}">${esc(l.status)}</span></td>
       <td>
-        ${l.status==='pending'?`<button class="btn btn-xs btn-success" onclick="setLeaveStatus('${l.id}','approved')">✓ Approve</button> <button class="btn btn-xs btn-danger" onclick="setLeaveStatus('${l.id}','rejected')">✕ Reject</button>`:`<button class="btn btn-xs btn-secondary" onclick="openLeaveModal('${l.id}')">Edit</button>`}
+        ${l.status==='pending'?`<button class="btn btn-xs btn-success" onclick="setLeaveStatus('${l.id}','approved')">✓ Approve</button> <button class="btn btn-xs btn-danger" onclick="setLeaveStatus('${l.id}','rejected')">✕ Reject</button>`:`<button class="btn btn-xs btn-secondary btn-edit" onclick="openLeaveModal('${l.id}')">Edit</button>`}
       </td>
     </tr>`;
   }).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">🏖️</div><div class="empty-title">No leave records yet</div><button class="btn btn-primary btn-sm" onclick="openLeaveModal()">+ New Leave Request</button></div></td></tr>';
@@ -5768,41 +6107,83 @@ const PRINT_PAGE_H_PX = 1009; // ≈267mm content height on A4 with 15mm margins
 // right up to the theoretical limit, we deliberately reserve a safety margin so the engine
 // compacts proactively and the signature reliably has real breathing room on the actual
 // printed page, not just in our estimate.
-const PRINT_SAFETY_MARGIN_PX = 70;
+const PRINT_SAFETY_MARGIN_PX = 120;
 const PRINT_USABLE_PAGE_H_PX = PRINT_PAGE_H_PX - PRINT_SAFETY_MARGIN_PX;
 const PRINT_COMPACT_LEVELS = ['', 'print-compact-1', 'print-compact-2', 'print-compact-3'];
 
-function _measurePrintHeight(html, compactClass) {
+// CSS that replicates @media print table styling, injected into the measurement
+// sandbox so row/block heights are measured under the same conditions they'll
+// actually print at (small font, tight padding, white background) rather than
+// the app's dark on-screen theme which renders everything ~30–40% larger.
+// Without this, every height estimate was systematically too large, so the engine
+// always concluded "no room for the signature" and pushed it to its own page.
+const PRINT_SANDBOX_STYLE = `
+  <style id="sbprint">
+  * { box-sizing: border-box !important; }
+  body,html { background:#fff!important; color:#000!important; }
+  table { width:100%; border-collapse:collapse; background:#fff!important; font-size:12px!important; margin:6px 0 12px!important; }
+  thead th { background:#f0f0f0!important; color:#222!important; padding:6px 10px!important; font-size:10.5px!important; border:1px solid #999!important; }
+  tbody tr { background:#fff!important; }
+  tbody tr:nth-child(even) { background:#fafafa!important; }
+  td { padding:5px 10px!important; font-size:12px!important; color:#000!important; line-height:1.3!important; vertical-align:middle!important; border:1px solid #ccc!important; }
+  .report-doc { background:#fff!important; color:#000!important; padding:26px!important; font-family:'Times New Roman',serif!important; font-size:13px!important; }
+  .report-doc table { font-size:13px!important; }
+  .report-doc th { font-size:12px!important; padding:7px 10px!important; }
+  .report-doc td { font-size:13px!important; padding:6px 10px!important; }
+  .report-signature { margin-top:60px!important; }
+  </style>
+`;
+
+function _fitSignatureOnPage(lastPageHtml, signatureHtml, wrapperOpen, wrapperClose) {
+  wrapperOpen = wrapperOpen || '';
+  wrapperClose = wrapperClose || '';
+  if (!signatureHtml) return wrapperOpen + lastPageHtml + wrapperClose;
+
   const sandbox = document.getElementById('print-measure-sandbox');
   sandbox.style.width = PRINT_PAGE_W_PX + 'px';
-  sandbox.className = 'print-doc-root' + (compactClass ? ' ' + compactClass : '');
-  sandbox.innerHTML = html;
-  const h = sandbox.scrollHeight;
-  sandbox.innerHTML = '';
-  return h;
-}
+  sandbox.style.position = 'absolute';
+  sandbox.style.left = '-9999px';
 
-// Decides how (or whether) to compact `lastPageHtml` so `signatureHtml` fits with it on one
-// printed page, and returns the finished HTML for that final page (content + signature).
-// `wrapperOpen`/`wrapperClose` are included in the measurement (not just the inner content) so
-// any padding/margin the caller wraps around the whole document is accounted for too — otherwise
-// the page-boundary math would be systematically off by however much that wrapper adds.
-function _fitSignatureOnPage(lastPageHtml, signatureHtml, wrapperOpen, wrapperClose) {
-  wrapperOpen = wrapperOpen || ''; wrapperClose = wrapperClose || '';
-  if (!signatureHtml) return lastPageHtml;
-  const sigHeight = _measurePrintHeight(wrapperOpen + signatureHtml + wrapperClose, '');
-  for (const level of PRINT_COMPACT_LEVELS) {
-    const wrapped = `<div class="${('print-doc-root ' + level).trim()}">${lastPageHtml}</div>`;
-    const contentHeight = _measurePrintHeight(wrapperOpen + wrapped + wrapperClose, '');
-    const usedOnLastPage = contentHeight % PRINT_USABLE_PAGE_H_PX;
-    const spaceLeft = usedOnLastPage === 0 ? PRINT_USABLE_PAGE_H_PX : PRINT_USABLE_PAGE_H_PX - usedOnLastPage;
-    if (sigHeight <= spaceLeft) return wrapped + signatureHtml;
+  function measure(html) {
+    sandbox.innerHTML = PRINT_SANDBOX_STYLE + html;
+    const h = sandbox.scrollHeight;
+    sandbox.innerHTML = '';
+    return h;
   }
-  // Even maximum compaction couldn't make room — let the signature fall to a fresh page
-  // (the one case the requirements explicitly accept), but keep it visually attached via
-  // page-break-inside:avoid on .report-signature so it still never splits mid-block.
+
+  const sigH = measure(wrapperOpen + signatureHtml + wrapperClose);
+
+  // Try each compaction level: if content + signature fits within one page, return it joined.
+  for (const level of PRINT_COMPACT_LEVELS) {
+    const wrappedContent = level
+      ? `<div class="print-doc-root ${level}">${lastPageHtml}</div>`
+      : lastPageHtml;
+    const totalH = measure(wrapperOpen + wrappedContent + signatureHtml + wrapperClose);
+
+    if (totalH <= PRINT_USABLE_PAGE_H_PX) {
+      // Everything fits on one page — return content + signature together inside the wrapper.
+      return wrapperOpen + wrappedContent + signatureHtml + wrapperClose;
+    }
+
+    // Content alone overflows one page — check how much of the last page is used.
+    const contentH = measure(wrapperOpen + wrappedContent + wrapperClose);
+    const pagesFloor = Math.floor(contentH / PRINT_USABLE_PAGE_H_PX);
+    const usedOnLastPage = contentH - pagesFloor * PRINT_USABLE_PAGE_H_PX;
+    const spaceLeft = PRINT_USABLE_PAGE_H_PX - usedOnLastPage;
+
+    if (sigH <= spaceLeft) {
+      return wrapperOpen + wrappedContent + signatureHtml + wrapperClose;
+    }
+  }
+
+  // Even maximum compaction can't fit the signature on the last content page —
+  // let it fall to a fresh page. This is the legitimate last-resort case (very long
+  // reports where the final table row lands right at the bottom of a page).
   const tightest = PRINT_COMPACT_LEVELS[PRINT_COMPACT_LEVELS.length - 1];
-  return `<div class="print-doc-root ${tightest}">${lastPageHtml}</div>${signatureHtml}`;
+  const tightContent = tightest
+    ? `<div class="print-doc-root ${tightest}">${lastPageHtml}</div>`
+    : lastPageHtml;
+  return wrapperOpen + tightContent + wrapperClose + signatureHtml;
 }
 
 // Shared finisher: drops the assembled HTML into #print-target and fires window.print(),
@@ -5839,8 +6220,11 @@ function universalPrint(priorPagesHtml, lastPageHtml, opts = {}) {
   const signatureHtml = opts.includeSignature === false ? '' : signatureBlockHtml();
   const open = opts.wrapperOpen || '';
   const close = opts.wrapperClose || '';
+  // _fitSignatureOnPage now returns the fully assembled, wrapper-included final HTML.
+  // For multi-page reports, priorPagesHtml is prepended inside the same wrapper.
   const lastPageFinal = _fitSignatureOnPage(lastPageHtml, signatureHtml, open, close);
-  _commitPrint(`${open}${priorPagesHtml || ''}${lastPageFinal}${close}`);
+  const priorWrapped = priorPagesHtml ? open + priorPagesHtml + close : '';
+  _commitPrint(priorWrapped + lastPageFinal);
 }
 
 /* ══ ARCHIVE — shared helpers (avoids duplicating the same lookup/toggle logic 3 times) ══ */
@@ -6031,9 +6415,9 @@ function renderArchive() {
         <td style="font-weight:500">${cat.icon} ${esc(x.name)}</td>
         <td class="text-muted">${esc(x.sub)}</td>
         <td>
-          <button class="btn btn-xs btn-secondary" onclick="viewProfile('${cat.type}','${x.id}')">👁️ View Profile</button>
-          <button class="btn btn-xs btn-secondary" onclick="printArchivedProfile('${cat.type}','${x.id}')">🖨️ Print</button>
-          <button class="btn btn-xs btn-secondary" onclick="unarchiveFromList('${cat.type}','${x.id}')">↩️ Restore</button>
+          <button class="btn btn-xs btn-secondary btn-view" onclick="viewProfile('${cat.type}','${x.id}')">👁️ View Profile</button>
+          <button class="btn btn-xs btn-secondary btn-print" onclick="printArchivedProfile('${cat.type}','${x.id}')">🖨️ Print</button>
+          <button class="btn btn-xs btn-secondary btn-archive" onclick="unarchiveFromList('${cat.type}','${x.id}')">↩️ Restore</button>
           ${session?.role==='admin'?`<button class="btn btn-xs btn-danger" onclick="confirmPermanentDelete('${cat.type}','${x.id}','${esc(x.name)}')">🗑️ Delete Permanently</button>`:''}
         </td>
       </tr>`).join('')}</tbody></table></div>` : `<div class="empty"><div class="empty-icon">🗄️</div><div class="empty-title">No archived ${cat.label.toLowerCase()}s</div><div class="empty-desc">${cat.label}s you archive will appear here</div></div>`;
@@ -6050,7 +6434,7 @@ function renderArchive() {
 
   if (tab==='deleted') {
     const items = db.deletedRecords.filter(r => !s || r.name?.toLowerCase().includes(s) || r.type?.toLowerCase().includes(s));
-    content.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Type</th><th>Name</th><th>Deleted At</th><th>Actions</th></tr></thead><tbody>${items.length?items.map(r=>`<tr><td><span class="badge badge-muted">${esc(r.type)}</span></td><td>${esc(r.name||r.id)}</td><td>${fmtDate(r.deletedAt)}</td><td><button class="btn btn-xs btn-secondary" onclick="restoreDeleted('${r.id}')">↩️ Restore</button></td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No deleted records</td></tr>'}</tbody></table></div>`;
+    content.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Type</th><th>Name</th><th>Deleted At</th><th>Actions</th></tr></thead><tbody>${items.length?items.map(r=>`<tr><td><span class="badge badge-muted">${esc(r.type)}</span></td><td>${esc(r.name||r.id)}</td><td>${fmtDate(r.deletedAt)}</td><td><button class="btn btn-xs btn-secondary btn-archive" onclick="restoreDeleted('${r.id}')">↩️ Restore</button></td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No deleted records</td></tr>'}</tbody></table></div>`;
     return;
   }
 
@@ -6574,8 +6958,6 @@ function setSettingsSection(id, el) {
   if (id==='tax') loadTaxSettings();
 }
 
-
-
 function loadSettingsValues() {
   const s = db.settings;
   const setVal = (id, val) => { const el=document.getElementById(id); if(el) el.value=val||''; };
@@ -6902,8 +7284,8 @@ function renderUsersTable() {
       <td><span class="badge ${u.status==='active'?'badge-success':'badge-muted'}">${esc(u.status)}</span></td>
       <td>${fmtDate(u.lastLogin)||'Never'}</td>
       <td>
-        <button class="btn btn-xs btn-secondary" onclick="openUserModal('${u.id}')">Edit</button>
-        <button class="btn btn-xs btn-secondary" onclick="resetUserPw('${u.id}')">Reset PW</button>
+        <button class="btn btn-xs btn-secondary btn-edit" onclick="openUserModal('${u.id}')">Edit</button>
+        <button class="btn btn-xs btn-secondary btn-adjust" onclick="resetUserPw('${u.id}')">Reset PW</button>
         <button class="btn btn-xs btn-secondary" onclick="${u.status==='active'?`deactivateUser('${u.id}')`:`activateUser('${u.id}')`}">${u.status==='active'?'Deactivate':'Activate'}</button>
         ${session?.role==='admin'&&u.id!==session?.id?`<button class="btn btn-xs btn-danger" onclick="deleteUser('${u.id}')">Del</button>`:''}
       </td>
@@ -7047,7 +7429,7 @@ function renderQRCodesList() {
       ${q.mode==='dynamic'?'<div style="width:36px;height:36px;background:var(--accent);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px">⚡</div>':q.imageData?`<img src="${q.imageData}" style="width:36px;height:36px;object-fit:contain;border-radius:4px">`:'<div style="width:36px;height:36px;background:var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center">🔳</div>'}
       <div style="flex:1"><div style="font-weight:500">${esc(q.label)}</div><div class="text-xs text-muted">${q.mode==='dynamic'?'Auto-generated · '+esc(q.payeeName||''):esc(q.accountName||'')+' '+esc(q.accountNumber||'')}</div></div>
       <span class="badge ${q.active?'badge-success':'badge-muted'}">${q.active?'Active':'Inactive'}</span>
-      <button class="btn btn-xs btn-secondary" onclick="openQRModal('${q.id}')">Edit</button>
+      <button class="btn btn-xs btn-secondary btn-edit" onclick="openQRModal('${q.id}')">Edit</button>
       <button class="btn btn-xs btn-danger" onclick="deleteQR('${q.id}')">✕</button>
     </div>`).join('') : '<div class="text-muted text-sm">No QR codes yet. Add one — Auto-Generate is recommended so amounts are embedded automatically.</div>';
 }
@@ -7277,7 +7659,7 @@ function renderEntities() {
       <td><span class="badge ${e.category?.includes('Wholesale')?'badge-info':'badge-muted'}">${esc(e.category||'—')}</span></td>
       <td class="mono ${due>0?'text-danger font-bold':''}">${due>0?fmt(due):'—'}</td>
       <td class="mono">${fmt(e.totalValue||0)}</td>
-      <td><button class="btn btn-xs btn-secondary" onclick="openEntityModal('${e.id}')">✏️ Edit</button> <button class="btn btn-xs btn-secondary" onclick="quickArchive('entity','${e.id}')">${e.archived?'↩️ Unarchive':'🗄️ Archive'}</button></td>
+      <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openEntityModal('${e.id}')">✏️ Edit</button> <button class="btn btn-xs btn-secondary btn-archive" onclick="quickArchive('entity','${e.id}')">${e.archived?'↩️ Unarchive':'🗄️ Archive'}</button></td>
     </tr>`;
   }).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><div class="empty-title">No customers yet</div><button class="btn btn-primary btn-sm" onclick="openEntityModal()">+ Add Customer</button></div></td></tr>';
   renderPagination('ent', items.length, perPage, page);
@@ -7294,10 +7676,11 @@ function renderDueLedger() {
   const total = items.reduce((a,c)=>a+c.dueAmount,0);
   const outstanding = items.filter(c=>c.status==='outstanding').reduce((a,c)=>a+c.dueAmount,0);
   document.getElementById('due-kpi').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Total Due</div><div class="kpi-value">${fmt(total)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Outstanding</div><div class="kpi-value text-danger">${fmt(outstanding)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Credit Entries</div><div class="kpi-value">${items.length}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Settled</div><div class="kpi-value text-success">${items.filter(c=>c.status==='settled').length}</div></div>`;
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">Total Due</div><div class="kpi-value">${fmt(total)}</div></div></div>
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">Outstanding</div><div class="kpi-value text-danger">${fmt(outstanding)}</div></div></div>
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">Credit Entries</div><div class="kpi-value">${items.length}</div></div></div>
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">Settled</div><div class="kpi-value text-success">${items.filter(c=>c.status==='settled').length}</div></div></div>`;
+  setTimeout(fitKpiValues, 0);
 
   document.getElementById('due-tbody').innerHTML = items.length ? items.map(c => {
     const overdue = c.status==='outstanding' && c.dueDate && c.dueDate < today();
@@ -7312,7 +7695,7 @@ function renderDueLedger() {
       <td><span class="badge ${c.status==='settled'?'badge-success':overdue?'badge-danger':'badge-warning'}">${c.status}</span></td>
       <td>
         ${c.status==='outstanding'?`<button class="btn btn-xs btn-success" onclick="openDuePayment('${c.id}')">💰 Collect</button> `:''}
-        <button class="btn btn-xs btn-secondary" onclick="viewCreditDetail('${c.id}')">View</button>
+        <button class="btn btn-xs btn-secondary btn-view" onclick="viewCreditDetail('${c.id}')">View</button>
       </td>
     </tr>`;
   }).join('') : '<tr><td colspan="9"><div class="empty"><div class="empty-icon">💳</div><div class="empty-title">No credit sales</div></div></td></tr>';
@@ -7413,9 +7796,9 @@ function renderRecords() {
       <td>${(r.variants||[]).length ? `<span class="badge badge-info">${r.variants.length} variants</span>` : '—'}</td>
       <td><span class="badge ${r.status==='active'?'badge-success':'badge-muted'}">${esc(r.status||'active')}</span></td>
       <td>
-        <button class="btn btn-xs btn-secondary" onclick="openRecordModal('${r.id}')">✏️ Edit</button>
-        <button class="btn btn-xs btn-secondary" onclick="openStockAdj('${r.id}')">📦 Stock</button>
-        <button class="btn btn-xs btn-secondary" onclick="quickArchive('record','${r.id}')">${r.status==='archived'?'↩️ Unarchive':'🗄️ Archive'}</button>
+        <button class="btn btn-xs btn-secondary btn-edit" onclick="openRecordModal('${r.id}')">✏️ Edit</button>
+        <button class="btn btn-xs btn-secondary btn-adjust" onclick="openStockAdj('${r.id}')">📦 Stock</button>
+        <button class="btn btn-xs btn-secondary btn-archive" onclick="quickArchive('record','${r.id}')">${r.status==='archived'?'↩️ Unarchive':'🗄️ Archive'}</button>
         
       </td>
     </tr>`).join('') : '<tr><td colspan="10"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">No products yet</div><button class="btn btn-primary btn-sm" onclick="openRecordModal()">+ Add Product</button></div></td></tr>';
@@ -7536,7 +7919,7 @@ function renderRawMaterials() {
       <td class="mono ${m.stock<=(m.reorderLevel||0)?'text-danger font-bold':''}">${m.stock||0} ${m.stock<=(m.reorderLevel||0)?'⚠️':''}</td>
       <td class="mono">${m.reorderLevel||0}</td>
       <td>${supplierNames.length?supplierNames.map(n=>`<span class="badge badge-info" style="font-size:13px">${esc(n)}</span>`).join(' '):'<span class="text-muted">—</span>'}</td>
-      <td><button class="btn btn-xs btn-secondary" onclick="openMaterialModal('${m.id}')">✏️ Edit</button> <button class="btn btn-xs btn-secondary" onclick="quickArchive('rawMaterial','${m.id}')">${m.status==='archived'?'↩️ Unarchive':'🗄️ Archive'}</button></td>
+      <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openMaterialModal('${m.id}')">✏️ Edit</button> <button class="btn btn-xs btn-secondary btn-archive" onclick="quickArchive('rawMaterial','${m.id}')">${m.status==='archived'?'↩️ Unarchive':'🗄️ Archive'}</button></td>
     </tr>`;
   }).join('') : '<tr><td colspan="8"><div class="empty"><div class="empty-icon">🧱</div><div class="empty-title">No raw materials yet</div><button class="btn btn-primary btn-sm" onclick="openMaterialModal()">+ Add Material</button></div></td></tr>';
 }
@@ -7678,7 +8061,7 @@ function renderWarehouses() {
       <td style="font-weight:500">${esc(w.name)}</td>
       <td>${esc(w.location||'—')}</td>
       <td>${w.isDefault?'<span class="badge badge-success">✓ Default</span>':''}</td>
-      <td><button class="btn btn-xs btn-secondary" onclick="openWarehouseModal('${w.id}')">✏️ Edit</button> <button class="btn btn-xs btn-danger" onclick="deleteWarehouse('${w.id}')">Del</button></td>
+      <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openWarehouseModal('${w.id}')">✏️ Edit</button> <button class="btn btn-xs btn-danger" onclick="deleteWarehouse('${w.id}')">Del</button></td>
     </tr>`).join('') : '<tr><td colspan="4"><div class="empty"><div class="empty-icon">🏬</div><div class="empty-title">No warehouses configured</div><button class="btn btn-primary btn-sm" onclick="openWarehouseModal()">+ Add Warehouse</button></div></td></tr>';
 }
 
@@ -7721,7 +8104,7 @@ function renderTransfers() {
       <td>${fmtDate(t.date)}</td><td>${esc(from)}</td><td>${esc(to)}</td>
       <td>${(t.items||[]).length} item(s)</td>
       <td><span class="badge ${t.status==='completed'?'badge-success':'badge-warning'}">${esc(t.status)}</span></td>
-      <td><button class="btn btn-xs btn-secondary" onclick="viewTransferDetail('${t.id}')">View</button></td>
+      <td><button class="btn btn-xs btn-secondary btn-view" onclick="viewTransferDetail('${t.id}')">View</button></td>
     </tr>`;
   }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">🔁</div><div class="empty-title">No stock transfers yet</div></div></td></tr>';
 }
@@ -7806,7 +8189,7 @@ function renderInvProducts() {
       <td class="mono ${r.stock<=(r.lowStockThreshold||10)?'text-danger':''}">${r.stock}</td>
       <td>${esc(r.unit||'pcs')}</td>
       <td class="mono">${fmt((r.salePrice||0)*r.stock)}</td>
-      <td><button class="btn btn-xs btn-secondary" onclick="openStockAdj('${r.id}')">📦 Adjust</button></td>
+      <td><button class="btn btn-xs btn-secondary btn-adjust" onclick="openStockAdj('${r.id}')">📦 Adjust</button></td>
     </tr>`).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">No products</div></div></td></tr>';
 }
 
@@ -7820,7 +8203,7 @@ function renderInvMaterials() {
       <td class="mono ${m.stock<=(m.reorderLevel||0)?'text-danger':''}">${m.stock}</td>
       <td>${esc(m.unit)}</td>
       <td class="mono">${fmt((m.cost||0)*m.stock)}</td>
-      <td><button class="btn btn-xs btn-secondary" onclick="openMaterialAdj('${m.id}')">⚖️ Adjust</button></td>
+      <td><button class="btn btn-xs btn-secondary btn-adjust" onclick="openMaterialAdj('${m.id}')">⚖️ Adjust</button></td>
     </tr>`).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">🧱</div><div class="empty-title">No raw materials</div></div></td></tr>';
 }
 
@@ -7945,7 +8328,7 @@ function renderBOMs() {
       <td class="mono">${b.outputQty||1}</td>
       <td>
         <button class="btn btn-xs btn-primary" onclick="openMakeNow('${b.id}')">🏭 Make Now</button>
-        <button class="btn btn-xs btn-secondary" onclick="openBOMModal('${b.id}')">✏️ Edit</button>
+        <button class="btn btn-xs btn-secondary btn-edit" onclick="openBOMModal('${b.id}')">✏️ Edit</button>
         <button class="btn btn-xs btn-danger" onclick="deleteBOM('${b.id}')">Del</button>
       </td>
     </tr>`;
@@ -8182,7 +8565,7 @@ function renderPurchaseOrders() {
       <td>${fmtDate(po.date)}</td>
       <td>
         ${po.status!=='Received'&&po.status!=='Cancelled'?`<button class="btn btn-xs btn-success" onclick="openGRNModal('${po.id}')">📥 Receive</button>`:''}
-        <button class="btn btn-xs btn-secondary" onclick="viewPODetail('${po.id}')">View</button>
+        <button class="btn btn-xs btn-secondary btn-view" onclick="viewPODetail('${po.id}')">View</button>
       </td>
     </tr>`;
   }).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📝</div><div class="empty-title">No purchase orders yet</div><button class="btn btn-primary btn-sm" onclick="openPOModal()">+ New Purchase Order</button></div></td></tr>';
@@ -8317,7 +8700,7 @@ function renderGRNList() {
       <td>${esc(sp?.name||'—')}</td>
       <td>${(g.items||[]).length} item(s)</td>
       <td>${fmtDate(g.date)}</td>
-      <td><button class="btn btn-xs btn-secondary" onclick="openSupplierInvoiceModal('${g.poId}','${g.id}')">🧾 Create Invoice</button></td>
+      <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openSupplierInvoiceModal('${g.poId}','${g.id}')">🧾 Create Invoice</button></td>
     </tr>`;
   }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📥</div><div class="empty-title">No goods received yet</div></div></td></tr>';
 }
@@ -8515,7 +8898,7 @@ function renderRolesList() {
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">
-        <button class="btn btn-xs btn-secondary" onclick="openRoleModal('${r.id}')">✏️ Edit</button>
+        <button class="btn btn-xs btn-secondary btn-edit" onclick="openRoleModal('${r.id}')">✏️ Edit</button>
         <button class="btn btn-xs btn-secondary" onclick="duplicateRole('${r.id}')">📋 Duplicate</button>
         <button class="btn btn-xs btn-secondary" onclick="toggleRoleActive('${r.id}')">${active?'⏸️ Deactivate':'▶️ Activate'}</button>
         <button class="btn btn-xs btn-danger" onclick="deleteRole('${r.id}')">Del</button>
@@ -8981,6 +9364,9 @@ function calCommitMonthYear() {
 /* ══ GLOBAL SEARCH ══ */
 let searchDebounce;
 function onGlobalSearch() {
+  const wrap = document.getElementById('global-search')?.closest('.search-wrap');
+  const hasText = !!document.getElementById('global-search')?.value;
+  if (wrap) wrap.classList.toggle('expanded', hasText && window.innerWidth <= 768);
   clearTimeout(searchDebounce);
   searchDebounce = setTimeout(doGlobalSearch, 300);
 }
@@ -9088,6 +9474,8 @@ function clearSearchHistory() {
 
 function hideSearch() {
   document.getElementById('search-results').classList.remove('show');
+  const input = document.getElementById('global-search');
+  if (input && !input.value) input.closest('.search-wrap')?.classList.remove('expanded');
 }
 
 /* ══ ADVANCED SEARCH ══ */
@@ -9120,112 +9508,179 @@ function clearAdvSearch() {
 
 /* ══ CUSTOMER SCREEN (separate window) ══ */
 function initCustomerScreen() {
-  // Hide all overlays, show blank page
   document.getElementById('wizard-overlay').style.display='none';
   document.getElementById('login-overlay').style.display='none';
   document.getElementById('app').style.display='none';
   document.body.innerHTML = '';
-  document.body.style.margin='0';
-  document.body.style.background='#fff';
-  document.body.style.fontFamily='Inter,system-ui,sans-serif';
-  
-  const wrap = document.createElement('div');
-  wrap.className = 'cs-wrap';
-  document.body.appendChild(wrap);
-  
+  document.body.style.cssText = 'margin:0;padding:0;background:#111;font-family:Inter,system-ui,sans-serif;overflow:hidden';
+  document.documentElement.style.cssText = 'height:100%;overflow:hidden';
+
+  const style = document.createElement('style');
+  style.textContent = `
+    *{box-sizing:border-box}
+    .cs-root{display:flex;flex-direction:column;height:100vh;width:100vw;background:#111;color:#fff}
+    .cs-body{display:flex;flex:1;overflow:hidden}
+    .cs-left{width:340px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;gap:16px;border-right:1px solid #2a2a2a}
+    .cs-logo{width:74px;height:74px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:#fff;overflow:hidden}
+    .cs-biz{text-align:center}
+    .cs-biz-name{font-size:21px;font-weight:800;line-height:1.2}
+    .cs-biz-tag{font-size:13px;color:#888;margin-top:2px}
+    .cs-qr-box{background:#fff;border-radius:14px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px}
+    .cs-qr-label{font-size:13px;font-weight:700;color:#111;text-align:center}
+    .cs-qr-sub{font-size:12px;color:#555;text-align:center}
+    .cs-right{flex:1;display:flex;flex-direction:column;justify-content:center;padding:24px 32px;overflow:hidden}
+    .cs-total-row{display:flex;align-items:baseline;gap:12px;margin-bottom:20px}
+    .cs-total-label{font-size:15px;color:#888;text-transform:uppercase;letter-spacing:.06em}
+    .cs-total-amt{font-size:52px;font-weight:900;line-height:1}
+    .cs-items-table{width:100%;border-collapse:collapse}
+    .cs-items-table th{text-align:left;padding:6px 8px;color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #2a2a2a}
+    .cs-items-table th:not(:first-child){text-align:right}
+    .cs-items-table td{padding:7px 8px;border-bottom:1px solid #1e1e1e;vertical-align:middle}
+    .cs-items-table td:not(:first-child){text-align:right}
+    .cs-items-table tr:last-child td{border-bottom:none}
+    .cs-subtotals{margin-top:14px;border-top:1px solid #2a2a2a;padding-top:10px;display:flex;flex-direction:column;gap:5px}
+    .cs-subtotal-row{display:flex;justify-content:space-between;font-size:14px;color:#888}
+    .cs-footer{border-top:1px solid #1e1e1e;padding:12px 32px;display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#555;gap:16px}
+    /* idle/success states */
+    .cs-idle{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:20px;text-align:center;padding:40px}
+    .cs-success-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;text-align:center}
+    @media(max-width:700px){
+      .cs-left{width:100%;border-right:none;border-bottom:1px solid #2a2a2a;padding:16px;flex-direction:row;justify-content:flex-start;gap:16px}
+      .cs-body{flex-direction:column;overflow:auto}
+      .cs-root{overflow:auto}
+      .cs-logo{width:50px;height:50px;font-size:22px}
+      .cs-total-amt{font-size:36px}
+    }
+  `;
+  document.head.appendChild(style);
+
+  const root = document.createElement('div');
+  root.className = 'cs-root';
+  document.body.appendChild(root);
+
   let lastQRPayload = null;
+
+  function fmt2(n, cur) {
+    if (!n) return (cur||'Rs')+' 0';
+    return (cur||'Rs')+' '+Math.round(Number(n)).toLocaleString();
+  }
 
   function render() {
     const raw = safeGet('bms_customer_screen');
     if (!raw) {
-      wrap.innerHTML = `<div style="text-align:center;padding:60px 20px"><div style="font-size:84px;margin-bottom:16px">🏪</div><div style="font-size:31px;font-weight:700">Welcome</div><div style="color:#666;margin-top:8px">Ready to serve you</div></div>`;
+      root.innerHTML = `<div class="cs-idle"><div style="font-size:80px">🏪</div><div style="font-size:28px;font-weight:800">Welcome</div><div style="font-size:16px;color:#666">Ready to serve you</div></div>`;
       return;
     }
-    let data;
-    try { data = JSON.parse(raw); } catch { return; }
-    
-    if (data.status === 'paid') {
-      wrap.innerHTML = `<div class="cs-success"><div class="cs-success-icon">✅</div><div class="cs-success-text">Payment Received!</div><div style="margin-top:12px;font-size:22px;color:#333">Thank you for your business!</div><div style="margin-top:8px;font-size:18px;color:#666">${esc(data.biz?.name||'')}</div></div>`;
-      setTimeout(()=>{ safeRemove('bms_customer_screen'); render(); }, 10000);
-      return;
-    }
-    
-    const biz = data.biz || {};
-    const accent = biz.accent || '#6366F1';
-    
-    if (!data.cart || !data.cart.length) {
-      wrap.innerHTML = `<div class="cs-logo" style="background:${biz.logo?'transparent':accent}">${biz.logo?`<img src="${esc(biz.logo)}" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">`:esc(biz.init||'B')}</div><div class="cs-biz-name">${esc(biz.name||'Business')}</div><div class="cs-biz-tag">${esc(biz.tag||'')}</div><div style="margin-top:40px;font-size:22px;color:#888">${esc(data.welcomeMsg||'Welcome! We are ready to serve you.')}</div>${biz.phone?`<div style="margin-top:20px;color:#666;font-size:18px">📞 ${esc(biz.phone)}</div>`:''}`;
-      return;
-    }
-    
-    // Bill summary
-    const itemsHtml = (data.cart||[]).map(item=>`
-      <tr><td style="padding:6px 0">${esc(item.name)}</td><td style="text-align:right;padding:6px 0">${item.qty}</td><td style="text-align:right;padding:6px 0">${fmt2(item.price,data.currency)}</td><td style="text-align:right;padding:6px 0;font-weight:600">${fmt2(item.price*item.qty,data.currency)}</td></tr>`).join('');
-    
-    // Build QR section: dynamic (auto-generated, amount embedded) takes priority over static images
-    let qrSectionHtml = '';
-    const dynQR = data.activeQR && data.activeQR.mode === 'dynamic' ? data.activeQR : null;
-    const staticQRs = (data.qrCodes||[]).filter(q=>q.mode!=='dynamic' || !q.payeeId);
+    let data; try { data = JSON.parse(raw); } catch { return; }
 
-    if (dynQR) {
-      qrSectionHtml = `
-        <div style="text-align:center;padding:16px">
-          <div id="cs-dynamic-qr" style="display:inline-block;background:#fff;padding:8px;border-radius:8px"></div>
-          <div style="font-size:22px;font-weight:700;margin-top:8px">${esc(dynQR.label)}</div>
-          ${dynQR.payeeName?`<div style="color:#666;font-size:18px">${esc(dynQR.payeeName)}</div>`:''}
-          <div style="color:#16a34a;font-size:17px;font-weight:600;margin-top:4px">✓ Amount auto-filled — just scan & confirm</div>
-          ${dynQR.instruction?`<div style="font-style:italic;color:#999;font-size:15px;margin-top:4px">${esc(dynQR.instruction)}</div>`:''}
-        </div>`;
-    } else if (staticQRs.length) {
-      qrSectionHtml = staticQRs.map(q=>`
-        <div style="text-align:center;padding:16px">
-          ${q.imageData?`<img src="${q.imageData}" style="width:280px;height:280px;object-fit:contain;border-radius:8px;margin:0 auto;display:block" alt="${esc(q.label)}">`:'<div style="font-size:84px">🔳</div>'}
-          <div style="font-size:22px;font-weight:700;margin-top:8px">${esc(q.label)}</div>
-          ${q.accountName?`<div style="color:#666;font-size:18px">${esc(q.accountName)}</div>`:''}
-          ${q.accountNumber?`<div style="color:#888;font-size:17px">${esc(q.accountNumber)}</div>`:''}
-          <div style="color:#d97706;font-size:15px;margin-top:4px">⚠️ Please enter amount manually: ${fmt2(data.total||0,data.currency)}</div>
-          ${q.instruction?`<div style="font-style:italic;color:#999;font-size:15px;margin-top:4px">${esc(q.instruction)}</div>`:''}
-        </div>`).join('<hr style="border:1px solid #eee">');
+    if (data.status === 'paid') {
+      root.innerHTML = `<div class="cs-success-screen"><div style="font-size:90px">✅</div><div style="font-size:34px;font-weight:800">Payment Received!</div><div style="font-size:20px;color:#888;margin-top:8px">Thank you for your business</div><div style="font-size:16px;color:#555;margin-top:4px">${esc(data.biz?.name||'')}</div></div>`;
+      setTimeout(()=>{ safeRemove('bms_customer_screen'); render(); }, 9000);
+      return;
     }
-    
-    wrap.innerHTML = `
-      <div class="cs-logo" style="background:${biz.logo?'transparent':accent}">${biz.logo?`<img src="${esc(biz.logo)}" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">`:esc(biz.init||'B')}</div>
-      <div class="cs-biz-name">${esc(biz.name||'')}</div>
-      <div class="cs-biz-tag">${esc(biz.tag||'')}</div>
-      <div style="width:100%;max-width:500px;margin:20px 0">
-        <div style="background:#f8f8f8;border-radius:12px;padding:20px;margin-bottom:16px">
-          <table style="width:100%;border-collapse:collapse">
-            <thead><tr style="color:#999;font-size:15px;border-bottom:1px solid #eee"><th style="text-align:left;padding-bottom:6px">Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Total</th></tr></thead>
-            <tbody>${itemsHtml}</tbody>
-          </table>
-          <div style="border-top:2px solid #ddd;margin-top:12px;padding-top:8px">
-            ${data.discount?`<div style="display:flex;justify-content:space-between;font-size:17px;color:#666"><span>Discount</span><span>-${fmt2(data.discount,data.currency)}</span></div>`:''}
-            ${data.tax?`<div style="display:flex;justify-content:space-between;font-size:17px;color:#666"><span>Tax</span><span>${fmt2(data.tax,data.currency)}</span></div>`:''}
+
+    const biz = data.biz || {};
+    const accent = biz.accent || '#10B981';
+
+    if (!data.cart || !data.cart.length) {
+      root.innerHTML = `<div class="cs-idle">
+        <div class="cs-logo" style="width:90px;height:90px;font-size:40px;background:${biz.logo?'transparent':accent}">${biz.logo?`<img src="${esc(biz.logo)}" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">`:esc(biz.init||'B')}</div>
+        <div style="font-size:26px;font-weight:800">${esc(biz.name||'')}</div>
+        ${biz.tag?`<div style="font-size:15px;color:#777">${esc(biz.tag)}</div>`:''}
+        <div style="font-size:18px;color:#666;max-width:400px;text-align:center;margin-top:16px">${esc(data.welcomeMsg||'Welcome! We are ready to serve you.')}</div>
+        ${biz.phone?`<div style="font-size:16px;color:#555;margin-top:12px">📞 ${esc(biz.phone)}</div>`:''}
+      </div>`;
+      return;
+    }
+
+    // QR section
+    const dynQR = data.activeQR && data.activeQR.mode === 'dynamic' ? data.activeQR : null;
+    const staticQRs = (data.qrCodes||[]).filter(q=>q.mode!=='dynamic');
+    const activeStaticQR = staticQRs[0] || null;
+    let qrHtml = '';
+    if (dynQR) {
+      qrHtml = `<div id="cs-dynamic-qr" style="display:inline-block"></div>
+        <div class="cs-qr-label" style="color:${accent}">${esc(dynQR.label||'Scan to Pay')}</div>
+        ${dynQR.payeeName?`<div class="cs-qr-sub">${esc(dynQR.payeeName)}</div>`:''}
+        <div style="font-size:11px;color:#16a34a;margin-top:2px">✓ Amount auto-embedded</div>`;
+    } else if (activeStaticQR) {
+      qrHtml = `${activeStaticQR.imageData?`<img src="${activeStaticQR.imageData}" style="width:200px;height:200px;object-fit:contain;border-radius:6px">`:'<div style="font-size:60px">🔳</div>'}
+        <div class="cs-qr-label">${esc(activeStaticQR.label||'Scan to Pay')}</div>
+        ${activeStaticQR.accountName?`<div class="cs-qr-sub">${esc(activeStaticQR.accountName)}</div>`:''}
+        <div style="font-size:11px;color:#d97706;margin-top:2px">Enter amount: ${fmt2(data.total,data.currency)}</div>`;
+    }
+
+    // Items — auto-size font to fit table in available space
+    const items = data.cart || [];
+    const itemsHtml = items.map(item=>`<tr>
+      <td>${esc(item.name)}</td>
+      <td>${item.qty}</td>
+      <td>${fmt2(item.price,data.currency)}</td>
+      <td style="font-weight:700;color:${accent}">${fmt2(item.price*item.qty,data.currency)}</td>
+    </tr>`).join('');
+
+    root.innerHTML = `
+      <div class="cs-body">
+        <div class="cs-left">
+          <div class="cs-logo" style="background:${biz.logo?'transparent':accent}">${biz.logo?`<img src="${esc(biz.logo)}" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">`:esc(biz.init||'B')}</div>
+          <div class="cs-biz">
+            <div class="cs-biz-name">${esc(biz.name||'')}</div>
+            ${biz.tag?`<div class="cs-biz-tag">${esc(biz.tag)}</div>`:''}
           </div>
+          ${qrHtml?`<div class="cs-qr-box"><div id="cs-dynamic-qr" style="display:${dynQR?'inline-block':'none'}"></div>${qrHtml}</div>`:'<div style="font-size:13px;color:#555;text-align:center">No payment QR configured</div>'}
         </div>
-        <div class="cs-total" style="color:${accent}">${fmt2(data.total||0,data.currency)}</div>
+        <div class="cs-right">
+          <div class="cs-total-row">
+            <div class="cs-total-label">Total Due</div>
+            <div class="cs-total-amt" style="color:${accent}">${fmt2(data.total||0, data.currency)}</div>
+          </div>
+          <div style="flex:1;overflow:hidden">
+            <table class="cs-items-table" id="cs-items-tbl">
+              <thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr></thead>
+              <tbody>${itemsHtml}</tbody>
+            </table>
+          </div>
+          ${(data.discount||data.tax)?`<div class="cs-subtotals">
+            ${data.discount?`<div class="cs-subtotal-row"><span>Subtotal</span><span>${fmt2(data.subtotal,data.currency)}</span></div>`:''}
+            ${data.discount?`<div class="cs-subtotal-row"><span>Discount</span><span style="color:#f87171">- ${fmt2(data.discount,data.currency)}</span></div>`:''}
+            ${data.tax?`<div class="cs-subtotal-row"><span>Tax</span><span>${fmt2(data.tax,data.currency)}</span></div>`:''}
+          </div>`:''}
+        </div>
       </div>
-      ${qrSectionHtml ? `<div style="width:100%;max-width:400px;border:2px solid ${accent};border-radius:16px;overflow:hidden">${qrSectionHtml}</div>` : ''}
-      <div style="margin-top:30px;font-size:17px;color:#999;text-align:center">Please show your payment confirmation to the cashier</div>
-      ${biz.phone?`<div style="margin-top:8px;color:#bbb;font-size:15px">📞 ${esc(biz.phone)}</div>`:''}
+      <div class="cs-footer">
+        <span>Please show your payment confirmation to the cashier</span>
+        ${biz.phone?`<span>📞 ${esc(biz.phone)}</span>`:''}
+        <span style="color:${accent};font-weight:700">${esc(biz.name||'')}</span>
+      </div>
     `;
 
-    // Generate the dynamic QR image with the live total embedded
+    // Auto-fit item table font so it never overflows the right panel
+    const tbl = document.getElementById('cs-items-tbl');
+    if (tbl) {
+      const panel = tbl.closest('.cs-right');
+      if (panel) {
+        let fs = 16;
+        tbl.style.fontSize = fs + 'px';
+        while (tbl.offsetHeight > panel.offsetHeight * 0.65 && fs > 10) {
+          fs--; tbl.style.fontSize = fs + 'px';
+        }
+      }
+    }
+
+    // Generate dynamic QR
     if (dynQR) {
-      const payload = `${dynQR.payeeId||''}|${dynQR.payeeName||''}|${(data.total||0).toFixed(2)}|${data.currencyCode||'NPR'}|${data.qrRef||''}`;
-      const payloadFinal = dynQR.payloadFormat === 'upi'
+      const payload = dynQR.payloadFormat === 'upi'
         ? `upi://pay?pa=${encodeURIComponent(dynQR.payeeId||'')}&pn=${encodeURIComponent(dynQR.payeeName||'')}&am=${(data.total||0).toFixed(2)}&cu=${data.currencyCode||'NPR'}&tn=${encodeURIComponent(data.qrRef||'')}`
         : dynQR.payloadFormat === 'custom' && dynQR.customTemplate
         ? dynQR.customTemplate.replace(/{id}/g,dynQR.payeeId||'').replace(/{name}/g,dynQR.payeeName||'').replace(/{amount}/g,(data.total||0).toFixed(2)).replace(/{currency}/g,data.currencyCode||'NPR').replace(/{ref}/g,data.qrRef||'')
-        : payload;
-      // Only regenerate if payload actually changed (avoids flicker)
-      if (payloadFinal !== lastQRPayload) {
-        lastQRPayload = payloadFinal;
+        : `${dynQR.payeeId||''}|${dynQR.payeeName||''}|${(data.total||0).toFixed(2)}|${data.currencyCode||'NPR'}|${data.qrRef||''}`;
+      if (payload !== lastQRPayload) {
+        lastQRPayload = payload;
         const target = document.getElementById('cs-dynamic-qr');
         if (target && typeof QRCode !== 'undefined') {
           target.innerHTML = '';
-          try { new QRCode(target, { text: payloadFinal, width: 260, height: 260, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M }); }
-          catch(e) { target.innerHTML = '<div style="padding:20px;color:#c00;font-size:15px">QR generation failed</div>'; }
+          try { new QRCode(target, { text: payload, width: 200, height: 200, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M }); }
+          catch(e) { target.innerHTML = '<div style="color:#c00;font-size:13px;padding:10px">QR error</div>'; }
         }
       }
     }

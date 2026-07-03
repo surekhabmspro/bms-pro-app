@@ -2772,7 +2772,10 @@ async function syncLogin(username, password) {
 async function syncPull(opts) {
   opts = opts || {};
   if (!syncConfigured() || !SYNC.token) return { ok: false };
-  if (SYNC.pending && !opts.force) return { ok: false, reason: 'local-changes-pending' };
+  // NOTE: We intentionally do NOT block pulls when SYNC.pending is true.
+  // Other devices may have pushed new data; this device needs to receive it
+  // even while it has local changes queued. If the versions differ, the server
+  // data is applied and our pending push will re-send on top (same as 409 path).
   syncSetStatus('syncing', 'Checking for updates…');
   try {
     const resp = await fetch(SYNC.apiBase + '/api/state', {
@@ -2782,9 +2785,6 @@ async function syncPull(opts) {
     if (!resp.ok) { syncRefreshStatusDisplay(); return { ok: false }; }
     const out = await resp.json();
     if (out.version !== SYNC.version) {
-      // Safety guard: never let an empty/corrupt server payload wipe out
-      // good local data. If the server has no users yet but this device
-      // does, skip applying it and surface a warning instead.
       const serverHasUsers = out.data && Array.isArray(out.data.users) && out.data.users.length > 0;
       const localHasUsers = db && Array.isArray(db.users) && db.users.length > 0;
       if (!serverHasUsers && localHasUsers) {
@@ -2795,17 +2795,14 @@ async function syncPull(opts) {
       db = out.data;
       syncSetVersion(out.version);
       safeSet(DB_KEY, JSON.stringify(db));
+      // If we had pending local changes, re-push them on top of the newly received data
+      if (SYNC.pending) scheduleSync(1000);
       if (session && typeof openModule === 'function') {
         updateTopbar();
         renderSidebar();
-        // Use the same central refresh dispatcher as local saves — updates
-        // dashboard KPIs + current module without interrupting the user.
         clearTimeout(saveDB._refreshTimer);
         saveDB._refreshTimer = setTimeout(refreshViews, 80);
       } else if (document.getElementById('login-overlay')?.classList.contains('show')) {
-        // No one has logged in yet — the login screen may already be showing
-        // stale/old company branding from before this pull. Re-render it now
-        // that local data has been corrected.
         initLoginScreen();
       }
     }
@@ -2855,7 +2852,7 @@ function scheduleSync(delayMs) {
   syncSetPending(true);
   syncRefreshStatusDisplay();
   if (_syncPushDebounce) clearTimeout(_syncPushDebounce);
-  _syncPushDebounce = setTimeout(syncPush, delayMs || 2500);
+  _syncPushDebounce = setTimeout(syncPush, delayMs || 1000);
 }
 
 // One-time upload of an existing offline system into a brand-new empty server.
@@ -2879,7 +2876,7 @@ function startSyncLoop() {
   syncRefreshStatusDisplay();
   if (SYNC.token) syncPull();
   if (SYNC.pullTimer) clearInterval(SYNC.pullTimer);
-  SYNC.pullTimer = setInterval(() => { if (document.visibilityState === 'visible') syncPull(); }, 15000);
+  SYNC.pullTimer = setInterval(() => { if (document.visibilityState === 'visible') syncPull(); }, 10000);
   if (SYNC.pending) scheduleSync(1500);
 }
 

@@ -437,7 +437,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 .report-doc thead th{background:#f0f0f0!important;padding:6px 10px;text-align:left;font-weight:700;border:1px solid #999!important;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#222!important}
 .report-doc tbody tr{background:#fff!important}
 .report-doc tbody tr:nth-child(even){background:#f9f9f9!important}
-.report-doc td{padding:5px 10px;border:1px solid #ccc!important;color:#000!important;background:transparent;line-height:1.3}.report-doc td.amt-revenue{color:#16a34a!important}.report-doc td.amt-expense{color:#dc2626!important}.report-doc td.amt-balance{color:#4f46e5!important}.report-doc td.amt-payment{color:#0284c7!important}.report-doc td.amt-purchase{color:#ea580c!important}
+.report-doc td{padding:5px 10px;border:1px solid #ccc!important;color:#000!important;background:transparent;line-height:1.3}.report-doc td.report-doc td.report-doc td.report-doc td.report-doc td
 .report-doc-header{border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start}
 .report-org-name{font-size:24px;font-weight:700;letter-spacing:.04em}
 .report-classification{font-size:14px;font-weight:700;letter-spacing:.1em;text-align:center;padding:2px 0;border-top:1px solid #000;border-bottom:1px solid #000;margin-bottom:8px}
@@ -629,13 +629,13 @@ textarea.form-control{resize:vertical;min-height:80px}
   #print-target tbody tr{background:#fff!important;border:none}
   #print-target tbody tr:nth-child(even){background:#fafafa!important}
   #print-target td{border:1px solid #ccc!important;padding:5px 10px;color:#000!important;font-size:12px;line-height:1.3;vertical-align:middle}
-  #print-target td.amt-revenue{color:#16a34a!important;font-weight:700!important}
-  #print-target td.amt-expense{color:#dc2626!important;font-weight:700!important}
-  #print-target td.amt-balance{color:#4f46e5!important;font-weight:700!important}
-  #print-target td.amt-payment{color:#0284c7!important;font-weight:700!important}
-  #print-target td.amt-purchase{color:#ea580c!important;font-weight:700!important}
+  #print-target td
+  #print-target td
+  #print-target td
+  #print-target td
+  #print-target td
   /* Signature uses a layout table — must not get any visible borders */
-  #print-target .report-signature td,#print-target .report-signature th{border:none!important;background:transparent!important}
+  
   /* Reports already have their own tuned table styling (.report-doc) — restate it here so
      it isn't accidentally overridden by the generic rules above (an ID selector otherwise
      outranks a plain class selector). */
@@ -701,7 +701,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 }
 #print-target{display:none}
 /* ══ MISC UTILS ══ */
-.flex{display:flex}.mb-2{margin-bottom:8px}.mb-4{margin-bottom:16px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.text-muted{color:var(--text-muted)}.text-sm{font-size:15px}.text-xs{font-size:14px}.font-bold{font-weight:700!important}.font-mono{font-family:'JetBrains Mono',monospace}.w-full{width:100%}.text-center{text-align:center}.text-right{text-align:right}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.text-accent{color:var(--accent)}.amt-revenue{color:#22c55e!important;font-weight:700!important}.amt-expense{color:#f87171!important;font-weight:700!important}.amt-balance{color:#818cf8!important;font-weight:700!important}.amt-payment{color:#38bdf8!important;font-weight:700!important}.amt-purchase{color:#fb923c!important;font-weight:700!important}.amt-neutral{font-weight:700!important}.light-mode .amt-balance{color:#4f46e5!important}.light-mode .amt-revenue{color:#16a34a!important}.light-mode .amt-expense{color:#dc2626!important}.light-mode .amt-payment{color:#0284c7!important}.light-mode .amt-purchase{color:#ea580c!important}.hidden{display:none!important}
+.flex{display:flex}.mb-2{margin-bottom:8px}.mb-4{margin-bottom:16px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.text-muted{color:var(--text-muted)}.text-sm{font-size:15px}.text-xs{font-size:14px}.font-bold{font-weight:700!important}.font-mono{font-family:'JetBrains Mono',monospace}.w-full{width:100%}.text-center{text-align:center}.text-right{text-align:right}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.text-accent{color:var(--accent)}.amt-revenue{color:#4ade80!important;font-weight:700!important}.amt-expense{color:#f87171!important;font-weight:700!important}.amt-balance{color:#a5b4fc!important;font-weight:700!important}.amt-payment{color:#38bdf8!important;font-weight:700!important}.amt-purchase{color:#fb923c!important;font-weight:700!important}.amt-neutral{font-weight:700!important}.light-mode .amt-revenue{color:#15803d!important}.light-mode .amt-expense{color:#b91c1c!important}.light-mode .amt-balance{color:#4338ca!important}.light-mode .amt-payment{color:#0369a1!important}.light-mode .amt-purchase{color:#c2410c!important}#print-target .report-signature td,#print-target .report-signature th{border:none!important;background:transparent!important}.report-doc td.amt-revenue,.report-doc p.amt-revenue{color:#15803d!important}.report-doc td.amt-expense,.report-doc p.amt-expense{color:#b91c1c!important}.report-doc td.amt-balance,.report-doc p.amt-balance{color:#4338ca!important}.report-doc td.amt-payment,.report-doc p.amt-payment{color:#0369a1!important}.report-doc td.amt-purchase,.report-doc p.amt-purchase{color:#c2410c!important}#print-target td.amt-revenue,#print-target span.amt-revenue{color:#15803d!important;font-weight:700!important}#print-target td.amt-expense,#print-target span.amt-expense{color:#b91c1c!important;font-weight:700!important}#print-target td.amt-balance,#print-target span.amt-balance{color:#4338ca!important;font-weight:700!important}#print-target td.amt-payment,#print-target span.amt-payment{color:#0369a1!important;font-weight:700!important}#print-target td.amt-purchase,#print-target span.amt-purchase{color:#c2410c!important;font-weight:700!important}.light-mode .light-mode .light-mode .light-mode .light-mode .hidden{display:none!important}
 </style>
 </head>
 <body>
@@ -2315,10 +2315,6 @@ textarea.form-control{resize:vertical;min-height:80px}
 
 <script>
 'use strict';
-// Bump this string on every deploy. It has no functional effect on the app —
-// it only lets you confirm, from the Sync modal, which build is actually
-// live on a given device (vs. still showing a stale cached one).
-const APP_BUILD = '2026-07-03-sync-cache-fix';
 /* ══ DB SCHEMA & INIT ══ */
 // ── SOFTWARE IDENTITY (fixed) — never derived from business data ─────────
 // "Surekha BMS Pro" is the name of THIS SOFTWARE. A business's own name
@@ -2657,9 +2653,9 @@ function refreshDashboardKPIs() {
   const lowStockCnt  = db.records.filter(r => r.stock <= (r.lowStockThreshold || db.settings.lowStockThreshold || 10)).length;
 
   kpiGrid.innerHTML = `
-    <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue</div><div class="kpi-value">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div></div>
-    <div class="kpi-card"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">Month Revenue</div><div class="kpi-value">${fmtWhole(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div></div></div>
-    <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value">${fmtWhole(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue</div><div class="kpi-value amt-revenue">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">Month Revenue</div><div class="kpi-value amt-revenue">${fmtWhole(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value ${netBalance>=0?'amt-revenue':'amt-expense'}">${fmtWhole(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.entities||'Customers')}</div><div class="kpi-value">${db.entities.length}</div><div class="kpi-change">Active contacts</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.records||'Records')}</div><div class="kpi-value">${db.records.length}</div><div class="kpi-change">In inventory</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">⚠️</div><div class="kpi-body"><div class="kpi-label">Low Stock</div><div class="kpi-value" style="color:var(--warning)">${lowStockCnt}</div><div class="kpi-change">Items to reorder</div></div></div>
@@ -2900,8 +2896,6 @@ function syncRenderSetupModal() {
         ${syncConfigured()
           ? `This device is connected to your organization's online server.<br><br>Status: <b id="sync-modal-status">${SYNC.pending ? 'Changes pending…' : (SYNC.online ? 'Synced' : 'No internet')}</b>`
           : `This device is running in offline mode. Ask your administrator to configure online sync if you need remote access.`}
-        <div style="font-size:13px;color:var(--text-dim);margin-top:10px">Build: ${esc(APP_BUILD)}</div>
-        <button class="btn btn-secondary btn-sm" style="margin-top:10px" onclick="forceAppUpdate()">🔄 Check for App Updates</button>
       </div>`;
     return;
   }
@@ -4559,10 +4553,10 @@ function getCartTotals() {
 function updateCartTotals() {
   const { subtotal, discount, tax, total } = getCartTotals();
   document.getElementById('cart-totals').innerHTML = `
-    <div class="cart-total-row"><span>Subtotal</span><span class="font-mono">${fmt(subtotal)}</span></div>
+    <div class="cart-total-row"><span>Subtotal</span><span class="font-mono amt-neutral">${fmt(subtotal)}</span></div>
     ${discount?`<div class="cart-total-row"><span>Discount</span><span class="font-mono amt-expense">-${fmt(discount)}</span></div>`:''}
-    ${tax?`<div class="cart-total-row"><span>Tax</span><span class="font-mono">${fmt(tax)}</span></div>`:''}
-    <div class="cart-total-row grand"><span>TOTAL</span><span class="font-mono">${fmt(total)}</span></div>`;
+    ${tax?`<div class="cart-total-row"><span>Tax</span><span class="font-mono amt-balance">${fmt(tax)}</span></div>`:''}
+    <div class="cart-total-row grand"><span>TOTAL</span><span class="font-mono amt-revenue">${fmt(total)}</span></div>`;
   updateCustomerScreen();
 }
 
@@ -4620,7 +4614,7 @@ function openCreditSaleModal() {
   const customerName = document.getElementById('pos-customer-input')?.value?.trim() || '';
   if (!customerName) { toast('Select a customer for credit sale','warning'); return; }
   if (!cart.length) { toast('Cart is empty','warning'); return; }
-  document.getElementById('credit-sale-info').innerHTML = `<div style="font-weight:600;margin-bottom:4px">${esc(customerName)}</div><div>Total: <strong class="font-mono">${fmt(total)}</strong></div>`;
+  document.getElementById('credit-sale-info').innerHTML = `<div style="font-weight:600;margin-bottom:4px">${esc(customerName)}</div><div>Total: <strong class="font-mono amt-revenue">${fmt(total)}</strong></div>`;
   document.getElementById('credit-paid-now').value = 0;
   document.getElementById('credit-paid-now').max = total;
   document.getElementById('credit-due-date').value = new Date(Date.now()+7*86400000).toISOString().slice(0,10);
@@ -5026,7 +5020,7 @@ function renderTransactions() {
     <tr>
       <td class="mono">#${t.id.slice(-6)}</td>
       <td><a href="#" onclick="viewProfile('transaction','${t.id}');return false">${esc(t.entityName||'—')}</a></td>
-      <td class="mono">${fmt(t.amount||0)}</td>
+      <td class="mono amt-balance">${fmt(t.amount||0)}</td>
       <td><span class="badge ${statusBadge(t.status)}" onclick="quickStatusUpdate('${t.id}')" style="cursor:pointer">${esc(t.status||'Pending')}</span></td>
       <td>${fmtDate(t.date)}</td>
       <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.notes||'—')}</td>
@@ -5244,7 +5238,7 @@ function renderAccounting() {
       <td><a href="#" onclick="viewProfile('accounting','${a.id}');return false" style="font-weight:500">${esc(a.description||'—')}</a></td>
       <td class="mono ${a.type==='income'?'amt-revenue':'amt-expense'}">${a.type==='income'?'+':'-'}${fmt(a.amount)}</td>
       <td class="mono">${esc(a.reference||'—')}</td>
-      <td class="mono">${fmt(a.runningBal)}</td>
+      <td class="mono amt-balance">${fmt(a.runningBal)}</td>
       <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openAccountingModal('${a.id}')">Edit</button> <button class="btn btn-xs btn-danger" onclick="deleteRecord('accounting','${a.id}')">Del</button></td>
     </tr>`).join('') : '<tr><td colspan="8"><div class="empty"><div class="empty-icon">💰</div><div class="empty-title">No entries yet</div><button class="btn btn-primary btn-sm" onclick="openAccountingModal()">+ Add Entry</button></div></td></tr>';
   
@@ -5254,7 +5248,7 @@ function renderAccounting() {
 // ── Accounting Print / Export PDF ──
 function buildAccountingPrintHtml() {
   const { withBal: items, totalIncome, totalExp, filterDesc } = getFilteredAccountingItems();
-  const rows = items.map(a=>`<tr><td>${fmtDate(a.date)}</td><td>${esc(a.type)}</td><td>${esc(a.category||'—')}</td><td>${esc(a.description||'—')}</td><td style="text-align:right" class="mono">${a.type==='income'?'':'-'}${fmt(a.amount)}</td><td class="mono">${esc(a.reference||'—')}</td><td style="text-align:right" class="mono">${fmt(a.runningBal)}</td></tr>`).join('');
+  const rows = items.map(a=>`<tr><td>${fmtDate(a.date)}</td><td>${esc(a.type)}</td><td>${esc(a.category||'—')}</td><td>${esc(a.description||'—')}</td><td style="text-align:right" class="mono ${a.type==='income'?'amt-revenue':'amt-expense'}">${a.type==='income'?'':'-'}${fmt(a.amount)}</td><td class="mono">${esc(a.reference||'—')}</td><td style="text-align:right" class="mono">${fmt(a.runningBal)}</td></tr>`).join('');
   return `
     <p style="font-size:15px;color:#555;margin-bottom:10px">Filters applied: ${esc(filterDesc)} &nbsp;·&nbsp; Generated: ${today()}</p>
     <table style="width:100%;border-collapse:collapse;font-size:15px"><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th>Reference</th><th style="text-align:right">Balance</th></tr></thead>
@@ -5375,7 +5369,7 @@ function renderEmployees() {
       <td>${esc(e.role||'—')}</td>
       <td>${esc(e.department||'—')}</td>
       <td>${esc(e.phone||'—')}</td>
-      <td class="mono">${fmt(e.salary||0)}</td>
+      <td class="mono amt-neutral">${fmt(e.salary||0)}</td>
       <td>${esc(e.joinDate||'—')}</td>
       <td><span class="badge ${e.status==='active'?'badge-success':e.status==='resigned'?'badge-warning':'badge-muted'}">${esc(e.status)}</span></td>
       <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openEmployeeModal('${e.id}')">✏️ Edit</button> <button class="btn btn-xs btn-secondary btn-archive" onclick="quickArchive('employee','${e.id}')">${e.status==='archived'?'↩️ Unarchive':'🗄️ Archive'}</button></td>
@@ -5456,7 +5450,7 @@ function renderPayrollTable() {
         const entry = ph?.entries?.find(x=>x.empId===e.id);
         return `<tr>
           <td style="font-weight:500">${esc(e.name)}<div style="font-size:14px;color:var(--text-muted)">${esc(e.role||'')}</div></td>
-          <td class="mono">${fmt(e.salary||0)}</td>
+          <td class="mono amt-neutral">${fmt(e.salary||0)}</td>
           ${extraEarnings.map(earn=>`<td><input type="number" value="${entry?.earnings?.[earn]||0}" id="earn-${e.id}-${earn.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
           ${deductions.map(ded=>`<td><input type="number" value="${entry?.deductions?.[ded]||0}" id="ded-${e.id}-${ded.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
           <td class="mono font-bold" id="net-${e.id}">${fmt(e.salary||0)}</td>
@@ -5514,7 +5508,7 @@ function renderSalaryHistory() {
   tbody.innerHTML = all.length ? all.map(e=>`
     <tr>
       <td class="mono">${esc(e.month)}</td><td>${esc(e.empName)}</td>
-      <td class="mono">${fmt(e.salary)}</td>
+      <td class="mono amt-neutral">${fmt(e.salary)}</td>
       <td class="mono text-success">+${fmt(e.totalEarnings||0)}</td>
       <td class="mono text-danger">-${fmt(e.totalDeductions||0)}</td>
       <td class="mono font-bold">${fmt(e.netPay)}</td>
@@ -5545,7 +5539,7 @@ function showPaySlip(entry) {
     <tbody>${eHTML}</tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--border)"><td style="padding:8px">Total Earnings</td><td style="padding:8px;text-align:right">${fmt((entry.salary||0)+(entry.totalEarnings||0))}</td></tr></tfoot></table>
     ${dHTML?`<table style="width:100%;margin-top:10px"><thead><tr style="background:var(--elevated)"><th style="padding:8px">Deductions</th><th style="padding:8px;text-align:right">Amount</th></tr></thead><tbody>${dHTML}</tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--border)"><td style="padding:8px">Total Deductions</td><td style="padding:8px;text-align:right;color:var(--danger)">-${fmt(entry.totalDeductions||0)}</td></tr></tfoot></table>`:''}
     <div style="margin-top:16px;padding:12px;background:var(--accent-dim);border-radius:8px;display:flex;justify-content:space-between;font-size:19px;font-weight:700">
-      <span>NET PAY</span><span class="mono">${fmt(entry.netPay)}</span>
+      <span>NET PAY</span><span class="mono amt-balance">${fmt(entry.netPay)}</span>
     </div>`;
   document.getElementById('payslip-body').innerHTML = slipContent + signatureBlockHtml();
   window._lastPaySlipContent = slipContent;
@@ -5919,16 +5913,16 @@ function viewProfile(type, id) {
     body = `<div class="profile-header"><div class="profile-avatar" style="background:var(--accent)">📦</div><div><div class="profile-name">${esc(r.name)}</div><div class="profile-sub">${esc(r.sku||'')} · ${esc(r.category||'')}</div></div>${archived?'<span class="badge badge-muted" style="margin-left:auto">🗄️ Archived</span>':''}</div>
     <div class="info-grid">
       <div class="info-item"><label>Stock</label><p class="font-mono">${r.stock} ${esc(r.unit||'pcs')}</p></div>
-      <div class="info-item"><label>Retail Price</label><p class="font-mono">${fmt(r.salePrice||0)}</p></div>
+      <div class="info-item"><label>Retail Price</label><p class="font-mono amt-revenue">${fmt(r.salePrice||0)}</p></div>
       <div class="info-item"><label>Wholesale Price</label><p class="font-mono">${fmt(r.wholesalePrice||0)||'—'}</p></div>
-      <div class="info-item"><label>Cost Price</label><p class="font-mono">${fmt(r.costPrice||0)}</p></div>
+      <div class="info-item"><label>Cost Price</label><p class="font-mono amt-purchase">${fmt(r.costPrice||0)}</p></div>
       <div class="info-item"><label>Supplier</label><p>${esc(r.supplier||'—')}</p></div>
       <div class="info-item"><label>Revenue Generated</label><p class="font-mono amt-revenue">${fmt(revenue)}</p></div>
       <div class="info-item"><label>Status</label><p><span class="badge ${r.status==='active'?'badge-success':'badge-muted'}">${esc(r.status)}</span></p></div>
       <div class="info-item"><label>Created</label><p>${fmtDate(r.createdAt)}</p></div>
     </div>
     ${r.description?`<div class="form-group"><label class="form-label">Description</label><p>${esc(r.description)}</p></div>`:''}
-    ${(r.variants&&r.variants.length)?`<h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Variants</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>SKU</th><th>Retail</th><th>Wholesale</th><th>Stock</th></tr></thead><tbody>${r.variants.map(v=>`<tr><td>${esc(v.name)}</td><td class="mono">${esc(v.sku||'—')}</td><td class="mono">${fmt(v.price||0)}</td><td class="mono">${fmt(v.wholesalePrice||0)}</td><td class="mono">${v.stock||0}</td></tr>`).join('')}</tbody></table></div>`:''}
+    ${(r.variants&&r.variants.length)?`<h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Variants</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>SKU</th><th>Retail</th><th>Wholesale</th><th>Stock</th></tr></thead><tbody>${r.variants.map(v=>`<tr><td>${esc(v.name)}</td><td class="mono">${esc(v.sku||'—')}</td><td class="mono amt-revenue">${fmt(v.price||0)}</td><td class="mono amt-revenue">${fmt(v.wholesalePrice||0)}</td><td class="mono">${v.stock||0}</td></tr>`).join('')}</tbody></table></div>`:''}
     <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Stock History</h3>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Qty</th><th>Balance</th><th>Ref</th></tr></thead><tbody>${sh.length?sh.map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${esc(h.type)}</td><td class="mono ${h.qty>=0?'text-success':'text-danger'}">${h.qty>0?'+':''}${h.qty}</td><td class="mono">${h.balanceAfter}</td><td class="mono">${esc(h.ref||'—')}</td></tr>`).join(''):'<tr><td colspan="5" class="text-center text-muted">No history</td></tr>'}</tbody></table></div>
     ${profileAuditHtml(type,id)}`;
@@ -5978,7 +5972,7 @@ function viewProfile(type, id) {
       <div class="info-item"><label>Join Date</label><p>${fmtDate(e.joinDate)}</p></div>
       <div class="info-item"><label>Phone</label><p>${esc(e.phone||'—')}</p></div>
       <div class="info-item"><label>Email</label><p>${esc(e.email||'—')}</p></div>
-      <div class="info-item"><label>Basic Salary</label><p class="mono">${fmt(e.salary||0)}</p></div>
+      <div class="info-item"><label>Basic Salary</label><p class="mono amt-neutral">${fmt(e.salary||0)}</p></div>
       <div class="info-item"><label>Status</label><p><span class="badge ${e.status==='active'?'badge-success':'badge-muted'}">${esc(e.status)}</span></p></div>
       <div class="info-item"><label>Citizenship No.</label><p>${esc(e.citizenship||'—')}</p></div>
       <div class="info-item"><label>Bank Account</label><p>${esc(e.bankAccount||'—')}</p></div>
@@ -6036,13 +6030,13 @@ function viewProfile(type, id) {
     const sale = db.sales.find(x=>x.id===id);
     if (!sale) return;
     title = sale.receiptNumber || 'Sale';
-    const itemRows = (sale.items||[]).map(i=>`<tr><td>${esc(i.name)}</td><td class="mono">${i.qty}</td><td class="mono">${fmt(i.price)}</td><td class="mono">${fmt((i.price||0)*(i.qty||0))}</td></tr>`).join('') || '<tr><td colspan="4" class="text-center text-muted">No items</td></tr>';
+    const itemRows = (sale.items||[]).map(i=>`<tr><td>${esc(i.name)}</td><td class="mono">${i.qty}</td><td class="mono amt-revenue">${fmt(i.price)}</td><td class="mono amt-revenue">${fmt((i.price||0)*(i.qty||0))}</td></tr>`).join('') || '<tr><td colspan="4" class="text-center text-muted">No items</td></tr>';
     body = `<div class="profile-header"><div class="profile-avatar" style="background:var(--accent)">🧾</div><div><div class="profile-name">${esc(sale.receiptNumber||'Sale')}</div><div class="profile-sub">${esc(sale.customerName||'Walk-in')}</div></div></div>
     <div class="info-grid">
       <div class="info-item"><label>Date</label><p>${fmtDate(sale.date)}</p></div>
       <div class="info-item"><label>Payment Method</label><p>${esc(sale.paymentMethod||'—')}</p></div>
-      <div class="info-item"><label>Subtotal</label><p class="font-mono">${fmt(sale.subtotal||0)}</p></div>
-      <div class="info-item"><label>Tax</label><p class="font-mono">${fmt(sale.taxAmount||0)}</p></div>
+      <div class="info-item"><label>Subtotal</label><p class="font-mono amt-neutral">${fmt(sale.subtotal||0)}</p></div>
+      <div class="info-item"><label>Tax</label><p class="font-mono amt-balance">${fmt(sale.taxAmount||0)}</p></div>
       <div class="info-item"><label>Total</label><p class="font-mono amt-revenue">${fmt(sale.total)}</p></div>
     </div>
     <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Items</h3>
@@ -6055,7 +6049,7 @@ function viewProfile(type, id) {
     body = `<div class="profile-header"><div class="profile-avatar" style="background:var(--accent)">💰</div><div><div class="profile-name">${esc(title)}</div><div class="profile-sub">${esc(a.category||'')}</div></div></div>
     <div class="info-grid">
       <div class="info-item"><label>Type</label><p><span class="badge ${a.type==='income'?'badge-success':'badge-danger'}">${esc(a.type)}</span></p></div>
-      <div class="info-item"><label>Amount</label><p class="font-mono ${a.type==='income'?'text-success':'text-danger'}">${fmt(a.amount)}</p></div>
+      <div class="info-item"><label>Amount</label><p class="font-mono ${a.type==='income'?'amt-revenue':'amt-expense'}">${fmt(a.amount)}</p></div>
       <div class="info-item"><label>Category</label><p>${esc(a.category||'—')}</p></div>
       <div class="info-item"><label>Date</label><p>${fmtDate(a.date)}</p></div>
       <div class="info-item"><label>Reference</label><p class="mono">${esc(a.reference||'—')}</p></div>
@@ -6848,10 +6842,10 @@ function generateReport() {
     bodyHtml = `<h2>Government Submission Summary</h2>
     <p style="font-size:17px;margin-bottom:12px">Summary formatted for periodic submission to the Inland Revenue Department (IRD). PAN: ${esc(s.panNumber||'N/A')} | VAT Registration: ${esc(s.vatNumber||'N/A')} | Fiscal Period: ${from?fmtDate(from):'—'} to ${to?fmtDate(to):'—'}</p>
     <table><thead><tr><th>Particulars</th><th>Amount</th></tr></thead><tbody>
-      <tr><td>Total Taxable Sales</td><td class="mono">${fmt(taxableSales)}</td></tr>
-      <tr><td>Output VAT Collected</td><td class="mono">${fmt(vatCollected)}</td></tr>
-      <tr><td>Total Purchases (Input)</td><td class="mono">${fmt(purchasesG.reduce((a,p)=>a+p.amount,0))}</td></tr>
-      <tr><td>Input VAT Paid</td><td class="mono">${fmt(vatPaidOnPurchase)}</td></tr>
+      <tr><td>Total Taxable Sales</td><td class="mono amt-revenue">${fmt(taxableSales)}</td></tr>
+      <tr><td>Output VAT Collected</td><td class="mono amt-balance">${fmt(vatCollected)}</td></tr>
+      <tr><td>Total Purchases (Input)</td><td class="mono amt-purchase">${fmt(purchasesG.reduce((a,p)=>a+p.amount,0))}</td></tr>
+      <tr><td>Input VAT Paid</td><td class="mono amt-purchase">${fmt(vatPaidOnPurchase)}</td></tr>
       <tr style="background:#f0f0f0"><td><strong>Net VAT Payable / (Refundable)</strong></td><td class="mono"><strong>${fmt(vatCollected-vatPaidOnPurchase)}</strong></td></tr>
     </tbody></table>
     <p style="font-size:15px;color:#666;margin-top:10px">This summary is generated from recorded transactions only. Verify against original tax invoices before submission — Claude/this system does not file returns on your behalf.</p>`;
@@ -6865,11 +6859,11 @@ function generateReport() {
     bodyHtml = `<h2>Annual Business Report</h2>
     <p style="font-size:17px;margin-bottom:12px">Period: ${fmtDate(yearFrom)} to ${fmtDate(yearTo)}</p>
     <table><thead><tr><th>Particulars</th><th>Amount</th></tr></thead><tbody>
-      <tr><td>Total Sales Revenue</td><td class="mono">${fmt(yrSales.reduce((a,x)=>a+x.total,0))}</td></tr>
+      <tr><td>Total Sales Revenue</td><td class="mono amt-revenue">${fmt(yrSales.reduce((a,x)=>a+x.total,0))}</td></tr>
       <tr><td>Number of Sales Transactions</td><td class="mono">${yrSales.length}</td></tr>
-      <tr><td>Total Purchases</td><td class="mono">${fmt(yrPurchaseTotal)}</td></tr>
-      <tr><td>Total Recorded Income</td><td class="mono">${fmt(yrIncome)}</td></tr>
-      <tr><td>Total Recorded Expense</td><td class="mono">${fmt(yrExpense)}</td></tr>
+      <tr><td>Total Purchases</td><td class="mono amt-purchase">${fmt(yrPurchaseTotal)}</td></tr>
+      <tr><td>Total Recorded Income</td><td class="mono amt-revenue">${fmt(yrIncome)}</td></tr>
+      <tr><td>Total Recorded Expense</td><td class="mono amt-expense">${fmt(yrExpense)}</td></tr>
       <tr style="background:#f0f0f0"><td><strong>Net Profit / (Loss)</strong></td><td class="mono"><strong>${fmt(yrIncome-yrExpense)}</strong></td></tr>
       <tr><td>Active Employees (current)</td><td class="mono">${db.employees.filter(e=>e.status==='active').length}</td></tr>
       <tr><td>Active Customers</td><td class="mono">${db.entities.filter(e=>!e.archived).length}</td></tr>
@@ -7770,7 +7764,7 @@ function renderEntities() {
       <td>${esc(e.email||'—')}</td>
       <td><span class="badge ${e.category?.includes('Wholesale')?'badge-info':'badge-muted'}">${esc(e.category||'—')}</span></td>
       <td class="mono ${due>0?'text-danger font-bold':''}">${due>0?fmt(due):'—'}</td>
-      <td class="mono">${fmt(e.totalValue||0)}</td>
+      <td class="mono amt-revenue">${fmt(e.totalValue||0)}</td>
       <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openEntityModal('${e.id}')">✏️ Edit</button> <button class="btn btn-xs btn-secondary btn-archive" onclick="quickArchive('entity','${e.id}')">${e.archived?'↩️ Unarchive':'🗄️ Archive'}</button></td>
     </tr>`;
   }).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><div class="empty-title">No customers yet</div><button class="btn btn-primary btn-sm" onclick="openEntityModal()">+ Add Customer</button></div></td></tr>';
@@ -7801,7 +7795,7 @@ function renderDueLedger() {
       <td><strong>${esc(c.customerName)}</strong></td>
       <td>${esc(c.date)}</td>
       <td class="${overdue?'text-danger font-bold':''}">${esc(c.dueDate||'—')}${overdue?' ⚠️':''}</td>
-      <td class="mono">${fmt(c.totalAmount)}</td>
+      <td class="mono amt-balance">${fmt(c.totalAmount)}</td>
       <td class="mono text-success">${fmt(c.paidAmount)}</td>
       <td class="mono ${c.dueAmount>0?'text-danger font-bold':''}">${fmt(c.dueAmount)}</td>
       <td><span class="badge ${c.status==='settled'?'badge-success':overdue?'badge-danger':'badge-warning'}">${c.status}</span></td>
@@ -7903,8 +7897,8 @@ function renderRecords() {
       <td>${esc(r.category||'—')}</td>
       <td>${esc(r.supplier||'—')}</td>
       <td class="mono ${r.stock<=(r.lowStockThreshold||10)?'text-danger':''}">${r.stock} ${esc(r.unit||'pcs')} ${r.stock<=(r.lowStockThreshold||10)?'⚠️':''}</td>
-      <td class="mono">${fmt(r.salePrice||0)}</td>
-      <td class="mono">${fmt(r.wholesalePrice||0)||'—'}</td>
+      <td class="mono amt-revenue">${fmt(r.salePrice||0)}</td>
+      <td class="mono amt-revenue">${fmt(r.wholesalePrice||0)||'—'}</td>
       <td>${(r.variants||[]).length ? `<span class="badge badge-info">${r.variants.length} variants</span>` : '—'}</td>
       <td><span class="badge ${r.status==='active'?'badge-success':'badge-muted'}">${esc(r.status||'active')}</span></td>
       <td>
@@ -8027,7 +8021,7 @@ function renderRawMaterials() {
       <td class="mono">${esc(m.code)}</td>
       <td><a href="#" onclick="viewMaterialProfile('${m.id}');return false" style="font-weight:500">${esc(m.name)}</a></td>
       <td>${esc(m.unit)}</td>
-      <td class="mono">${fmt(m.cost||0)}</td>
+      <td class="mono amt-purchase">${fmt(m.cost||0)}</td>
       <td class="mono ${m.stock<=(m.reorderLevel||0)?'text-danger font-bold':''}">${m.stock||0} ${m.stock<=(m.reorderLevel||0)?'⚠️':''}</td>
       <td class="mono">${m.reorderLevel||0}</td>
       <td>${supplierNames.length?supplierNames.map(n=>`<span class="badge badge-info" style="font-size:13px">${esc(n)}</span>`).join(' '):'<span class="text-muted">—</span>'}</td>
@@ -8140,13 +8134,13 @@ function viewMaterialProfile(id) {
     <div class="profile-header"><div class="profile-avatar" style="background:var(--accent)">🧱</div><div><div class="profile-name">${esc(m.name)}</div><div class="profile-sub">${esc(m.code)} · ${esc(m.category||'')}</div></div></div>
     <div class="info-grid">
       <div class="info-item"><label>Stock</label><p class="font-mono">${m.stock} ${esc(m.unit)}</p></div>
-      <div class="info-item"><label>Cost/Unit</label><p class="font-mono">${fmt(m.cost||0)}</p></div>
+      <div class="info-item"><label>Cost/Unit</label><p class="font-mono amt-purchase">${fmt(m.cost||0)}</p></div>
       <div class="info-item"><label>Reorder Level</label><p class="font-mono">${m.reorderLevel||0}</p></div>
       <div class="info-item"><label>Stock Value</label><p class="font-mono text-accent">${fmt((m.cost||0)*(m.stock||0))}</p></div>
     </div>
     ${m.notes?`<div class="form-group"><label class="form-label">Notes</label><p>${esc(m.notes)}</p></div>`:''}
     <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Suppliers</h3>
-    <div class="table-wrap"><table><thead><tr><th>Supplier</th><th>Cost</th><th>Primary</th></tr></thead><tbody>${links.length?links.map(l=>{const sp=db.secondary.find(s=>s.id===l.supplierId);return `<tr><td>${esc(sp?.name||'—')}</td><td class="mono">${fmt(l.cost||0)}</td><td>${l.isPrimary?'⭐':''}</td></tr>`;}).join(''):'<tr><td colspan="3" class="text-center text-muted">No suppliers linked</td></tr>'}</tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Supplier</th><th>Cost</th><th>Primary</th></tr></thead><tbody>${links.length?links.map(l=>{const sp=db.secondary.find(s=>s.id===l.supplierId);return `<tr><td>${esc(sp?.name||'—')}</td><td class="mono amt-purchase">${fmt(l.cost||0)}</td><td>${l.isPrimary?'⭐':''}</td></tr>`;}).join(''):'<tr><td colspan="3" class="text-center text-muted">No suppliers linked</td></tr>'}</tbody></table></div>
     <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Stock History</h3>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Qty</th><th>Balance</th><th>Ref</th></tr></thead><tbody>${sh.length?sh.map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${esc(h.type)}</td><td class="mono ${h.qty>=0?'text-success':'text-danger'}">${h.qty>0?'+':''}${h.qty}</td><td class="mono">${h.balanceAfter}</td><td class="mono">${esc(h.ref||'—')}</td></tr>`).join(''):'<tr><td colspan="5" class="text-center text-muted">No history</td></tr>'}</tbody></table></div>
     ${profileAuditHtml('rawMaterial',id)}`;
@@ -8300,7 +8294,7 @@ function renderInvProducts() {
       <td class="mono">${esc(r.sku||'—')}</td>
       <td class="mono ${r.stock<=(r.lowStockThreshold||10)?'text-danger':''}">${r.stock}</td>
       <td>${esc(r.unit||'pcs')}</td>
-      <td class="mono">${fmt((r.salePrice||0)*r.stock)}</td>
+      <td class="mono amt-revenue">${fmt((r.salePrice||0)*r.stock)}</td>
       <td><button class="btn btn-xs btn-secondary btn-adjust" onclick="openStockAdj('${r.id}')">📦 Adjust</button></td>
     </tr>`).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">No products</div></div></td></tr>';
 }
@@ -8314,7 +8308,7 @@ function renderInvMaterials() {
       <td class="mono">${esc(m.code)}</td>
       <td class="mono ${m.stock<=(m.reorderLevel||0)?'text-danger':''}">${m.stock}</td>
       <td>${esc(m.unit)}</td>
-      <td class="mono">${fmt((m.cost||0)*m.stock)}</td>
+      <td class="mono amt-purchase">${fmt((m.cost||0)*m.stock)}</td>
       <td><button class="btn btn-xs btn-secondary btn-adjust" onclick="openMaterialAdj('${m.id}')">⚖️ Adjust</button></td>
     </tr>`).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">🧱</div><div class="empty-title">No raw materials</div></div></td></tr>';
 }
@@ -8636,7 +8630,7 @@ function renderProductionBatches() {
       <td class="mono">${esc(b.batchNumber)}</td>
       <td>${esc(prod?.name||'—')}</td>
       <td class="mono">${b.qtyProduced}</td>
-      <td class="mono">${fmt(b.cost||0)}</td>
+      <td class="mono amt-purchase">${fmt(b.cost||0)}</td>
       <td>${fmtDate(b.date)}</td>
       <td><span class="badge badge-success">${esc(b.status)}</span></td>
     </tr>`;
@@ -8672,7 +8666,7 @@ function renderPurchaseOrders() {
       <td class="mono">${esc(po.poNumber)}</td>
       <td>${esc(sp?.name||'—')}</td>
       <td>${(po.items||[]).length} item(s)</td>
-      <td class="mono">${fmt(total)}</td>
+      <td class="mono amt-revenue">${fmt(total)}</td>
       <td><span class="badge ${po.status==='Received'?'badge-success':po.status==='Partially Received'?'badge-warning':po.status==='Cancelled'?'badge-muted':'badge-info'}">${esc(po.status)}</span></td>
       <td>${fmtDate(po.date)}</td>
       <td>
@@ -8853,7 +8847,7 @@ function renderSupplierInvoices() {
     return `<tr>
       <td class="mono">${esc(inv.invoiceNumber)}</td>
       <td>${esc(sp?.name||'—')}</td>
-      <td class="mono">${fmt(inv.amount)}</td>
+      <td class="mono amt-purchase">${fmt(inv.amount)}</td>
       <td>${fmtDate(inv.dueDate)||'—'}</td>
       <td><span class="badge ${status==='paid'?'badge-success':status==='partial'?'badge-warning':'badge-danger'}">${status==='paid'?'Paid':status==='partial'?'Partial':'Unpaid'}</span></td>
       <td>${due>0?`<button class="btn btn-xs btn-success" onclick="openSupplierPaymentModal('${inv.id}')">💰 Pay</button>`:'<span class="text-muted">Settled</span>'}</td>
@@ -9901,59 +9895,9 @@ document.addEventListener('DOMContentLoaded', () => { boot(); startInactivityWat
 // still opening the file directly (e.g. the office PC's local copy).
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').then(reg => {
-      // Force the browser to re-check service-worker.js on the network instead
-      // of trusting its HTTP cache. This is what was hiding every new deploy:
-      // once a service worker was installed, browsers reuse its cached response
-      // for up to 24h before even checking for a new version, so pushing new
-      // HTML/CSS/JS to GitHub had no visible effect until that window expired.
-      reg.update();
-      setInterval(() => reg.update(), 60 * 1000);
-
-      // If a new worker finishes installing while this tab is open, activate
-      // it immediately instead of waiting for every tab to be closed first.
-      reg.addEventListener('updatefound', () => {
-        const nw = reg.installing;
-        if (!nw) return;
-        nw.addEventListener('statechange', () => {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-            nw.postMessage({ type: 'SKIP_WAITING' });
-          }
-        });
-      });
-    }).catch(() => {});
-
-    // Reload once, automatically, the moment the new service worker takes
-    // control — this is what actually makes a fresh deploy show up without
-    // the user having to know to clear the app cache manually.
-    let _swRefreshed = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (_swRefreshed) return;
-      _swRefreshed = true;
-      window.location.reload();
-    });
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
   });
 }
-
-// Manual escape hatch: if a stale build is ever stuck (e.g. an old
-// service-worker.js that doesn't support the SKIP_WAITING message above),
-// running  forceAppUpdate()  in the browser console unregisters every
-// service worker, clears the Cache Storage, and does a hard reload.
-window.forceAppUpdate = async function() {
-  try {
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
-    }
-    if (window.caches) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-  } finally {
-    location.reload(true);
-  }
-};
-
 
 // Also handle if page was opened with #cs hash after DOM loaded
 window.addEventListener('hashchange', () => {

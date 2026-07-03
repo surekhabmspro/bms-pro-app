@@ -437,7 +437,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 .report-doc thead th{background:#f0f0f0!important;padding:6px 10px;text-align:left;font-weight:700;border:1px solid #999!important;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#222!important}
 .report-doc tbody tr{background:#fff!important}
 .report-doc tbody tr:nth-child(even){background:#f9f9f9!important}
-.report-doc td{padding:5px 10px;border:1px solid #ccc!important;color:#000!important;background:transparent;line-height:1.3}
+.report-doc td{padding:5px 10px;border:1px solid #ccc!important;color:#000!important;background:transparent;line-height:1.3}.report-doc td.amt-revenue{color:#16a34a!important}.report-doc td.amt-expense{color:#dc2626!important}.report-doc td.amt-balance{color:#4f46e5!important}.report-doc td.amt-payment{color:#0284c7!important}.report-doc td.amt-purchase{color:#ea580c!important}
 .report-doc-header{border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start}
 .report-org-name{font-size:24px;font-weight:700;letter-spacing:.04em}
 .report-classification{font-size:14px;font-weight:700;letter-spacing:.1em;text-align:center;padding:2px 0;border-top:1px solid #000;border-bottom:1px solid #000;margin-bottom:8px}
@@ -629,6 +629,11 @@ textarea.form-control{resize:vertical;min-height:80px}
   #print-target tbody tr{background:#fff!important;border:none}
   #print-target tbody tr:nth-child(even){background:#fafafa!important}
   #print-target td{border:1px solid #ccc!important;padding:5px 10px;color:#000!important;font-size:12px;line-height:1.3;vertical-align:middle}
+  #print-target td.amt-revenue{color:#16a34a!important;font-weight:700!important}
+  #print-target td.amt-expense{color:#dc2626!important;font-weight:700!important}
+  #print-target td.amt-balance{color:#4f46e5!important;font-weight:700!important}
+  #print-target td.amt-payment{color:#0284c7!important;font-weight:700!important}
+  #print-target td.amt-purchase{color:#ea580c!important;font-weight:700!important}
   /* Signature uses a layout table — must not get any visible borders */
   #print-target .report-signature td,#print-target .report-signature th{border:none!important;background:transparent!important}
   /* Reports already have their own tuned table styling (.report-doc) — restate it here so
@@ -696,7 +701,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 }
 #print-target{display:none}
 /* ══ MISC UTILS ══ */
-.flex{display:flex}.mb-2{margin-bottom:8px}.mb-4{margin-bottom:16px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.text-muted{color:var(--text-muted)}.text-sm{font-size:15px}.text-xs{font-size:14px}.font-bold{font-weight:700!important}.font-mono{font-family:'JetBrains Mono',monospace}.w-full{width:100%}.text-center{text-align:center}.text-right{text-align:right}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.text-accent{color:var(--accent)}.amt-revenue{color:#22c55e;font-weight:700}.amt-expense{color:#f87171;font-weight:700}.amt-balance{color:#818cf8;font-weight:700}.amt-payment{color:#38bdf8;font-weight:700}.amt-purchase{color:#fb923c;font-weight:700}.amt-neutral{font-weight:700}.light-mode .amt-balance{color:#4f46e5}.light-mode .amt-revenue{color:#16a34a}.light-mode .amt-expense{color:#dc2626}.light-mode .amt-payment{color:#0284c7}.light-mode .amt-purchase{color:#ea580c}.hidden{display:none!important}
+.flex{display:flex}.mb-2{margin-bottom:8px}.mb-4{margin-bottom:16px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.text-muted{color:var(--text-muted)}.text-sm{font-size:15px}.text-xs{font-size:14px}.font-bold{font-weight:700!important}.font-mono{font-family:'JetBrains Mono',monospace}.w-full{width:100%}.text-center{text-align:center}.text-right{text-align:right}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.text-accent{color:var(--accent)}.amt-revenue{color:#22c55e!important;font-weight:700!important}.amt-expense{color:#f87171!important;font-weight:700!important}.amt-balance{color:#818cf8!important;font-weight:700!important}.amt-payment{color:#38bdf8!important;font-weight:700!important}.amt-purchase{color:#fb923c!important;font-weight:700!important}.amt-neutral{font-weight:700!important}.light-mode .amt-balance{color:#4f46e5!important}.light-mode .amt-revenue{color:#16a34a!important}.light-mode .amt-expense{color:#dc2626!important}.light-mode .amt-payment{color:#0284c7!important}.light-mode .amt-purchase{color:#ea580c!important}.hidden{display:none!important}
 </style>
 </head>
 <body>
@@ -5988,7 +5993,7 @@ function viewProfile(type, id) {
     </div>
     <div style="page-break-inside:avoid;break-inside:avoid">
       <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Payroll History</h3>
-      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Basic</th><th>Earnings</th><th>Deductions</th><th>Net Pay</th></tr></thead><tbody>${ph.length?ph.map(p=>{ const entry=p.entries.find(x=>x.empId===id); return entry?`<tr><td>${esc(p.month)}</td><td class="mono">${fmt(entry.salary)}</td><td class="mono text-success">+${fmt(entry.totalEarnings||0)}</td><td class="mono text-danger">-${fmt(entry.totalDeductions||0)}</td><td class="mono amt-balance">${fmt(entry.netPay)}</td></tr>`:''}).join(''):'<tr><td colspan="5" class="text-center text-muted">No payroll history</td></tr>'}</tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Basic</th><th>Earnings</th><th>Deductions</th><th>Net Pay</th></tr></thead><tbody>${ph.length?ph.map(p=>{ const entry=p.entries.find(x=>x.empId===id); return entry?`<tr><td>${esc(p.month)}</td><td class="mono amt-neutral">${fmt(entry.salary)}</td><td class="mono text-success">+${fmt(entry.totalEarnings||0)}</td><td class="mono text-danger">-${fmt(entry.totalDeductions||0)}</td><td class="mono amt-balance">${fmt(entry.netPay)}</td></tr>`:''}).join(''):'<tr><td colspan="5" class="text-center text-muted">No payroll history</td></tr>'}</tbody></table></div>
     </div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='secondary') {
@@ -6007,7 +6012,7 @@ function viewProfile(type, id) {
     ${sp.notes?`<div class="form-group"><label class="form-label">Notes</label><p>${esc(sp.notes)}</p></div>`:''}
     <div style="page-break-inside:avoid;break-inside:avoid">
       <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Purchase History</h3>
-      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead><tbody>${purchases.length?purchases.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${esc(p.description)}</td><td class="mono">${fmt(p.amount)}</td></tr>`).join(''):'<tr><td colspan="3" class="text-center text-muted">No purchases recorded</td></tr>'}</tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead><tbody>${purchases.length?purchases.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${esc(p.description)}</td><td class="mono amt-payment">${fmt(p.amount)}</td></tr>`).join(''):'<tr><td colspan="3" class="text-center text-muted">No purchases recorded</td></tr>'}</tbody></table></div>
     </div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='transaction') {

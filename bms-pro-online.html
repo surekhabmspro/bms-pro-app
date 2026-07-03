@@ -2315,6 +2315,10 @@ textarea.form-control{resize:vertical;min-height:80px}
 
 <script>
 'use strict';
+// Bump this string on every deploy. It has no functional effect on the app —
+// it only lets you confirm, from the Sync modal, which build is actually
+// live on a given device (vs. still showing a stale cached one).
+const APP_BUILD = '2026-07-03-sync-cache-fix';
 /* ══ DB SCHEMA & INIT ══ */
 // ── SOFTWARE IDENTITY (fixed) — never derived from business data ─────────
 // "Surekha BMS Pro" is the name of THIS SOFTWARE. A business's own name
@@ -2896,6 +2900,8 @@ function syncRenderSetupModal() {
         ${syncConfigured()
           ? `This device is connected to your organization's online server.<br><br>Status: <b id="sync-modal-status">${SYNC.pending ? 'Changes pending…' : (SYNC.online ? 'Synced' : 'No internet')}</b>`
           : `This device is running in offline mode. Ask your administrator to configure online sync if you need remote access.`}
+        <div style="font-size:13px;color:var(--text-dim);margin-top:10px">Build: ${esc(APP_BUILD)}</div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:10px" onclick="forceAppUpdate()">🔄 Check for App Updates</button>
       </div>`;
     return;
   }
@@ -9895,9 +9901,59 @@ document.addEventListener('DOMContentLoaded', () => { boot(); startInactivityWat
 // still opening the file directly (e.g. the office PC's local copy).
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    navigator.serviceWorker.register('service-worker.js').then(reg => {
+      // Force the browser to re-check service-worker.js on the network instead
+      // of trusting its HTTP cache. This is what was hiding every new deploy:
+      // once a service worker was installed, browsers reuse its cached response
+      // for up to 24h before even checking for a new version, so pushing new
+      // HTML/CSS/JS to GitHub had no visible effect until that window expired.
+      reg.update();
+      setInterval(() => reg.update(), 60 * 1000);
+
+      // If a new worker finishes installing while this tab is open, activate
+      // it immediately instead of waiting for every tab to be closed first.
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            nw.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+    }).catch(() => {});
+
+    // Reload once, automatically, the moment the new service worker takes
+    // control — this is what actually makes a fresh deploy show up without
+    // the user having to know to clear the app cache manually.
+    let _swRefreshed = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (_swRefreshed) return;
+      _swRefreshed = true;
+      window.location.reload();
+    });
   });
 }
+
+// Manual escape hatch: if a stale build is ever stuck (e.g. an old
+// service-worker.js that doesn't support the SKIP_WAITING message above),
+// running  forceAppUpdate()  in the browser console unregisters every
+// service worker, clears the Cache Storage, and does a hard reload.
+window.forceAppUpdate = async function() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if (window.caches) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } finally {
+    location.reload(true);
+  }
+};
+
 
 // Also handle if page was opened with #cs hash after DOM loaded
 window.addEventListener('hashchange', () => {

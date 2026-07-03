@@ -21,48 +21,52 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 <style>
 /* ══ CSS VARIABLES & RESET ══ */
 :root {
-  --accent: #10B981;
-  --accent-dim: rgba(16,185,129,0.16);
-  --accent-hover: #0d9c6f;
-  --accent-glow: rgba(16,185,129,0.32);
-  /* Dark: Forest Night — each layer is visibly distinct */
-  --bg:          #0E1612;   /* page canvas — near black-green */
-  --sidebar-bg:  #192B22;   /* sidebar — clearly brighter than bg */
-  --surface:     #22382C;   /* cards — pop against bg */
-  --elevated:    #2C4A3A;   /* modals, dropdowns — above cards */
-  --border:      #3A5E49;
-  --border-light:#4D7A62;
-  --text:        #E4EEE9;
-  --text-muted:  #85AB99;
-  --text-dim:    #527A67;
+  --accent: #6366F1;
+  --accent-dim: rgba(99,102,241,0.16);
+  --accent-hover: #4f46e5;
+  --accent-glow: rgba(99,102,241,0.30);
+  /* ── Charcoal Dark ──
+     5 distinct layers with visible separation in every ambient light condition.
+     Accent is indigo so it pops cleanly against the gray tones. */
+  --bg:          #141416;   /* page canvas  — near-black charcoal */
+  --sidebar-bg:  #1C1C1F;   /* sidebar/topbar — one step lighter */
+  --surface:     #26262A;   /* cards — clearly lighter than sidebar */
+  --elevated:    #313136;   /* modals / dropdowns — above cards */
+  --border:      #3F3F46;
+  --border-light:#52525C;
+  --text:        #F2F2F5;
+  --text-muted:  #A1A1AB;
+  --text-dim:    #62626E;
   --success: #34D399;  --success-dim: rgba(52,211,153,0.16);
   --warning: #FCD34D;  --warning-dim: rgba(252,211,77,0.16);
   --danger:  #F87171;  --danger-dim:  rgba(248,113,113,0.16);
   --info:    #67E8F9;  --info-dim:    rgba(103,232,249,0.16);
   --sidebar-w: 240px;  --topbar-h: 56px;
   --radius: 12px;  --radius-sm: 8px;  --radius-xs: 5px;
-  --shadow:    0 8px 32px rgba(0,0,0,0.65);
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.45);
+  --shadow:    0 8px 32px rgba(0,0,0,0.70);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.50);
   --transition: 0.18s ease;
 }
 .light-mode {
-  --accent: #059669;
-  --accent-dim: rgba(5,150,105,0.12);
-  --accent-hover: #047857;
-  --accent-glow: rgba(5,150,105,0.26);
-  /* Light: richer bg so white cards clearly lift off the page */
-  --bg:          #C8DED3;   /* stronger sage-green canvas */
-  --sidebar-bg:  #E6F3EC;   /* sidebar — warm white-green */
-  --surface:     #FFFFFF;   /* cards — clean white, stands out clearly */
-  --elevated:    #EEF7F2;   /* dropdowns/inputs */
-  --border:      #AECFBE;
-  --border-light:#C5E0D1;
-  --text:        #0B2016;
-  --text-muted:  #2E5C44;
-  --text-dim:    #628F78;
+  --accent: #4f46e5;
+  --accent-dim: rgba(79,70,229,0.12);
+  --accent-hover: #4338ca;
+  --accent-glow: rgba(79,70,229,0.25);
+  /* ── Charcoal Light ──
+     Warm off-white background, pure white cards — classic document feel.
+     Text is very dark for maximum reading comfort. */
+  --bg:          #E4E4E8;   /* cool gray canvas */
+  --sidebar-bg:  #F4F4F7;   /* sidebar — lighter than bg, distinct */
+  --surface:     #FFFFFF;   /* cards — pure white, clearly elevated */
+  --elevated:    #F0F0F5;   /* modals/dropdowns — slight tint above cards */
+  --border:      #D4D4DC;
+  --border-light:#E2E2EA;
+  --text:        #111114;   /* near-black — maximum contrast */
+  --text-muted:  #4A4A55;
+  --text-dim:    #8A8A99;
   --success: #059669;
-  --shadow:    0 4px 20px rgba(8,36,22,0.13);
-  --shadow-sm: 0 1px 5px rgba(8,36,22,0.08);
+  --shadow:    0 4px 20px rgba(0,0,0,0.12);
+  --shadow-sm: 0 1px 5px rgba(0,0,0,0.08);
   --success-dim: rgba(5,150,105,0.11);
   --warning-dim: rgba(245,158,11,0.11);
   --danger-dim:  rgba(239,68,68,0.11);
@@ -224,7 +228,7 @@ tbody tr:nth-child(even){background:rgba(255,255,255,0.015)}
 tbody tr:hover{background:var(--elevated);cursor:default}
 tbody tr.row-danger{background:var(--danger-dim)!important}
 td{padding:10px 14px;font-size:17px;vertical-align:middle}
-td.mono{font-family:'JetBrains Mono',monospace;font-size:15px}
+td.mono{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700}
 /* ══ BADGES ══ */
 .badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:14px;font-weight:700;letter-spacing:0.03em}
 .badge-success{background:var(--success-dim);color:var(--success)}
@@ -443,7 +447,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 .report-doc h2{font-size:19px;font-weight:700;margin:14px 0 8px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #999;padding-bottom:5px}
 .report-doc h3{font-size:18px;font-weight:700;margin:10px 0 5px}
 /* Signature block: kept out of the table grid look and protected from awkward print splits */
-.report-signature{margin-top:60px;page-break-inside:avoid;break-inside:avoid}
+.report-signature{margin-top:60px;page-break-inside:avoid;break-inside:avoid;page-break-before:avoid;break-before:avoid;font-size:14px}
 /* Report category selector grid */
 .report-cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:16px}
 .report-cat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all var(--transition)}
@@ -461,36 +465,6 @@ textarea.form-control{resize:vertical;min-height:80px}
    tighter than the last; the engine picks the loosest level that makes the signature fit, and
    only allows a fresh page when even the tightest level still doesn't have room. */
 .print-doc-root{line-height:1.45}
-.print-compact-1{line-height:1.45}
-.print-compact-1 .report-doc-header{padding-bottom:8px;margin-bottom:10px}
-.print-compact-1 .report-doc h2{margin:12px 0 6px;padding-bottom:4px}
-.print-compact-1 .report-doc h3{margin:8px 0 4px}
-.print-compact-1 .report-doc p{margin:0 0 6px}
-.print-compact-1 .report-doc table{margin:4px 0 12px}
-.print-compact-1 thead th,.print-compact-1 td,.print-compact-1 .report-doc th,.print-compact-1 .report-doc td{padding:6px 10px}
-.print-compact-1 .profile-header{margin-bottom:12px}
-.print-compact-1 .info-grid{margin-bottom:10px;gap:8px}
-
-.print-compact-2{line-height:1.3}
-.print-compact-2 .report-doc-header{padding-bottom:6px;margin-bottom:7px}
-.print-compact-2 .report-doc h2{margin:8px 0 4px;padding-bottom:3px}
-.print-compact-2 .report-doc h3{margin:6px 0 3px}
-.print-compact-2 .report-doc p{margin:0 0 4px}
-.print-compact-2 .report-doc table{margin:3px 0 8px}
-.print-compact-2 thead th,.print-compact-2 td,.print-compact-2 .report-doc th,.print-compact-2 .report-doc td{padding:4px 8px}
-.print-compact-2 .profile-header{margin-bottom:8px}
-.print-compact-2 .info-grid{margin-bottom:6px;gap:6px}
-
-.print-compact-3{line-height:1.15;font-size:15px}
-.print-compact-3 .report-doc-header{padding-bottom:4px;margin-bottom:5px}
-.print-compact-3 .report-doc h2{margin:5px 0 3px;padding-bottom:2px}
-.print-compact-3 .report-doc h3{margin:4px 0 2px}
-.print-compact-3 .report-doc p{margin:0 0 2px}
-.print-compact-3 .report-doc table{margin:2px 0 5px}
-.print-compact-3 thead th,.print-compact-3 td,.print-compact-3 .report-doc th,.print-compact-3 .report-doc td{padding:2px 6px}
-.print-compact-3 .profile-header{margin-bottom:5px}
-.print-compact-3 .info-grid{margin-bottom:4px;gap:4px}
-.print-compact-3 .report-doc{padding:24px}
 
 @media print{
   .report-page{page-break-after:always}
@@ -507,7 +481,12 @@ textarea.form-control{resize:vertical;min-height:80px}
   .report-doc-header{page-break-after:avoid;break-after:avoid}
   .report-doc thead{display:table-header-group}
   .report-doc p{orphans:3;widows:3}
-  .report-signature{page-break-inside:avoid !important;break-inside:avoid !important;page-break-before:auto}
+  /* Signature block: never split mid-block, and try to stay on the same page as
+     the content above it. The browser honours these when there is room; only
+     pushes to a new page when there truly is not enough space on the current page. */
+  .report-signature{page-break-inside:avoid !important;break-inside:avoid !important;
+                    page-break-before:avoid !important;break-before:avoid !important;
+                    margin-top:60px !important}
   @page{margin:15mm}
 }
 /* ══ SETTINGS ══ */
@@ -650,6 +629,8 @@ textarea.form-control{resize:vertical;min-height:80px}
   #print-target tbody tr{background:#fff!important;border:none}
   #print-target tbody tr:nth-child(even){background:#fafafa!important}
   #print-target td{border:1px solid #ccc!important;padding:5px 10px;color:#000!important;font-size:12px;line-height:1.3;vertical-align:middle}
+  /* Signature uses a layout table — must not get any visible borders */
+  #print-target .report-signature td,#print-target .report-signature th{border:none!important;background:transparent!important}
   /* Reports already have their own tuned table styling (.report-doc) — restate it here so
      it isn't accidentally overridden by the generic rules above (an ID selector otherwise
      outranks a plain class selector). */
@@ -715,14 +696,13 @@ textarea.form-control{resize:vertical;min-height:80px}
 }
 #print-target{display:none}
 /* ══ MISC UTILS ══ */
-.flex{display:flex}.mb-2{margin-bottom:8px}.mb-4{margin-bottom:16px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.text-muted{color:var(--text-muted)}.text-sm{font-size:15px}.text-xs{font-size:14px}.font-bold{font-weight:700}.font-mono{font-family:'JetBrains Mono',monospace}.w-full{width:100%}.text-center{text-align:center}.text-right{text-align:right}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.text-accent{color:var(--accent)}.hidden{display:none!important}
+.flex{display:flex}.mb-2{margin-bottom:8px}.mb-4{margin-bottom:16px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.text-muted{color:var(--text-muted)}.text-sm{font-size:15px}.text-xs{font-size:14px}.font-bold{font-weight:700!important}.font-mono{font-family:'JetBrains Mono',monospace}.w-full{width:100%}.text-center{text-align:center}.text-right{text-align:right}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.text-accent{color:var(--accent)}.amt-revenue{color:#22c55e;font-weight:700}.amt-expense{color:#f87171;font-weight:700}.amt-balance{color:#818cf8;font-weight:700}.amt-payment{color:#38bdf8;font-weight:700}.amt-purchase{color:#fb923c;font-weight:700}.amt-neutral{font-weight:700}.light-mode .amt-balance{color:#4f46e5}.light-mode .amt-revenue{color:#16a34a}.light-mode .amt-expense{color:#dc2626}.light-mode .amt-payment{color:#0284c7}.light-mode .amt-purchase{color:#ea580c}.hidden{display:none!important}
 </style>
 </head>
 <body>
 
 <!-- ══ PRINT TARGET (isolated print container) ══ -->
 <div id="print-target"></div>
-<div id="print-measure-sandbox" style="position:absolute;left:-9999px;top:0;visibility:hidden;pointer-events:none"></div>
 
 <!-- ══ TOAST CONTAINER ══ -->
 <div id="toast-container"></div>
@@ -997,7 +977,7 @@ textarea.form-control{resize:vertical;min-height:80px}
                   </div>
                   <div style="text-align:center;padding-top:16px">
                     <div class="text-xs text-muted">Change</div>
-                    <div id="change-due-val" class="font-mono font-bold text-accent"></div>
+                    <div id="change-due-val" class="font-mono amt-payment"></div>
                   </div>
                 </div>
               </div>
@@ -1284,9 +1264,8 @@ textarea.form-control{resize:vertical;min-height:80px}
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-primary" onclick="generateReport()">📊 Generate Report</button>
-              <button class="btn btn-secondary" onclick="printReportDoc()">🖨️ Print</button>
+              <button class="btn btn-secondary btn-print" onclick="printReportDoc()">🖨️ Print / PDF</button>
               <button class="btn btn-secondary" onclick="exportReportCSV()">📤 CSV</button>
-              <button class="btn btn-secondary" onclick="exportReportPDF()">📄 PDF</button>
               <button class="btn btn-secondary" onclick="copyReportText()">📋 Copy Text</button>
               <button class="btn btn-secondary" onclick="saveReportTemplate()">💾 Save Template</button>
             </div>
@@ -2348,8 +2327,7 @@ const DB_KEY = 'bms_pro_v1';
 // strict privacy settings, some managed/locked-down PCs). A raw
 // localStorage call throwing at script load time used to take down the
 // ENTIRE app before anything could even draw on screen (the "black screen"
-// bug). Every read/write now goes through these safe wrappers instead —
-// worst case, storage just silently doesn't persist, the app never crashes.
+
 function safeGet(key) {
   try { return localStorage.getItem(key); } catch (e) { return null; }
 }
@@ -2601,6 +2579,83 @@ function saveDB() {
   }
   try { safeSet(DB_KEY, JSON.stringify(db)); } catch(e) { toast('Storage error: ' + e.message, 'error'); }
   scheduleSync();
+  clearTimeout(saveDB._refreshTimer);
+  saveDB._refreshTimer = setTimeout(refreshViews, 80);
+}
+
+// ── Central view refresh dispatcher ──────────────────────────────────────────
+// Called automatically after every saveDB(). Keeps the dashboard KPIs and the
+// currently-open module in sync with the latest data at all times — on the
+// device that made the change AND on other devices after a sync pull.
+//
+// Rules:
+//   • Dashboard always gets a silent KPI-only refresh (cheap, ~2ms).
+//   • Current module gets a full re-render only if it's directly affected by
+//     the kind of data that changes most often (sales, stock, accounting).
+//     Settings/HR modules skip re-render unless they're actually open.
+//   • POS is never auto-re-rendered mid-session (would clear cart state).
+//   • No render runs until the app is fully booted and a user is logged in.
+// Modules that should NOT be auto-re-rendered in the background after a save:
+// POS — re-rendering mid-session would clear the active cart.
+// Reports/Archive/Settings — these are read or config views; background data changes
+//   don't affect what the user is reading there until they regenerate/reload anyway.
+const REFRESH_SKIP = new Set(['pos', 'reports', 'archive', 'settings']);
+
+function refreshViews() {
+  if (!session || typeof renderDashboard !== 'function') return;
+  if (currentModule === 'dashboard') {
+    // User is looking at the dashboard — do the full render (charts, recent txns, alerts)
+    try { renderDashboard(); } catch(e) {}
+    return;
+  }
+  // User is on another module — silently update only the dashboard KPI numbers
+  // (so they're current when the user next switches to the dashboard),
+  // then re-render the currently-visible module if it's data-driven.
+  try { refreshDashboardKPIs(); } catch(e) {}
+  if (currentModule && !REFRESH_SKIP.has(currentModule)) {
+    const renders = {
+      records: renderRecords, rawmaterials: renderRawMaterials,
+      inventory: renderInventory, production: renderProduction,
+      purchase: renderPurchase, transactions: renderTransactions,
+      entities: renderEntities, secondary: renderSecondary,
+      accounting: renderAccounting, hr: renderHR
+    };
+    const fn = renders[currentModule];
+    if (fn) { try { fn(); } catch(e) {} }
+  }
+}
+
+// Lightweight dashboard KPI refresh — only updates the numbers, not the
+// whole page. Does NOT re-render charts/top-products (those are slower)
+// unless the user is actually on the dashboard.
+function refreshDashboardKPIs() {
+  const kpiGrid = document.getElementById('kpi-grid');
+  if (!kpiGrid) return; // dashboard not mounted yet
+  const t = today();
+  const monthPrefix = t.slice(0, 7);
+  // Last month — use local date math, NOT toISOString() (UTC offset bug)
+  const now2 = new Date();
+  const lastMDate = new Date(now2.getFullYear(), now2.getMonth() - 1, 1);
+  const lastMStr = lastMDate.getFullYear() + '-' + String(lastMDate.getMonth()+1).padStart(2,'0');
+
+  const todaySales   = db.sales.filter(s => s.date === t);
+  const monthSales   = db.sales.filter(s => s.date && s.date.startsWith(monthPrefix));
+  const totalRevToday  = todaySales.reduce((a,s) => a + s.total, 0);
+  const totalRevMonth  = monthSales.reduce((a,s) => a + s.total, 0);
+  const totalIncome  = db.accounting.filter(a => a.type === 'income').reduce((a,x) => a + x.amount, 0);
+  const totalExp     = db.accounting.filter(a => a.type === 'expense').reduce((a,x) => a + x.amount, 0);
+  const netBalance   = totalIncome - totalExp;
+  const lowStockCnt  = db.records.filter(r => r.stock <= (r.lowStockThreshold || db.settings.lowStockThreshold || 10)).length;
+
+  kpiGrid.innerHTML = `
+    <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue</div><div class="kpi-value">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">Month Revenue</div><div class="kpi-value">${fmtWhole(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value">${fmtWhole(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.entities||'Customers')}</div><div class="kpi-value">${db.entities.length}</div><div class="kpi-change">Active contacts</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.records||'Records')}</div><div class="kpi-value">${db.records.length}</div><div class="kpi-change">In inventory</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">⚠️</div><div class="kpi-body"><div class="kpi-label">Low Stock</div><div class="kpi-value" style="color:var(--warning)">${lowStockCnt}</div><div class="kpi-change">Items to reorder</div></div></div>
+  `;
+  setTimeout(fitKpiValues, 0);
 }
 
 /* ══ UTILITIES ══ */
@@ -2613,13 +2668,7 @@ async function hashPw(pw, s) {
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   ONLINE SYNC MODULE
-   ----------------------------------------------------------------------
-   This entire block is ADDITIVE — it does not change any business logic.
-   If no server is configured, every function below quietly does nothing
-   and the app behaves exactly like the original offline-only version.
-
+/* ══ ONLINE SYNC MODULE ══
    How it works in plain terms:
    - Each device stores its own server address + login token (not synced,
      because every device may connect to the same server differently).
@@ -2744,7 +2793,10 @@ async function syncPull(opts) {
       if (session && typeof openModule === 'function') {
         updateTopbar();
         renderSidebar();
-        openModule(currentModule || 'dashboard');
+        // Use the same central refresh dispatcher as local saves — updates
+        // dashboard KPIs + current module without interrupting the user.
+        clearTimeout(saveDB._refreshTimer);
+        saveDB._refreshTimer = setTimeout(refreshViews, 80);
       } else if (document.getElementById('login-overlay')?.classList.contains('show')) {
         // No one has logged in yet — the login screen may already be showing
         // stale/old company branding from before this pull. Re-render it now
@@ -2822,7 +2874,7 @@ function startSyncLoop() {
   syncRefreshStatusDisplay();
   if (SYNC.token) syncPull();
   if (SYNC.pullTimer) clearInterval(SYNC.pullTimer);
-  SYNC.pullTimer = setInterval(() => { if (document.visibilityState === 'visible') syncPull(); }, 30000);
+  SYNC.pullTimer = setInterval(() => { if (document.visibilityState === 'visible') syncPull(); }, 15000);
   if (SYNC.pending) scheduleSync(1500);
 }
 
@@ -4273,31 +4325,13 @@ function renderDashboard() {
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   document.getElementById('dashboard-greeting').textContent = `${greet}, ${session.name.split(' ')[0]}! 👋`;
   document.getElementById('dashboard-date').textContent = 'Today is ' + fmtDate(today());
-  
-  // KPI
-  const todaySales = db.sales.filter(s=>s.date===today());
-  const totalRevToday = todaySales.reduce((a,s)=>a+s.total,0);
-  const monthSales = db.sales.filter(s=>s.date&&s.date.startsWith(today().slice(0,7)));
-  const totalRevMonth = monthSales.reduce((a,s)=>a+s.total,0);
-  const totalIncome = db.accounting.filter(a=>a.type==='income').reduce((a,x)=>a+x.amount,0);
-  const totalExp = db.accounting.filter(a=>a.type==='expense').reduce((a,x)=>a+x.amount,0);
-  const netBalance = totalIncome - totalExp;
-  const totalEntities = db.entities.length;
-  const totalRecords = db.records.length;
-  
-  document.getElementById('kpi-grid').innerHTML = `
-    <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue</div><div class="kpi-value">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div></div>
-    <div class="kpi-card"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">Month Revenue</div><div class="kpi-value">${fmtWhole(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div></div></div>
-    <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value">${fmtWhole(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div></div>
-    <div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.entities||'Customers')}</div><div class="kpi-value">${totalEntities}</div><div class="kpi-change">Active contacts</div></div></div>
-    <div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.records||'Records')}</div><div class="kpi-value">${totalRecords}</div><div class="kpi-change">In inventory</div></div></div>
-    <div class="kpi-card"><div class="kpi-icon">⚠️</div><div class="kpi-body"><div class="kpi-label">Low Stock</div><div class="kpi-value" style="color:var(--warning)">${db.records.filter(r=>r.stock<=(r.lowStockThreshold||db.settings.lowStockThreshold||10)).length}</div><div class="kpi-change">Items to reorder</div></div></div>
-  `;
-  setTimeout(fitKpiValues, 0);
+
+  // KPI cards — delegate to shared function used by both renderDashboard and refreshViews
+  refreshDashboardKPIs();
   renderTopProducts();
   renderCategoryDonut();
-  
-  // 7-day chart
+
+  // 7-day chart — local date (not UTC)
   const days7 = [];
   for (let i=6;i>=0;i--) {
     const d = new Date(); d.setDate(d.getDate()-i);
@@ -4313,11 +4347,11 @@ function renderDashboard() {
       </div>
       <div class="chart-label">${d.label}</div>
     </div>`).join('');
-  
-  // Month vs last month
+
+  // Month vs last month — local date math only (toISOString has UTC offset bug)
   const thisM = today().slice(0,7);
-  const lastM = new Date(); lastM.setMonth(lastM.getMonth()-1);
-  const lastMStr = lastM.toISOString().slice(0,7);
+  const lmDate = new Date(); lmDate.setDate(1); lmDate.setMonth(lmDate.getMonth()-1);
+  const lastMStr = lmDate.getFullYear()+'-'+String(lmDate.getMonth()+1).padStart(2,'0');
   const thisRev = db.sales.filter(s=>s.date&&s.date.startsWith(thisM)).reduce((a,x)=>a+x.total,0);
   const lastRev = db.sales.filter(s=>s.date&&s.date.startsWith(lastMStr)).reduce((a,x)=>a+x.total,0);
   const pct = lastRev ? Math.round((thisRev-lastRev)/lastRev*100) : (thisRev?100:0);
@@ -4327,15 +4361,15 @@ function renderDashboard() {
       <div><div class="text-xs text-muted">Last Month</div><div class="font-mono" style="font-size:19px">${fmtWhole(lastRev)}</div></div>
       <div class="badge ${pct>=0?'badge-success':'badge-danger'}" style="width:fit-content;font-size:18px">${pct>=0?'▲':'▼'} ${Math.abs(pct)}%</div>
     </div>`;
-  
+
   // Recent transactions
   const recent = [...db.sales].sort((a,b)=>new Date(b.createdAt||b.date)-new Date(a.createdAt||a.date)).slice(0,10);
   document.getElementById('recent-txns').innerHTML = recent.length ? recent.map(s=>`
     <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
       <div><div style="font-size:17px;font-weight:500">${esc(s.customerName||'Walk-in')}</div><div class="text-xs text-muted">${fmtDate(s.date)} · ${esc(s.paymentMethod||'Cash')}</div></div>
-      <div class="font-mono font-bold text-accent">${fmtWhole(s.total)}</div>
+      <div class="font-mono amt-revenue">${fmtWhole(s.total)}</div>
     </div>`).join('') : '<div class="empty" style="padding:16px"><div class="empty-icon">🧾</div><div class="empty-desc">No sales yet</div></div>';
-  
+
   // Alerts
   const alerts = [];
   db.records.filter(r=>r.stock<=(r.lowStockThreshold||db.settings.lowStockThreshold||10)).slice(0,5).forEach(r=>alerts.push({icon:'📦',text:`Low stock: ${r.name} (${r.stock} left)`,type:'warning'}));
@@ -4518,7 +4552,7 @@ function updateCartTotals() {
   const { subtotal, discount, tax, total } = getCartTotals();
   document.getElementById('cart-totals').innerHTML = `
     <div class="cart-total-row"><span>Subtotal</span><span class="font-mono">${fmt(subtotal)}</span></div>
-    ${discount?`<div class="cart-total-row"><span>Discount</span><span class="font-mono text-danger">-${fmt(discount)}</span></div>`:''}
+    ${discount?`<div class="cart-total-row"><span>Discount</span><span class="font-mono amt-expense">-${fmt(discount)}</span></div>`:''}
     ${tax?`<div class="cart-total-row"><span>Tax</span><span class="font-mono">${fmt(tax)}</span></div>`:''}
     <div class="cart-total-row grand"><span>TOTAL</span><span class="font-mono">${fmt(total)}</span></div>`;
   updateCustomerScreen();
@@ -5181,8 +5215,8 @@ function renderAccounting() {
   document.getElementById('acct-kpi').innerHTML = `
     <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-body"><div class="kpi-label">Total Income</div><div class="kpi-value">${fmt(totalIncome)}</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">📉</div><div class="kpi-body"><div class="kpi-label">Total Expenses</div><div class="kpi-value">${fmt(totalExp)}</div></div></div>
-    <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value ${net>=0?'text-success':'text-danger'}">${fmt(net)}</div></div></div>
-    <div class="kpi-card"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">This Month Net</div><div class="kpi-value ${(mInc-mExp)>=0?'text-success':'text-danger'}">${fmt(mInc-mExp)}</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value ${net>=0?'amt-revenue':'amt-expense'}">${fmt(net)}</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">This Month Net</div><div class="kpi-value ${(mInc-mExp)>=0?'amt-revenue':'amt-expense'}">${fmt(mInc-mExp)}</div></div></div>
   `;
   setTimeout(fitKpiValues, 0);
   
@@ -5200,7 +5234,7 @@ function renderAccounting() {
       <td><span class="badge ${a.type==='income'?'badge-success':'badge-danger'}">${a.type}</span></td>
       <td>${esc(a.category||'—')}</td>
       <td><a href="#" onclick="viewProfile('accounting','${a.id}');return false" style="font-weight:500">${esc(a.description||'—')}</a></td>
-      <td class="mono ${a.type==='income'?'text-success':'text-danger'}">${a.type==='income'?'+':'-'}${fmt(a.amount)}</td>
+      <td class="mono ${a.type==='income'?'amt-revenue':'amt-expense'}">${a.type==='income'?'+':'-'}${fmt(a.amount)}</td>
       <td class="mono">${esc(a.reference||'—')}</td>
       <td class="mono">${fmt(a.runningBal)}</td>
       <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openAccountingModal('${a.id}')">Edit</button> <button class="btn btn-xs btn-danger" onclick="deleteRecord('accounting','${a.id}')">Del</button></td>
@@ -5488,7 +5522,7 @@ function showPaySlip(entry) {
   let eHTML = `<tr><td>Basic Salary</td><td class="text-right mono">${fmt(entry.salary)}</td></tr>`;
   sc.earnings.slice(1).forEach(earn => { const a=entry.earnings?.[earn]||0; if(a) eHTML+=`<tr><td>${esc(earn)}</td><td class="text-right mono">${fmt(a)}</td></tr>`; });
   let dHTML = '';
-  sc.deductions.forEach(ded => { const a=entry.deductions?.[ded]||0; if(a) dHTML+=`<tr><td>${esc(ded)}</td><td class="text-right mono text-danger">-${fmt(a)}</td></tr>`; });
+  sc.deductions.forEach(ded => { const a=entry.deductions?.[ded]||0; if(a) dHTML+=`<tr><td>${esc(ded)}</td><td class="text-right mono amt-expense">-${fmt(a)}</td></tr>`; });
   const slipContent = `
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-size:22px;font-weight:700">${esc(s.orgName)}</div>
@@ -5881,7 +5915,7 @@ function viewProfile(type, id) {
       <div class="info-item"><label>Wholesale Price</label><p class="font-mono">${fmt(r.wholesalePrice||0)||'—'}</p></div>
       <div class="info-item"><label>Cost Price</label><p class="font-mono">${fmt(r.costPrice||0)}</p></div>
       <div class="info-item"><label>Supplier</label><p>${esc(r.supplier||'—')}</p></div>
-      <div class="info-item"><label>Revenue Generated</label><p class="font-mono text-accent">${fmt(revenue)}</p></div>
+      <div class="info-item"><label>Revenue Generated</label><p class="font-mono amt-revenue">${fmt(revenue)}</p></div>
       <div class="info-item"><label>Status</label><p><span class="badge ${r.status==='active'?'badge-success':'badge-muted'}">${esc(r.status)}</span></p></div>
       <div class="info-item"><label>Created</label><p>${fmtDate(r.createdAt)}</p></div>
     </div>
@@ -5903,15 +5937,19 @@ function viewProfile(type, id) {
     <div class="info-grid">
       <div class="info-item"><label>Phone</label><p>${esc(e.phone||'—')}</p></div>
       <div class="info-item"><label>Email</label><p>${esc(e.email||'—')}</p></div>
-      <div class="info-item"><label>Total Value</label><p class="font-mono text-accent">${fmt(e.totalValue||0)}</p></div>
-      <div class="info-item"><label>Outstanding Due</label><p class="font-mono ${outstanding>0?'text-danger':''}">${fmt(outstanding)}</p></div>
+      <div class="info-item"><label>Total Value</label><p class="font-mono amt-revenue">${fmt(e.totalValue||0)}</p></div>
+      <div class="info-item"><label>Outstanding Due</label><p class="font-mono ${outstanding>0?'amt-expense':'amt-revenue'}">${fmt(outstanding)}</p></div>
       <div class="info-item"><label>Address</label><p>${esc(e.address||'—')}</p></div>
     </div>
     ${e.notes?`<div class="form-group"><label class="form-label">Notes</label><p>${esc(e.notes)}</p></div>`:''}
-    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Transaction History</h3>
-    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Amount</th><th>Payment</th></tr></thead><tbody>${txns.length?txns.map(s=>`<tr><td>${fmtDate(s.date)}</td><td class="mono">${esc(s.receiptNumber||'—')}</td><td class="mono">${fmt(s.total)}</td><td>${esc(s.paymentMethod||'—')}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No transactions</td></tr>'}</tbody></table></div>
-    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Payment History</h3>
-    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Amount</th><th>Method</th></tr></thead><tbody>${payments.length?payments.map(p=>`<tr><td>${fmtDate(p.date)}</td><td class="mono">${esc(p.receiptNumber||'—')}</td><td class="mono text-success">${fmt(p.amount)}</td><td>${esc(p.method||'—')}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No payments recorded</td></tr>'}</tbody></table></div>
+    <div style="page-break-inside:avoid;break-inside:avoid">
+      <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Transaction History</h3>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Amount</th><th>Payment</th></tr></thead><tbody>${txns.length?txns.map(s=>`<tr><td>${fmtDate(s.date)}</td><td class="mono">${esc(s.receiptNumber||'—')}</td><td class="mono amt-revenue">${fmt(s.total)}</td><td>${esc(s.paymentMethod||'—')}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No transactions</td></tr>'}</tbody></table></div>
+    </div>
+    <div style="page-break-inside:avoid;break-inside:avoid">
+      <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Payment History</h3>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Amount</th><th>Method</th></tr></thead><tbody>${payments.length?payments.map(p=>`<tr><td>${fmtDate(p.date)}</td><td class="mono">${esc(p.receiptNumber||'—')}</td><td class="mono text-success">${fmt(p.amount)}</td><td>${esc(p.method||'—')}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No payments recorded</td></tr>'}</tbody></table></div>
+    </div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='employee') {
     const e = db.employees.find(x=>x.id===id);
@@ -5940,12 +5978,18 @@ function viewProfile(type, id) {
     </div>
     ${e.address?`<div class="form-group"><label class="form-label">Address</label><p>${esc(e.address)}</p></div>`:''}
     ${e.notes?`<div class="form-group"><label class="form-label">Notes</label><p>${esc(e.notes)}</p></div>`:''}
-    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Leave Records</h3>
-    <div class="table-wrap"><table><thead><tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th></tr></thead><tbody>${leaves.length?leaves.map(l=>`<tr><td>${esc(l.type)}</td><td>${fmtDate(l.fromDate)}</td><td>${fmtDate(l.toDate)}</td><td class="mono">${l.days}</td><td><span class="badge ${l.status==='approved'?'badge-success':l.status==='rejected'?'badge-danger':'badge-warning'}">${esc(l.status)}</span></td></tr>`).join(''):'<tr><td colspan="5" class="text-center text-muted">No leave records</td></tr>'}</tbody></table></div>
-    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Performance Reviews</h3>
-    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Rating</th><th>Reviewer</th><th>Notes</th></tr></thead><tbody>${reviews.length?reviews.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${'⭐'.repeat(p.rating||0)}</td><td>${esc(p.reviewer||'—')}</td><td class="text-sm">${esc(p.notes||'—')}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No performance reviews</td></tr>'}</tbody></table></div>
-    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Payroll History</h3>
-    <div class="table-wrap"><table><thead><tr><th>Month</th><th>Basic</th><th>Earnings</th><th>Deductions</th><th>Net Pay</th></tr></thead><tbody>${ph.length?ph.map(p=>{ const entry=p.entries.find(x=>x.empId===id); return entry?`<tr><td>${esc(p.month)}</td><td class="mono">${fmt(entry.salary)}</td><td class="mono text-success">+${fmt(entry.totalEarnings||0)}</td><td class="mono text-danger">-${fmt(entry.totalDeductions||0)}</td><td class="mono font-bold">${fmt(entry.netPay)}</td></tr>`:''}).join(''):'<tr><td colspan="5" class="text-center text-muted">No payroll history</td></tr>'}</tbody></table></div>
+    <div style="page-break-inside:avoid;break-inside:avoid">
+      <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Leave Records</h3>
+      <div class="table-wrap"><table><thead><tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th></tr></thead><tbody>${leaves.length?leaves.map(l=>`<tr><td>${esc(l.type)}</td><td>${fmtDate(l.fromDate)}</td><td>${fmtDate(l.toDate)}</td><td class="mono">${l.days}</td><td><span class="badge ${l.status==='approved'?'badge-success':l.status==='rejected'?'badge-danger':'badge-warning'}">${esc(l.status)}</span></td></tr>`).join(''):'<tr><td colspan="5" class="text-center text-muted">No leave records</td></tr>'}</tbody></table></div>
+    </div>
+    <div style="page-break-inside:avoid;break-inside:avoid">
+      <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Performance Reviews</h3>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Rating</th><th>Reviewer</th><th>Notes</th></tr></thead><tbody>${reviews.length?reviews.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${'⭐'.repeat(p.rating||0)}</td><td>${esc(p.reviewer||'—')}</td><td class="text-sm">${esc(p.notes||'—')}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No performance reviews</td></tr>'}</tbody></table></div>
+    </div>
+    <div style="page-break-inside:avoid;break-inside:avoid">
+      <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Payroll History</h3>
+      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Basic</th><th>Earnings</th><th>Deductions</th><th>Net Pay</th></tr></thead><tbody>${ph.length?ph.map(p=>{ const entry=p.entries.find(x=>x.empId===id); return entry?`<tr><td>${esc(p.month)}</td><td class="mono">${fmt(entry.salary)}</td><td class="mono text-success">+${fmt(entry.totalEarnings||0)}</td><td class="mono text-danger">-${fmt(entry.totalDeductions||0)}</td><td class="mono amt-balance">${fmt(entry.netPay)}</td></tr>`:''}).join(''):'<tr><td colspan="5" class="text-center text-muted">No payroll history</td></tr>'}</tbody></table></div>
+    </div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='secondary') {
     const sp = db.secondary.find(x=>x.id===id);
@@ -5958,11 +6002,13 @@ function viewProfile(type, id) {
       <div class="info-item"><label>Phone</label><p>${esc(sp.phone||'—')}</p></div>
       <div class="info-item"><label>Email</label><p>${esc(sp.email||'—')}</p></div>
       <div class="info-item"><label>Address</label><p>${esc(sp.address||'—')}</p></div>
-      <div class="info-item"><label>Total Supplied</label><p class="font-mono text-accent">${fmt(sp.totalValue||0)}</p></div>
+      <div class="info-item"><label>Total Supplied</label><p class="font-mono amt-purchase">${fmt(sp.totalValue||0)}</p></div>
     </div>
     ${sp.notes?`<div class="form-group"><label class="form-label">Notes</label><p>${esc(sp.notes)}</p></div>`:''}
-    <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Purchase History</h3>
-    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead><tbody>${purchases.length?purchases.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${esc(p.description)}</td><td class="mono">${fmt(p.amount)}</td></tr>`).join(''):'<tr><td colspan="3" class="text-center text-muted">No purchases recorded</td></tr>'}</tbody></table></div>
+    <div style="page-break-inside:avoid;break-inside:avoid">
+      <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Purchase History</h3>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead><tbody>${purchases.length?purchases.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${esc(p.description)}</td><td class="mono">${fmt(p.amount)}</td></tr>`).join(''):'<tr><td colspan="3" class="text-center text-muted">No purchases recorded</td></tr>'}</tbody></table></div>
+    </div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='transaction') {
     const t = db.transactions.find(x=>x.id===id);
@@ -5970,7 +6016,7 @@ function viewProfile(type, id) {
     title = `Transaction #${t.id.slice(-6)}`;
     body = `<div class="info-grid">
       <div class="info-item"><label>Entity</label><p>${esc(t.entityName||'—')}</p></div>
-      <div class="info-item"><label>Amount</label><p class="mono font-bold text-accent">${fmt(t.amount)}</p></div>
+      <div class="info-item"><label>Amount</label><p class="mono amt-balance">${fmt(t.amount)}</p></div>
       <div class="info-item"><label>Status</label><p><span class="badge ${statusBadge(t.status)}">${esc(t.status)}</span></p></div>
       <div class="info-item"><label>Category</label><p>${esc(t.category||'—')}</p></div>
       <div class="info-item"><label>Date</label><p>${fmtDate(t.date)}</p></div>
@@ -5989,7 +6035,7 @@ function viewProfile(type, id) {
       <div class="info-item"><label>Payment Method</label><p>${esc(sale.paymentMethod||'—')}</p></div>
       <div class="info-item"><label>Subtotal</label><p class="font-mono">${fmt(sale.subtotal||0)}</p></div>
       <div class="info-item"><label>Tax</label><p class="font-mono">${fmt(sale.taxAmount||0)}</p></div>
-      <div class="info-item"><label>Total</label><p class="font-mono text-accent font-bold">${fmt(sale.total)}</p></div>
+      <div class="info-item"><label>Total</label><p class="font-mono amt-revenue">${fmt(sale.total)}</p></div>
     </div>
     <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Items</h3>
     <div class="table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead><tbody>${itemRows}</tbody></table></div>
@@ -6082,123 +6128,43 @@ function signatureColumnHtml(name, designation) {
 }
 function signatureBlockHtml() {
   const rs = db.settings.reportSettings || {};
+  // Use table layout (not flex) for the two-column signature.
+  // Chrome's print engine does NOT reliably respect break-inside:avoid on flex
+  // containers — the signature was consistently splitting mid-block despite
+  // page-break-inside:avoid being set. Table layout IS respected.
   return `
-  <div class="report-signature" style="display:flex;justify-content:space-between;gap:40px;font-size:14px;flex-wrap:wrap">
-    <div style="flex:1;min-width:200px;border-top:1px solid #000;padding-top:8px"><div style="font-weight:600;margin-bottom:2px">Prepared By</div>${signatureColumnHtml(rs.sig1Name, rs.sig1Designation)}</div>
-    <div style="flex:1;min-width:200px;border-top:1px solid #000;padding-top:8px"><div style="font-weight:600;margin-bottom:2px">Verified By</div>${signatureColumnHtml(rs.sig2Name, rs.sig2Designation)}</div>
+  <div class="report-signature">
+    <table style="width:100%;border:none;border-collapse:collapse">
+      <tr>
+        <td style="width:50%;border:none;padding:0 40px 0 0;vertical-align:top;border-top:1px solid #000;padding-top:8px">
+          <div style="font-weight:600;margin-bottom:2px">Prepared By</div>${signatureColumnHtml(rs.sig1Name, rs.sig1Designation)}
+        </td>
+        <td style="width:50%;border:none;padding:0;vertical-align:top;border-top:1px solid #000;padding-top:8px">
+          <div style="font-weight:600;margin-bottom:2px">Verified By</div>${signatureColumnHtml(rs.sig2Name, rs.sig2Designation)}
+        </td>
+      </tr>
+    </table>
   </div>`;
 }
 
-/* ══ UNIVERSAL PRINT ENGINE ══
-   One engine, used by every print call site (Reports, Profile printouts, Salary Slips, A4
-   receipts). Matches the @page geometry declared in CSS (A4, 15mm margins) and, before ever
-   calling window.print(), actually measures the rendered height of the final page's content
-   plus the signature block in a hidden same-width sandbox. If the signature wouldn't fit in
-   the remaining space on that page, it progressively compacts spacing (line-height, table cell
-   padding, header margins) — never the signature itself — and re-measures, picking the
-   loosest compaction level that makes it fit. Only if even the tightest level still doesn't
-   have room does the signature fall to a fresh page, which is the documented "absolutely
-   impossible" fallback. */
-const PRINT_PAGE_W_PX = 680;  // ≈180mm content width on A4 with 15mm margins, at 96dpi
-const PRINT_PAGE_H_PX = 1009; // ≈267mm content height on A4 with 15mm margins, at 96dpi
-// Real-world printing varies — some browsers reserve extra space for their own page header/
-// footer (URL, date, page number) unless the person has turned that off in the print dialog,
-// and font metrics differ slightly between screen and print rendering. Rather than calculate
-// right up to the theoretical limit, we deliberately reserve a safety margin so the engine
-// compacts proactively and the signature reliably has real breathing room on the actual
-// printed page, not just in our estimate.
-const PRINT_SAFETY_MARGIN_PX = 120;
-const PRINT_USABLE_PAGE_H_PX = PRINT_PAGE_H_PX - PRINT_SAFETY_MARGIN_PX;
-const PRINT_COMPACT_LEVELS = ['', 'print-compact-1', 'print-compact-2', 'print-compact-3'];
-
-// CSS that replicates @media print table styling, injected into the measurement
-// sandbox so row/block heights are measured under the same conditions they'll
-// actually print at (small font, tight padding, white background) rather than
-// the app's dark on-screen theme which renders everything ~30–40% larger.
-// Without this, every height estimate was systematically too large, so the engine
-// always concluded "no room for the signature" and pushed it to its own page.
-const PRINT_SANDBOX_STYLE = `
-  <style id="sbprint">
-  * { box-sizing: border-box !important; }
-  body,html { background:#fff!important; color:#000!important; }
-  table { width:100%; border-collapse:collapse; background:#fff!important; font-size:12px!important; margin:6px 0 12px!important; }
-  thead th { background:#f0f0f0!important; color:#222!important; padding:6px 10px!important; font-size:10.5px!important; border:1px solid #999!important; }
-  tbody tr { background:#fff!important; }
-  tbody tr:nth-child(even) { background:#fafafa!important; }
-  td { padding:5px 10px!important; font-size:12px!important; color:#000!important; line-height:1.3!important; vertical-align:middle!important; border:1px solid #ccc!important; }
-  .report-doc { background:#fff!important; color:#000!important; padding:26px!important; font-family:'Times New Roman',serif!important; font-size:13px!important; }
-  .report-doc table { font-size:13px!important; }
-  .report-doc th { font-size:12px!important; padding:7px 10px!important; }
-  .report-doc td { font-size:13px!important; padding:6px 10px!important; }
-  .report-signature { margin-top:60px!important; }
-  </style>
-`;
-
-function _fitSignatureOnPage(lastPageHtml, signatureHtml, wrapperOpen, wrapperClose) {
-  wrapperOpen = wrapperOpen || '';
-  wrapperClose = wrapperClose || '';
-  if (!signatureHtml) return wrapperOpen + lastPageHtml + wrapperClose;
-
-  const sandbox = document.getElementById('print-measure-sandbox');
-  sandbox.style.width = PRINT_PAGE_W_PX + 'px';
-  sandbox.style.position = 'absolute';
-  sandbox.style.left = '-9999px';
-
-  function measure(html) {
-    sandbox.innerHTML = PRINT_SANDBOX_STYLE + html;
-    const h = sandbox.scrollHeight;
-    sandbox.innerHTML = '';
-    return h;
-  }
-
-  const sigH = measure(wrapperOpen + signatureHtml + wrapperClose);
-
-  // Try each compaction level: if content + signature fits within one page, return it joined.
-  for (const level of PRINT_COMPACT_LEVELS) {
-    const wrappedContent = level
-      ? `<div class="print-doc-root ${level}">${lastPageHtml}</div>`
-      : lastPageHtml;
-    const totalH = measure(wrapperOpen + wrappedContent + signatureHtml + wrapperClose);
-
-    if (totalH <= PRINT_USABLE_PAGE_H_PX) {
-      // Everything fits on one page — return content + signature together inside the wrapper.
-      return wrapperOpen + wrappedContent + signatureHtml + wrapperClose;
-    }
-
-    // Content alone overflows one page — check how much of the last page is used.
-    const contentH = measure(wrapperOpen + wrappedContent + wrapperClose);
-    const pagesFloor = Math.floor(contentH / PRINT_USABLE_PAGE_H_PX);
-    const usedOnLastPage = contentH - pagesFloor * PRINT_USABLE_PAGE_H_PX;
-    const spaceLeft = PRINT_USABLE_PAGE_H_PX - usedOnLastPage;
-
-    if (sigH <= spaceLeft) {
-      return wrapperOpen + wrappedContent + signatureHtml + wrapperClose;
-    }
-  }
-
-  // Even maximum compaction can't fit the signature on the last content page —
-  // let it fall to a fresh page. This is the legitimate last-resort case (very long
-  // reports where the final table row lands right at the bottom of a page).
-  const tightest = PRINT_COMPACT_LEVELS[PRINT_COMPACT_LEVELS.length - 1];
-  const tightContent = tightest
-    ? `<div class="print-doc-root ${tightest}">${lastPageHtml}</div>`
-    : lastPageHtml;
-  return wrapperOpen + tightContent + wrapperClose + signatureHtml;
-}
-
-// Shared finisher: drops the assembled HTML into #print-target and fires window.print(),
-// using the same body.printing-receipt isolation pattern every print call site already relies on.
+// Assembles the final print HTML, runs the signature-fit pre-flight, then fires window.print().
+// Pre-flight strategy (in order — stops as soon as one works):
+//   1. Default: signature has 60px top margin. CSS page-break-before:avoid keeps it
+//      on the last content page when there is room. Browser handles it.
+//   2. If the signature block was still split (flex-column Chrome bug now fixed via table layout),
+//      reduce margin-top progressively: 60 → 40 → 20 → 0 px.
+//   3. If still split: shrink last table's row padding to tighten the final rows.
+//   4. If still split: add a page-break-before to the last N rows of the final table so
+//      those rows move to a new page together WITH the signature block.
 function _commitPrint(finalHtml) {
   const target = document.getElementById('print-target');
   target.innerHTML = finalHtml;
   document.body.classList.add('printing-receipt');
-  // Force the browser to fully calculate layout for the freshly-inserted HTML
-  // before printing. On a first print after page load, fonts/images/CSS may
-  // not have settled within a single short timeout, causing the first print
-  // to render differently from the second. Reading offsetHeight forces a
-  // synchronous layout flush, and double requestAnimationFrame waits for an
-  // actual completed paint cycle before we call window.print().
-  void target.offsetHeight;
+
+  // Pre-flight: ensure signature is not split across pages
+  _preflight_signatureFit(target);
+
+  void target.offsetHeight; // force layout flush before print
   const prevTitle = document.title;
   document.title = '';
   requestAnimationFrame(() => {
@@ -6209,22 +6175,87 @@ function _commitPrint(finalHtml) {
   });
 }
 
-// Universal entry point for every print call site in the system.
-//   priorPagesHtml — any earlier pages that already end in an explicit forced page-break
-//                    (e.g. a report's main content page before "Remarks"); printed as-is.
-//   lastPageHtml   — the final page's content, the one the signature should stay attached to.
-//   wrapperOpen/wrapperClose — optional outer wrapper markup (e.g. padding/background for
-//                    profile printouts) applied around the whole assembled document.
-//   includeSignature — pass false for documents that never carry a signature (none currently).
+// Checks if the signature block would be split across a page boundary in the live
+// rendered layout of #print-target, and progressively adjusts to keep it together.
+// Strategy (in order — stops as soon as the split is resolved):
+//   1. Reduce signature margin-top: 60 → 40 → 20 → 10 px
+//   2. Compact the last content table's cell padding to 2px top/bottom
+//   3. Reduce the last content table's font size: 11px → 10px
+//   4. Give up — restore defaults and let CSS handle it (signature may go to own page
+//      only if the last page is genuinely full with no room at all)
+// Row-pushing is intentionally NOT done: it leaves large empty spaces on the prior
+// page which is worse than the signature being on its own page.
+function _preflight_signatureFit(target) {
+  const sig = target.querySelector('.report-signature');
+  if (!sig) return;
+
+  const PAGE_H = 889; // Letter/A4 usable height at 96dpi with 15mm margins
+
+  function isSplitAcrossPage(el) {
+    const r = el.getBoundingClientRect();
+    const targetTop = target.getBoundingClientRect().top;
+    const top = r.top - targetTop;
+    const bottom = r.bottom - targetTop;
+    return Math.floor(top / PAGE_H) !== Math.floor((bottom - 1) / PAGE_H);
+  }
+
+  if (!isSplitAcrossPage(sig)) return; // already fine, nothing to do
+
+  // Step 1: reduce margin-top progressively
+  for (const margin of [40, 20, 10]) {
+    sig.style.marginTop = margin + 'px';
+    void sig.offsetHeight;
+    if (!isSplitAcrossPage(sig)) return;
+  }
+
+  // Step 2: compact the last content table's cell padding
+  // (explicitly skip the signature's own layout table)
+  const contentTables = Array.from(target.querySelectorAll('table'))
+    .filter(t => !t.closest('.report-signature'));
+  const lastTable = contentTables[contentTables.length - 1];
+
+  if (lastTable) {
+    lastTable.querySelectorAll('td,th').forEach(cell => {
+      cell.style.paddingTop = '2px';
+      cell.style.paddingBottom = '2px';
+    });
+    void target.offsetHeight;
+    if (!isSplitAcrossPage(sig)) return;
+
+    // Step 3: shrink font size of last table
+    for (const fs of ['11px', '10px']) {
+      lastTable.style.fontSize = fs;
+      void target.offsetHeight;
+      if (!isSplitAcrossPage(sig)) return;
+    }
+  }
+
+  // Nothing worked — restore defaults and let the browser handle it naturally.
+  // The signature will start a new page only if the content genuinely fills the page.
+  sig.style.marginTop = '60px';
+  if (lastTable) {
+    lastTable.querySelectorAll('td,th').forEach(cell => {
+      cell.style.paddingTop = '';
+      cell.style.paddingBottom = '';
+    });
+    lastTable.style.fontSize = '';
+  }
+}
+
+// Single entry point for every print call in the system.
+// priorPagesHtml — content for earlier pages (e.g. retail section before wholesale).
+// lastPageHtml   — final page content; signature is appended directly after it.
+// opts.wrapperOpen/Close — outer wrapper (profile prints need padding/bg override).
+// opts.includeSignature — set false to suppress the signature block.
 function universalPrint(priorPagesHtml, lastPageHtml, opts = {}) {
   const signatureHtml = opts.includeSignature === false ? '' : signatureBlockHtml();
   const open = opts.wrapperOpen || '';
   const close = opts.wrapperClose || '';
-  // _fitSignatureOnPage now returns the fully assembled, wrapper-included final HTML.
-  // For multi-page reports, priorPagesHtml is prepended inside the same wrapper.
-  const lastPageFinal = _fitSignatureOnPage(lastPageHtml, signatureHtml, open, close);
-  const priorWrapped = priorPagesHtml ? open + priorPagesHtml + close : '';
-  _commitPrint(priorWrapped + lastPageFinal);
+  // Everything goes inside ONE wrapper so the signature is never orphaned outside
+  // the document context. CSS page-break-before:avoid on .report-signature does
+  // the rest — the browser keeps it with the preceding content when there is room.
+  const allContent = (priorPagesHtml || '') + lastPageHtml + signatureHtml;
+  _commitPrint(open + allContent + close);
 }
 
 /* ══ ARCHIVE — shared helpers (avoids duplicating the same lookup/toggle logic 3 times) ══ */
@@ -6651,13 +6682,13 @@ function generateReport() {
     </tbody></table>`;
     const itemTotals = {}; periodSales.forEach(s=>s.items?.forEach(i=>{ itemTotals[i.name]=(itemTotals[i.name]||0)+(i.price*i.qty); }));
     const top10 = Object.entries(itemTotals).sort((a,b)=>b[1]-a[1]).slice(0,10);
-    if (top10.length) bodyHtml += `<h2>Top Products by Revenue</h2><table><thead><tr><th>Rank</th><th>Product</th><th>Revenue</th></tr></thead><tbody>${top10.map(([n,v],i)=>`<tr><td>${i+1}</td><td>${esc(n)}</td><td>${fmt(v)}</td></tr>`).join('')}</tbody></table>`;
+    if (top10.length) bodyHtml += `<!-- LAST_SECTION --><h2>Top Products by Revenue</h2><table><thead><tr><th>Rank</th><th>Product</th><th>Revenue</th></tr></thead><tbody>${top10.map(([n,v],i)=>`<tr><td>${i+1}</td><td>${esc(n)}</td><td>${fmt(v)}</td></tr>`).join('')}</tbody></table>`;
   } else if (type==='sales-register') {
     const retail = periodSales.filter(x=>x.customerType!=='Wholesale');
     const wholesale = periodSales.filter(x=>x.customerType==='Wholesale');
     bodyHtml = `<h2>Sales Register</h2><h3>Retail Sales</h3>
     <table><thead><tr><th>Date</th><th>Invoice</th><th>Customer</th><th>Total</th></tr></thead><tbody>${retail.length?retail.map(s=>`<tr><td>${fmtDate(s.date)}</td><td>${esc(s.receiptNumber)}</td><td>${esc(s.customerName||'Walk-in')}</td><td>${fmt(s.total)}</td></tr>`).join(''):'<tr><td colspan="4">No retail sales</td></tr>'}<tr style="background:#f0f0f0"><td colspan="3"><strong>Retail Total</strong></td><td><strong>${fmt(retail.reduce((a,s)=>a+s.total,0))}</strong></td></tr></tbody></table>
-    <h3>Wholesale Sales</h3>
+    <!-- LAST_SECTION --><h3>Wholesale Sales</h3>
     <table><thead><tr><th>Date</th><th>Invoice</th><th>Customer</th><th>Total</th></tr></thead><tbody>${wholesale.length?wholesale.map(s=>`<tr><td>${fmtDate(s.date)}</td><td>${esc(s.receiptNumber)}</td><td>${esc(s.customerName||'Walk-in')}</td><td>${fmt(s.total)}</td></tr>`).join(''):'<tr><td colspan="4">No wholesale sales</td></tr>'}<tr style="background:#f0f0f0"><td colspan="3"><strong>Wholesale Total</strong></td><td><strong>${fmt(wholesale.reduce((a,s)=>a+s.total,0))}</strong></td></tr></tbody></table>`;
   } else if (type==='credit-sales') {
     const credits = db.creditSales.filter(c=>(!from||c.date>=from)&&(!to||c.date<=to));
@@ -6850,25 +6881,42 @@ function generateReport() {
     bodyHtml = `<h2>Report</h2><p>Select report parameters above and click Generate Report.</p>`;
   }
 
-  // Build the report flow: main body is page 1. If remarks are present they start a clean new
-  // page (own header repeated); the signature always attaches to whichever page is last. The
-  // on-screen preview (#report-output) shows everything including the signature for review.
-  // Separately, we keep the prior page(s) and the bare last-page content (no signature baked
-  // in yet) so printReportDoc() can run the universal print engine's fit/compaction logic
-  // against exactly the page the signature will land on.
+  // Split the body at <!-- LAST_SECTION --> when present: this lets the signature
+  // engine measure only the genuinely final section (e.g. Top Products, Wholesale Sales)
+  // rather than the entire multi-page document. Measuring 6 pages as one string then
+  // computing the page remainder is unreliable — splitting at the last section is exact.
+  const LAST_SECTION_MARKER = '<!-- LAST_SECTION -->';
+  let priorBodyHtml = '', lastBodyHtml = '';
+  const markerIdx = bodyHtml.lastIndexOf(LAST_SECTION_MARKER);
+  if (markerIdx !== -1) {
+    priorBodyHtml = bodyHtml.slice(0, markerIdx);
+    lastBodyHtml  = bodyHtml.slice(markerIdx + LAST_SECTION_MARKER.length);
+  } else {
+    priorBodyHtml = '';
+    lastBodyHtml  = bodyHtml;
+  }
+
   let html, priorPagesHtml, lastPageHtml, lastPageInner;
   if (remarks) {
-    lastPageInner = `${reportDocHeader(refNum, from, to)}<h2>Remarks / Key Observations</h2><p style="font-size:17px;line-height:1.7">${esc(remarks)}</p>`;
-    priorPagesHtml = `<div class="report-doc report-page">${header}<div style="padding:8px 0">${bodyHtml}</div></div>`;
+    // Remarks always start fresh on a new page with their own header
+    lastPageInner   = `${reportDocHeader(refNum, from, to)}<h2>Remarks / Key Observations</h2><p style="font-size:17px;line-height:1.7">${esc(remarks)}</p>`;
+    priorPagesHtml  = `<div class="report-doc report-page">${header}<div style="padding:8px 0">${bodyHtml.replace(/<!-- LAST_SECTION -->/g,'')}</div></div>`;
+  } else if (priorBodyHtml) {
+    // Split mode — last section is a continuation: NO header repeated, header only on page 1.
+    // priorPagesHtml carries the full header; lastPageHtml is header-free continuation content.
+    priorPagesHtml = `<div class="report-doc report-page">${header}<div style="padding:8px 0">${priorBodyHtml}</div></div>`;
+    lastPageInner  = `<div style="padding:8px 0">${lastBodyHtml}</div>`;
   } else {
-    lastPageInner = `${header}<div style="padding:8px 0">${bodyHtml}</div>`;
+    // Single-block report — header appears once in the only page
     priorPagesHtml = '';
+    lastPageInner  = `${header}<div style="padding:8px 0">${lastBodyHtml}</div>`;
   }
   lastPageHtml = `<div class="report-doc">${lastPageInner}</div>`;
   html = priorPagesHtml + `<div class="report-doc">${lastPageInner}${footer}</div>`;
   window._lastReportPriorPagesHtml = priorPagesHtml;
   window._lastReportLastPageHtml = lastPageHtml;
-  document.getElementById('report-output').innerHTML = html;
+  // Show preview (strip the marker so it doesn't appear in the on-screen view)
+  document.getElementById('report-output').innerHTML = html.replace(/<!-- LAST_SECTION -->/g, '');
   audit('Reports','Create','',type);
 }
 
@@ -6883,11 +6931,73 @@ function printReportDoc() {
   });
 }
 
-function exportReportPDF() {
-  toast('Use "Print" and choose "Save as PDF" in your browser\'s print dialog for a PDF copy.','info');
-  printReportDoc();
-}
+function exportReportPDF() { printReportDoc(); } // kept for any legacy calls
 
+function copyReportText() {
+  const el = document.getElementById('report-output');
+  if (!el || !el.innerHTML.trim()) { toast('Generate a report first','warning'); return; }
+
+  // Build structured plain text from the rendered report HTML
+  function nodeToText(node) {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    const tag = node.tagName.toLowerCase();
+    // Skip elements marked as non-print (buttons, controls)
+    if (node.getAttribute('data-no-print') || node.classList.contains('no-print')) return '';
+    if (['script','style','button'].includes(tag)) return '';
+
+    if (tag === 'table') {
+      let out = '';
+      node.querySelectorAll('tr').forEach(tr => {
+        const cells = Array.from(tr.querySelectorAll('th,td'));
+        out += cells.map(c => c.textContent.trim().replace(/\s+/g,' ')).join('\t') + '\n';
+      });
+      return out + '\n';
+    }
+    const childText = Array.from(node.childNodes).map(nodeToText).join('');
+    if (['h1','h2'].includes(tag)) return '\n' + childText.trim().toUpperCase() + '\n' + '='.repeat(Math.min(childText.trim().length, 60)) + '\n';
+    if (tag === 'h3') return '\n' + childText.trim() + '\n' + '-'.repeat(Math.min(childText.trim().length, 40)) + '\n';
+    if (['p','div','li','tr'].includes(tag)) return childText + '\n';
+    if (tag === 'br') return '\n';
+    if (tag === 'hr') return '\n' + '-'.repeat(60) + '\n';
+    return childText;
+  }
+
+  const plainText = nodeToText(el).replace(/\n{3,}/g,'\n\n').trim();
+
+  // Also build an HTML snippet for rich-text paste (preserves table structure in Word/Gmail)
+  const htmlSnippet = el.innerHTML;
+
+  if (navigator.clipboard && window.ClipboardItem) {
+    const blob_plain = new Blob([plainText], {type:'text/plain'});
+    const blob_html  = new Blob([htmlSnippet], {type:'text/html'});
+    navigator.clipboard.write([new ClipboardItem({'text/plain':blob_plain,'text/html':blob_html})])
+      .then(()=>toast('Report copied — paste into Word or email to keep table formatting, or into Notepad for plain text','success',5000))
+      .catch(()=>{
+        // Fallback: plain text only
+        navigator.clipboard.writeText(plainText)
+          .then(()=>toast('Copied as plain text','success'))
+          .catch(()=>toast('Copy failed — try selecting the report and using Ctrl+C','error'));
+      });
+  } else {
+    // Older browser fallback
+    const ta = document.createElement('textarea');
+    ta.value = plainText; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Report copied as plain text','success');
+  }
+}
+  const type = document.getElementById('rpt-type').value;
+  const from = document.getElementById('rpt-from').value;
+  const to = document.getElementById('rpt-to').value;
+  let data = [];
+  if (type==='sales'||type==='sales-register') data = db.sales.filter(s=>(!from||s.date>=from)&&(!to||s.date<=to));
+  else if (type==='stock') data = db.records;
+  else if (type==='material-stock') data = db.rawMaterials;
+  else if (type==='hr') data = db.employees;
+  else if (type==='entity') data = db.entities;
 function exportReportCSV() {
   const type = document.getElementById('rpt-type').value;
   const from = document.getElementById('rpt-from').value;
@@ -6904,12 +7014,6 @@ function exportReportCSV() {
   else if (type==='credit-sales'||type==='due-ledger') data = db.creditSales;
   else data = db.accounting.filter(a=>(!from||a.date>=from)&&(!to||a.date<=to));
   downloadCSV(data, type+'-report');
-}
-
-function copyReportText() {
-  const el = document.getElementById('report-output');
-  if (!el?.textContent) { toast('Generate a report first','warning'); return; }
-  navigator.clipboard?.writeText(el.textContent).then(()=>toast('Report copied to clipboard','success')).catch(()=>toast('Copy failed','error'));
 }
 
 function saveReportTemplate() {
@@ -9075,7 +9179,7 @@ function saveTaxSettings() {
 }
 
 // VAT/Tax reports have moved to Reports → Tax & VAT Reports category.
-// These redirect functions keep old Settings buttons working without duplicating logic.
+
 function generateVATReport() {
   openModule('reports');
   setTimeout(()=>{ selectReportCategory('tax'); document.getElementById('rpt-type').value='vat-summary'; generateReport(); }, 50);

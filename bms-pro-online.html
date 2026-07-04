@@ -221,8 +221,8 @@ a{color:var(--accent);text-decoration:none}
 .kpi-grid .kpi-card:nth-of-type(4n+2)::after{background:linear-gradient(135deg,var(--teal),#0891B2)}
 .kpi-grid .kpi-card:nth-of-type(4n+3) .kpi-icon{background:linear-gradient(135deg,#F59E0B,#EA580C);box-shadow:0 4px 14px rgba(245,158,11,.30)}
 .kpi-grid .kpi-card:nth-of-type(4n+3)::after{background:linear-gradient(135deg,#F59E0B,#EA580C)}
-.kpi-grid .kpi-card:nth-of-type(4n+4) .kpi-icon{background:linear-gradient(135deg,#EC4899,#DB2777);box-shadow:0 4px 14px rgba(236,72,153,.30)}
-.kpi-grid .kpi-card:nth-of-type(4n+4)::after{background:linear-gradient(135deg,#EC4899,#DB2777)}
+.kpi-grid .kpi-card:nth-of-type(4n+4) .kpi-icon{background:linear-gradient(135deg,#3B82F6,#1D4ED8);box-shadow:0 4px 14px rgba(59,130,246,.30)}
+.kpi-grid .kpi-card:nth-of-type(4n+4)::after{background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
 /* ══ TOP PRODUCTS LIST ══ */
 .top-prod-row{display:flex;align-items:center;gap:10px;padding:8px 4px}
 .top-prod-rank{width:22px;height:22px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -10034,20 +10034,33 @@ if (navigator.storage && navigator.storage.persist) {
 // Registered immediately (not on window 'load') so the offline cache is
 // ready as early as possible on the very first visit.
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  navigator.serviceWorker.register('service-worker.js').then(reg => {
-    // If a new version of the app shell is installed while this tab is
-    // open, let the user know a refresh will pick it up — otherwise
-    // they could be stuck on an old cached copy indefinitely.
+  // updateViaCache:'none' is the critical bit — without it, some
+  // browsers/servers can keep serving an OLD cached copy of
+  // service-worker.js itself from their normal HTTP cache for up to a
+  // day, silently ignoring every fix shipped in a new version of this
+  // file. This forces every registration check to fetch the real
+  // current file from the network.
+  navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).then(reg => {
     reg.addEventListener('updatefound', () => {
       const nw = reg.installing;
       if (!nw) return;
       nw.addEventListener('statechange', () => {
         if (nw.state === 'activated' && navigator.serviceWorker.controller) {
-          toast('A newer version is ready — refresh when convenient.', 'info');
+          toast('Updated — reloading…', 'info');
         }
       });
     });
   }).catch(() => {});
+
+  // Once a NEW service worker actually takes control of this page,
+  // reload automatically so the person always ends up on the current
+  // version without needing to know to hard-refresh manually.
+  let _swReloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (_swReloaded) return;
+    _swReloaded = true;
+    location.reload();
+  });
 }
 
 // Also handle if page was opened with #cs hash after DOM loaded

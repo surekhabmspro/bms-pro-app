@@ -1,65 +1,51 @@
-/* ══ BMS PRO — OFFLINE APP-SHELL SERVICE WORKER ══════════════════════════
+/* ══ BMS PRO — OFFLINE APP-SHELL SERVICE WORKER (v4) ═════════════════════
    Goal: the app must open instantly with NO internet connection, on both
    the very first cold start after this SW is installed AND every time
    after (including after a full device/browser restart).
 
+   IMPORTANT FIX IN THIS VERSION: earlier versions hardcoded the exact
+   filename "bms-pro-online.html" as the thing to cache and later look
+   up. If the file is actually deployed under a different name or path
+   (e.g. index.html, a subfolder, a different filename entirely), that
+   hardcoded cache lookup silently never matched — so offline mode could
+   fail 100% of the time no matter what, regardless of any other fix.
+   This version caches and looks things up using whatever URL the
+   browser is ACTUALLY requesting, so it works no matter what the file
+   is named or where it lives.
+
    Strategy:
-   - On install, download and cache the app shell (this HTML file, the
-     manifest, and the icons) into a versioned cache.
-   - On every navigation (i.e. opening/reloading the app), serve the
-     cached shell INSTANTLY so it never depends on the network being up,
-     then quietly re-fetch a fresh copy in the background to keep the
-     cache current for next time ("stale-while-revalidate"). If the
-     network fetch fails (offline), the cached copy already shown is all
-     that's needed — nothing breaks.
-   - Data/API calls (anything going to the configured sync server) are
-     NEVER cached here — they always hit the network directly, so sync
-     behaves exactly as the app's own online/offline logic expects.
-   - Old caches from previous versions are cleaned up on activate so
-     updates don't pile up storage.
+   - Never let install fail. Precaching is best-effort only.
+   - The very first time the app is opened online, the real fix happens
+     at runtime: the navigation request's own URL is cached as-is. Every
+     open after that (online or fully offline) is served from that same
+     cache entry instantly, then quietly refreshed in the background.
+   - Data/API calls to a different origin (the sync server) are never
+     touched here — they always go straight to the network.
+   - Old caches from previous versions are cleaned up on activate.
 
-   IMPORTANT: bump CACHE_VERSION any time this file OR the app's file
-   list changes, so returning users actually receive the update instead
-   of an old cached shell forever. ════════════════════════════════════ */
+   IMPORTANT: bump CACHE_VERSION any time this file changes, so
+   returning users actually receive the update instead of being stuck on
+   an old cached shell. This registration also uses
+   `{ updateViaCache: 'none' }` and an auto-reload-on-update so browsers
+   can't keep serving a stale copy of this very file from their own HTTP
+   cache and silently skip the update. ════════════════════════════════ */
 
-const CACHE_VERSION = 'bms-pro-shell-v3';
-
-// Files that make up the app shell. Keep this list in sync with what's
-// actually deployed next to this service-worker.js file. If a file in
-// this list doesn't exist on the server, its cache.addAll() call will
-// fail the whole install step — so this list intentionally sticks to
-// files that should always be present.
-const SHELL_FILES = [
-  './',
-  './bms-pro-online.html',
-  './manifest.json'
-];
-
-// Optional extras — nice to have offline (icons for the install prompt /
-// home screen) but must NOT block install if missing on the server.
-const OPTIONAL_FILES = [
-  './favicon-32.png',
-  './favicon-16.png',
-  './icon-192.png',
-  './icon-512.png'
-];
+const CACHE_VERSION = 'bms-pro-shell-v4';
 
 self.addEventListener('install', event => {
   event.waitUntil(
     (async () => {
+      // Best-effort only — never block/fail install over a missing file,
+      // since we don't actually know the exact deployed filename here.
       const cache = await caches.open(CACHE_VERSION);
-      // Required shell files: fail loudly if these can't be cached.
-      await cache.addAll(SHELL_FILES);
-      // Optional files: best-effort, never block install on a 404.
-      await Promise.all(
-        OPTIONAL_FILES.map(url =>
-          cache.add(url).catch(() => {/* fine if missing */})
-        )
-      );
-      // Activate this new SW immediately instead of waiting for the old
-      // one to be released (all tabs closed) — users get the offline fix
-      // the moment they load the page once with internet, not on some
-      // later visit.
+      await Promise.allSettled([
+        cache.add('./').catch(() => {}),
+        cache.add('./manifest.json').catch(() => {}),
+        cache.add('./favicon-32.png').catch(() => {}),
+        cache.add('./favicon-16.png').catch(() => {}),
+        cache.add('./icon-192.png').catch(() => {}),
+        cache.add('./icon-512.png').catch(() => {})
+      ]);
       self.skipWaiting();
     })()
   );
@@ -69,67 +55,64 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     (async () => {
       const names = await caches.keys();
-      await Promise.all(
-        names
-          .filter(n => n !== CACHE_VERSION)
-          .map(n => caches.delete(n))
-      );
+      await Promise.all(names.filter(n => n !== CACHE_VERSION).map(n => caches.delete(n)));
       await self.clients.claim();
     })()
   );
 });
 
-// Never intercept anything that isn't a plain GET (POST/PUT to the sync
-// API must always go straight to the network, untouched).
+function stripQuery(url) {
+  const u = new URL(url);
+  u.search = '';
+  u.hash = '';
+  return u.toString();
+}
+
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-
-  // Only handle requests to this same origin/app. Sync/API calls to a
-  // different origin (the server backend) are left completely alone —
-  // they go straight to the network so online/offline sync logic in the
-  // app itself behaves exactly as it already does.
+  // Only handle same-origin requests — sync/API calls to the backend
+  // server are left completely untouched, straight to the network.
   if (url.origin !== self.location.origin) return;
 
-  // Navigations (opening the app / hitting refresh) — this is the case
-  // that MUST work with zero internet connection.
   if (req.mode === 'navigate') {
     event.respondWith(shellFirst(req));
     return;
   }
-
-  // Everything else same-origin (css/js/images/manifest/icons) —
-  // stale-while-revalidate: instant from cache, refreshed in background.
   event.respondWith(staleWhileRevalidate(req));
 });
 
 async function shellFirst(req) {
   const cache = await caches.open(CACHE_VERSION);
-  const cached = await cache.match('./bms-pro-online.html') || await cache.match(req);
-  // Kick off a background refresh so the next offline open has the
-  // latest version, but never let it block or break the current load.
+  const key = stripQuery(req.url);
+  const cached = await cache.match(key) || await cache.match(req);
+
+  // Always try to refresh in the background so next time (online or
+  // offline) has the latest version — never lets this block the
+  // response that's about to be shown.
   const refresh = fetch(req).then(res => {
-    if (res && res.ok) cache.put('./bms-pro-online.html', res.clone());
+    if (res && res.ok) cache.put(key, res.clone());
     return res;
   }).catch(() => null);
 
   if (cached) return cached;
-  // Nothing cached yet (shouldn't normally happen) — try the network,
-  // and only fail if that also fails.
   const fresh = await refresh;
   return fresh || new Response(
-    '<h1>Offline</h1><p>This app has not finished its first online load yet. Please connect to the internet once, then it will work offline from then on.</p>',
+    `<!doctype html><html><body style="font-family:sans-serif;background:#121019;color:#F4F2FC;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:20px">
+      <div><h2>Offline — first load not complete yet</h2><p>This device hasn't finished its first successful online load. Please connect to the internet once, open the app, and it will then work offline from then on.</p></div>
+    </body></html>`,
     { headers: { 'Content-Type': 'text/html' } }
   );
 }
 
 async function staleWhileRevalidate(req) {
   const cache = await caches.open(CACHE_VERSION);
-  const cached = await cache.match(req);
+  const key = stripQuery(req.url);
+  const cached = await cache.match(key) || await cache.match(req);
   const refresh = fetch(req).then(res => {
-    if (res && res.ok) cache.put(req, res.clone());
+    if (res && res.ok) cache.put(key, res.clone());
     return res;
   }).catch(() => null);
   return cached || (await refresh) || Response.error();

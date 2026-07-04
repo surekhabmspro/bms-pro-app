@@ -802,8 +802,8 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="topbar-actions">
         <div class="live-clock" id="live-clock"></div>
         <button class="btn-icon" onclick="toggleAdvSearch()" title="Advanced Search">🎚️</button>
-        <div class="dropdown" style="position:relative" title="Online sync status — click to configure">
-          <button class="btn-icon" onclick="openModal('sync-setup-modal-overlay');syncRenderSetupModal()" style="display:flex;align-items:center;gap:6px;width:auto;padding:0 10px;font-size:15px;white-space:nowrap">
+        <div class="dropdown" style="position:relative" title="Online sync status — tap to configure, long-press to force sync now">
+          <button class="btn-icon" onclick="openModal('sync-setup-modal-overlay');syncRenderSetupModal()" oncontextmenu="event.preventDefault();forceSyncNow()" style="display:flex;align-items:center;gap:6px;width:auto;padding:0 10px;font-size:15px;white-space:nowrap">
             <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:#9CA3AF;display:inline-block;flex-shrink:0"></span>
             <span id="sync-label">Offline mode</span>
           </button>
@@ -2702,6 +2702,23 @@ const SYNC = {
   online: navigator.onLine
 };
 
+// Force an immediate full sync regardless of local version state.
+// Resets the locally stored version+timestamp so the next pull always
+// applies server data unconditionally. Use when two devices get out of sync.
+async function forceSyncNow() {
+  if (!syncConfigured() || !SYNC.token) { toast('Sync not configured','warning'); return; }
+  // Reset local version tracking so pull treats server data as always newer
+  syncSetVersion(0);
+  safeRemove('bms_sync_ts');
+  toast('Syncing now…', 'info');
+  const result = await syncPull({ force: true });
+  if (result.ok) {
+    toast('✅ Sync complete — latest data applied', 'success');
+  } else {
+    toast('⚠️ Sync failed — check internet connection', 'warning');
+  }
+}
+
 function syncConfigured() { return !!SYNC.apiBase; }
 
 function syncSetApiBase(url) {
@@ -2772,10 +2789,6 @@ async function syncLogin(username, password) {
 async function syncPull(opts) {
   opts = opts || {};
   if (!syncConfigured() || !SYNC.token) return { ok: false };
-  // NOTE: We intentionally do NOT block pulls when SYNC.pending is true.
-  // Other devices may have pushed new data; this device needs to receive it
-  // even while it has local changes queued. If the versions differ, the server
-  // data is applied and our pending push will re-send on top (same as 409 path).
   syncSetStatus('syncing', 'Checking for updates…');
   try {
     const resp = await fetch(SYNC.apiBase + '/api/state', {
@@ -2784,18 +2797,28 @@ async function syncPull(opts) {
     if (resp.status === 401) { syncClearAuth(); syncRefreshStatusDisplay(); return { ok: false, reason: 'auth' }; }
     if (!resp.ok) { syncRefreshStatusDisplay(); return { ok: false }; }
     const out = await resp.json();
-    if (out.version !== SYNC.version) {
+
+    // Use BOTH version AND updatedAt timestamp to detect new data.
+    // Version-only comparison fails when localStorage gets out of sync with
+    // the actual server state (e.g. device cleared cache, first login on new device).
+    // Timestamp comparison catches cases the version check misses.
+    const serverVersion = out.version || 0;
+    const serverTs = out.updatedAt || out.timestamp || 0;
+    const localTs = parseInt(safeGet('bms_sync_ts') || '0', 10);
+    const hasNewData = (serverVersion !== SYNC.version) || (serverTs > localTs) || opts.force;
+
+    if (hasNewData) {
       const serverHasUsers = out.data && Array.isArray(out.data.users) && out.data.users.length > 0;
       const localHasUsers = db && Array.isArray(db.users) && db.users.length > 0;
       if (!serverHasUsers && localHasUsers) {
-        console.warn('Sync pull skipped: server data looked empty while local data exists.');
+        console.warn('Sync pull skipped: server data looks empty vs local data.');
         syncRefreshStatusDisplay();
         return { ok: false, reason: 'server-empty' };
       }
       db = out.data;
-      syncSetVersion(out.version);
+      syncSetVersion(serverVersion);
+      if (serverTs) safeSet('bms_sync_ts', String(serverTs));
       safeSet(DB_KEY, JSON.stringify(db));
-      // If we had pending local changes, re-push them on top of the newly received data
       if (SYNC.pending) scheduleSync(1000);
       if (session && typeof openModule === 'function') {
         updateTopbar();
@@ -2824,11 +2847,10 @@ async function syncPush() {
     const resp = await fetch(SYNC.apiBase + '/api/state', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SYNC.token },
-      body: JSON.stringify({ data: db, version: SYNC.version })
+      body: JSON.stringify({ data: db, version: SYNC.version, updatedAt: Date.now() })
     });
     const out = await resp.json();
     if (resp.status === 409) {
-      // Someone else saved first — pull their version, then queue our push again.
       await syncPull({ force: true });
       syncSetPending(true);
       scheduleSync(3000);
@@ -2836,6 +2858,7 @@ async function syncPush() {
     }
     if (!resp.ok) { syncSetPending(true); SYNC.online = resp.status !== 0; syncRefreshStatusDisplay(); return; }
     syncSetVersion(out.version);
+    if (out.updatedAt) safeSet('bms_sync_ts', String(out.updatedAt));
     syncSetPending(false);
     SYNC.online = true;
     syncRefreshStatusDisplay();
@@ -2882,7 +2905,13 @@ function startSyncLoop() {
 
 window.addEventListener('online', () => { SYNC.online = true; syncRefreshStatusDisplay(); if (SYNC.pending) syncPush(); else syncPull(); });
 window.addEventListener('offline', () => { SYNC.online = false; syncRefreshStatusDisplay(); });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && syncConfigured()) syncPull(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && syncConfigured()) {
+    // Always force-pull when app comes back into focus — catches updates from
+    // other devices that happened while this tab/app was in the background.
+    syncPull({ force: true });
+  }
+});
 
 // ---- Setup modal (Admin-only configuration; others see read-only status) ----
 function syncRenderSetupModal() {
@@ -2894,7 +2923,9 @@ function syncRenderSetupModal() {
     body.innerHTML = `
       <div style="font-size:17px;color:var(--text-muted);line-height:1.6">
         ${syncConfigured()
-          ? `This device is connected to your organization's online server.<br><br>Status: <b id="sync-modal-status">${SYNC.pending ? 'Changes pending…' : (SYNC.online ? 'Synced' : 'No internet')}</b>`
+          ? `This device is connected to your organization's online server.<br><br>Status: <b id="sync-modal-status">${SYNC.pending ? 'Changes pending…' : (SYNC.online ? 'Synced' : 'No internet')}</b><br><br>
+            <button class="btn btn-secondary btn-sm" onclick="forceSyncNow().then(()=>syncRenderSetupModal())" style="margin-top:8px">🔄 Sync Now</button>
+            <div style="font-size:13px;color:var(--text-dim);margin-top:8px">Use "Sync Now" if data from another device is not appearing. Auto-syncs every 10 seconds.</div>`
           : `This device is running in offline mode. Ask your administrator to configure online sync if you need remote access.`}
       </div>`;
     return;

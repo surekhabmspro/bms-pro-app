@@ -21,22 +21,25 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 <style>
 /* ══ CSS VARIABLES & RESET ══ */
 :root {
-  --accent: #6366F1;
-  --accent-dim: rgba(99,102,241,0.16);
-  --accent-hover: #4f46e5;
-  --accent-glow: rgba(99,102,241,0.30);
-  /* ── Charcoal Dark ──
-     5 distinct layers with visible separation in every ambient light condition.
-     Accent is indigo so it pops cleanly against the gray tones. */
-  --bg:          #141416;   /* page canvas  — near-black charcoal */
-  --sidebar-bg:  #1C1C1F;   /* sidebar/topbar — one step lighter */
-  --surface:     #26262A;   /* cards — clearly lighter than sidebar */
-  --elevated:    #313136;   /* modals / dropdowns — above cards */
-  --border:      #3F3F46;
-  --border-light:#52525C;
-  --text:        #F2F2F5;
-  --text-muted:  #A1A1AB;
-  --text-dim:    #62626E;
+  --accent: #7C6BF5;
+  --accent-dim: rgba(124,107,245,0.18);
+  --accent-hover: #6552E8;
+  --accent-glow: rgba(124,107,245,0.35);
+  /* ── Indigo Ink ──
+     A violet-tinted dark palette instead of flat gray — every layer carries
+     a faint cool-purple undertone so the app reads as its own distinct
+     identity rather than a generic dark theme. Accent is a brighter
+     periwinkle-indigo so it still pops cleanly against the tinted layers. */
+  --bg:          #121019;   /* page canvas — near-black with a violet cast */
+  --sidebar-bg:  #1B1730;   /* sidebar — deep indigo, clearly its own layer */
+  --topbar-bg:   #17142A;   /* topbar — between bg and sidebar, its own layer */
+  --surface:     #221E38;   /* cards — clearly lighter than bg, violet-charcoal */
+  --elevated:    #2C2748;   /* modals / dropdowns — above cards */
+  --border:      #3A3358;
+  --border-light:#4C4470;
+  --text:        #F4F2FC;
+  --text-muted:  #ABA6CC;
+  --text-dim:    #726C9C;
   --success: #34D399;  --success-dim: rgba(52,211,153,0.16);
   --warning: #FCD34D;  --warning-dim: rgba(252,211,77,0.16);
   --danger:  #F87171;  --danger-dim:  rgba(248,113,113,0.16);
@@ -46,37 +49,38 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   --shadow:    0 8px 32px rgba(0,0,0,0.70);
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.50);
   --transition: 0.18s ease;
-  --accent-grad: linear-gradient(135deg,#6366F1,#A855F7);
-  --sidebar-grad: linear-gradient(190deg,#1E1B2E 0%,#17151F 55%,#141416 100%);
-  --teal: #14B8A6;  --teal-dim: rgba(20,184,166,0.16);
+  --accent-grad: linear-gradient(135deg,#7C6BF5,#C084FC);
+  --sidebar-grad: linear-gradient(190deg,#221D3E 0%,#1B1730 55%,#150F26 100%);
+  --teal: #2DD4BF;  --teal-dim: rgba(45,212,191,0.18);
   --font-display: 'Outfit','DM Sans',system-ui,sans-serif;
 }
 .light-mode {
-  --accent: #4f46e5;
-  --accent-dim: rgba(79,70,229,0.12);
-  --accent-hover: #4338ca;
-  --accent-glow: rgba(79,70,229,0.25);
-  /* ── Charcoal Light ──
-     Warm off-white background, pure white cards — classic document feel.
-     Text is very dark for maximum reading comfort. */
-  --bg:          #E4E4E8;   /* cool gray canvas */
-  --sidebar-bg:  #F4F4F7;   /* sidebar — lighter than bg, distinct */
+  --accent: #6D28D9;
+  --accent-dim: rgba(109,40,217,0.12);
+  --accent-hover: #5B21B6;
+  --accent-glow: rgba(109,40,217,0.25);
+  /* ── Indigo Ink Light ──
+     Soft lavender-white canvas with pure white cards, so surfaces still
+     visibly separate from the page instead of blending into flat gray. */
+  --bg:          #EDE9F9;   /* soft lavender canvas */
+  --sidebar-bg:  #F5F2FD;   /* sidebar — lighter than bg, distinct */
+  --topbar-bg:   #FBF9FE;   /* topbar — its own layer, near-white */
   --surface:     #FFFFFF;   /* cards — pure white, clearly elevated */
-  --elevated:    #F0F0F5;   /* modals/dropdowns — slight tint above cards */
-  --border:      #D4D4DC;
-  --border-light:#E2E2EA;
-  --text:        #111114;   /* near-black — maximum contrast */
-  --text-muted:  #4A4A55;
-  --text-dim:    #8A8A99;
+  --elevated:    #F1ECFC;   /* modals/dropdowns — slight violet tint above cards */
+  --border:      #DCD3F2;
+  --border-light:#E9E1F9;
+  --text:        #191325;   /* near-black with a violet cast — maximum contrast */
+  --text-muted:  #564F79;
+  --text-dim:    #948DBD;
   --success: #059669;
-  --shadow:    0 4px 20px rgba(0,0,0,0.12);
-  --shadow-sm: 0 1px 5px rgba(0,0,0,0.08);
+  --shadow:    0 4px 20px rgba(76,29,149,0.10);
+  --shadow-sm: 0 1px 5px rgba(76,29,149,0.07);
   --success-dim: rgba(5,150,105,0.11);
   --warning-dim: rgba(245,158,11,0.11);
   --danger-dim:  rgba(239,68,68,0.11);
   --info-dim:    rgba(56,189,248,0.11);
-  --accent-grad: linear-gradient(135deg,#4f46e5,#9333EA);
-  --sidebar-grad: linear-gradient(190deg,#EEEBFB 0%,#F4F4F7 60%);
+  --accent-grad: linear-gradient(135deg,#6D28D9,#C026D3);
+  --sidebar-grad: linear-gradient(190deg,#EEE7FC 0%,#F5F2FD 60%);
   --teal: #0D9488;  --teal-dim: rgba(13,148,136,0.12);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -100,7 +104,7 @@ a{color:var(--accent);text-decoration:none}
 .sidebar-logo{width:32px;height:32px;border-radius:9px;background:var(--accent-grad);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;flex-shrink:0;box-shadow:0 2px 10px var(--accent-glow)}
 .sidebar-brand{overflow:hidden;white-space:nowrap}
 .sidebar-brand-name{font-weight:700;font-size:19px;color:var(--text);font-family:var(--font-display)}
-.sidebar-brand-tag{font-size:14px;color:var(--text-muted)}
+.sidebar-brand-tag{font-size:13px;color:var(--accent);font-weight:600;letter-spacing:.02em}
 .sidebar-nav{flex:1;overflow-y:auto;padding:8px 0}
 .nav-section-label{padding:8px 12px 4px;font-size:13px;font-weight:600;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;overflow:hidden}
 #sidebar.collapsed .nav-section-label{opacity:0}
@@ -109,7 +113,7 @@ a{color:var(--accent);text-decoration:none}
 .nav-item.active{color:var(--accent);background:var(--accent-dim)}
 .nav-item.active::before{content:'';position:absolute;left:-6px;top:4px;bottom:4px;width:3px;background:var(--accent-grad);border-radius:0 3px 3px 0}
 .nav-icon{font-size:22px;flex-shrink:0;width:20px;text-align:center}
-.nav-label{font-size:17px;font-weight:500;overflow:hidden}
+.nav-label{font-size:17px;font-weight:600;overflow:hidden}
 .nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:13px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;flex-shrink:0}
 .user-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:#fff;flex-shrink:0;box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--border-light)}
 .sidebar-user{border-top:1px solid var(--border);padding:14px 12px;display:flex;align-items:center;gap:8px;overflow:hidden}
@@ -125,7 +129,7 @@ a{color:var(--accent);text-decoration:none}
 /* ══ MAIN AREA ══ */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;min-height:0}
 /* ══ TOPBAR ══ */
-#topbar{height:var(--topbar-h);background:var(--sidebar-bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:90;position:relative;box-shadow:0 1px 0 rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.06)}
+#topbar{height:var(--topbar-h);background:var(--topbar-bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:90;position:relative;box-shadow:0 1px 0 rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.06)}
 .topbar-toggle{background:none;color:var(--text-muted);font-size:22px;padding:6px;border-radius:6px}
 .topbar-toggle:hover{background:var(--elevated);color:var(--text)}
 .topbar-breadcrumb{font-weight:600;font-size:19px;white-space:nowrap;flex-shrink:0;font-family:var(--font-display)}
@@ -207,8 +211,8 @@ a{color:var(--accent);text-decoration:none}
 .kpi-card::before{content:'';position:absolute;top:0;right:0;width:80px;height:80px;border-radius:50%;background:var(--accent-dim);transform:translate(25px,-25px);pointer-events:none;z-index:0}
 .kpi-card>*{position:relative;z-index:1}
 .kpi-card .kpi-body{flex:1;min-width:0}
-.kpi-value{font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1.15;white-space:nowrap;overflow:hidden;display:block;width:100%}
-.kpi-label{font-size:13px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-value{font-size:29px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1.15;white-space:nowrap;overflow:hidden;display:block;width:100%;letter-spacing:-0.01em}
+.kpi-label{font-size:13px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi-change{font-size:13px;margin-top:5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi-icon{font-size:22px;width:42px;height:42px;flex-shrink:0;border-radius:12px;background:var(--accent-grad);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px var(--accent-glow)}
 /* Cycle a small palette across successive KPI cards so a dashboard row
@@ -2709,6 +2713,16 @@ function refreshDashboardKPIs() {
   const monthSales   = db.sales.filter(s => s.date && s.date.startsWith(monthPrefix));
   const totalRevToday  = todaySales.reduce((a,s) => a + s.total, 0);
   const totalRevMonth  = monthSales.reduce((a,s) => a + s.total, 0);
+  // Expense totals — pulled from db.accounting, which is the single place
+  // EVERY expense lands regardless of source: Payroll processing pushes
+  // Salary entries here, Supplier Payments push raw-material/Purchase
+  // entries here, and any manual entry (Utilities, Rent, Tax, Other, etc.)
+  // is added here too. So filtering by type==='expense' already covers
+  // salary + raw material + everything else — nothing extra to wire up.
+  const todayExpenses  = db.accounting.filter(a => a.type === 'expense' && a.date === t);
+  const monthExpenses  = db.accounting.filter(a => a.type === 'expense' && a.date && a.date.startsWith(monthPrefix));
+  const totalExpToday  = todayExpenses.reduce((a,x) => a + x.amount, 0);
+  const totalExpMonth  = monthExpenses.reduce((a,x) => a + x.amount, 0);
   const totalIncome  = db.accounting.filter(a => a.type === 'income').reduce((a,x) => a + x.amount, 0);
   const totalExp     = db.accounting.filter(a => a.type === 'expense').reduce((a,x) => a + x.amount, 0);
   const netBalance   = totalIncome - totalExp;
@@ -2717,6 +2731,8 @@ function refreshDashboardKPIs() {
   kpiGrid.innerHTML = `
     <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue</div><div class="kpi-value amt-revenue">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">Month Revenue</div><div class="kpi-value amt-revenue">${fmtWhole(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">💸</div><div class="kpi-body"><div class="kpi-label">Today's Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpToday)}</div><div class="kpi-change">${todayExpenses.length} entries today</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">🧾</div><div class="kpi-body"><div class="kpi-label">Month Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpMonth)}</div><div class="kpi-change">${monthExpenses.length} entries · salary, raw material &amp; other</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value ${netBalance>=0?'amt-revenue':'amt-expense'}">${fmtWhole(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.entities||'Customers')}</div><div class="kpi-value">${db.entities.length}</div><div class="kpi-change">Active contacts</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.records||'Records')}</div><div class="kpi-value">${db.records.length}</div><div class="kpi-change">In inventory</div></div></div>

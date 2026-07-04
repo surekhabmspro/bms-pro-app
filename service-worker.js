@@ -30,7 +30,7 @@
    can't keep serving a stale copy of this very file from their own HTTP
    cache and silently skip the update. ════════════════════════════════ */
 
-const CACHE_VERSION = 'bms-pro-shell-v5';
+const CACHE_VERSION = 'bms-pro-shell-v7';
 
 self.addEventListener('install', event => {
   event.waitUntil(

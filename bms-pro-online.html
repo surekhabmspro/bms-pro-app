@@ -2727,6 +2727,8 @@ function refreshDashboardKPIs() {
   const totalExp     = db.accounting.filter(a => a.type === 'expense').reduce((a,x) => a + x.amount, 0);
   const netBalance   = totalIncome - totalExp;
   const lowStockCnt  = db.records.filter(r => r.stock <= (r.lowStockThreshold || db.settings.lowStockThreshold || 10)).length;
+  const outstandingSales = (db.creditSales||[]).filter(c => c.status === 'outstanding');
+  const outstandingDue   = outstandingSales.reduce((a,c) => a + (c.dueAmount||0), 0);
 
   kpiGrid.innerHTML = `
     <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue</div><div class="kpi-value amt-revenue">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div></div>
@@ -2734,7 +2736,7 @@ function refreshDashboardKPIs() {
     <div class="kpi-card"><div class="kpi-icon">💸</div><div class="kpi-body"><div class="kpi-label">Today's Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpToday)}</div><div class="kpi-change">${todayExpenses.length} entries today</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">🧾</div><div class="kpi-body"><div class="kpi-label">Month Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpMonth)}</div><div class="kpi-change">${monthExpenses.length} entries · salary, raw material &amp; other</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value ${netBalance>=0?'amt-revenue':'amt-expense'}">${fmtWhole(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div></div>
-    <div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.entities||'Customers')}</div><div class="kpi-value">${db.entities.length}</div><div class="kpi-change">Active contacts</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="goToDueLedger()" title="Open Due Ledger"><div class="kpi-icon">💳</div><div class="kpi-body"><div class="kpi-label">Outstanding Due</div><div class="kpi-value amt-expense">${fmtWhole(outstandingDue)}</div><div class="kpi-change">${outstandingSales.length} unpaid credit sales</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.records||'Records')}</div><div class="kpi-value">${db.records.length}</div><div class="kpi-change">In inventory</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">⚠️</div><div class="kpi-body"><div class="kpi-label">Low Stock</div><div class="kpi-value" style="color:var(--warning)">${lowStockCnt}</div><div class="kpi-change">Items to reorder</div></div></div>
   `;
@@ -7861,8 +7863,16 @@ async function systemReset() {
 }
 
 /* ══ ENTITIES / CUSTOMERS ENHANCED ══ */
-function setEntTab(t, el) {
-  document.getElementById('ent-list-section').style.display = t==='list' ? '' : 'none';
+// Jump straight from the dashboard's Outstanding Due card into the
+// Customer Due Ledger tab, instead of just opening the module at
+// whatever tab it last had open.
+function goToDueLedger() {
+  openModule('entities');
+  const tabs = document.querySelectorAll('#ent-tabs .tab');
+  if (tabs[1]) setEntTab('due', tabs[1]);
+}
+
+function setEntTab(t, el) {  document.getElementById('ent-list-section').style.display = t==='list' ? '' : 'none';
   document.getElementById('ent-due-section').style.display = t==='due' ? '' : 'none';
   document.getElementById('ent-payments-section').style.display = t==='payments' ? '' : 'none';
   document.querySelectorAll('#ent-tabs .tab').forEach(x=>x.classList.remove('active'));

@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>
 /* QRCode.js (davidshimjs/qrcodejs, MIT) — inlined so QR codes generate
    even when the device cannot reach the cdnjs CDN. This was the cause of
@@ -42,12 +42,14 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   --danger:  #F87171;  --danger-dim:  rgba(248,113,113,0.16);
   --info:    #67E8F9;  --info-dim:    rgba(103,232,249,0.16);
   --sidebar-w: 240px;  --topbar-h: 56px;
-  --radius: 12px;  --radius-sm: 8px;  --radius-xs: 5px;
+  --radius: 16px;  --radius-sm: 10px;  --radius-xs: 6px;
   --shadow:    0 8px 32px rgba(0,0,0,0.70);
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.50);
   --transition: 0.18s ease;
-  --accent-grad: linear-gradient(135deg,#6366F1,#8B5CF6);
-  --sidebar-grad: linear-gradient(180deg,#1C1C1F,#161618);
+  --accent-grad: linear-gradient(135deg,#6366F1,#A855F7);
+  --sidebar-grad: linear-gradient(190deg,#1E1B2E 0%,#17151F 55%,#141416 100%);
+  --teal: #14B8A6;  --teal-dim: rgba(20,184,166,0.16);
+  --font-display: 'Outfit','DM Sans',system-ui,sans-serif;
 }
 .light-mode {
   --accent: #4f46e5;
@@ -73,19 +75,22 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   --warning-dim: rgba(245,158,11,0.11);
   --danger-dim:  rgba(239,68,68,0.11);
   --info-dim:    rgba(56,189,248,0.11);
-  --accent-grad: linear-gradient(135deg,#4f46e5,#7C3AED);
-  --sidebar-grad: linear-gradient(180deg,#F4F4F7,#EDEDF3);
+  --accent-grad: linear-gradient(135deg,#4f46e5,#9333EA);
+  --sidebar-grad: linear-gradient(190deg,#EEEBFB 0%,#F4F4F7 60%);
+  --teal: #0D9488;  --teal-dim: rgba(13,148,136,0.12);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{height:100%;overflow:hidden}
 body{height:100%;overflow:hidden;font-family:'DM Sans','Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:18px;font-weight:400;line-height:1.5}
+h1,h2,h3,h4{font-family:var(--font-display);letter-spacing:-0.01em}
 button{cursor:pointer;font-family:inherit;border:none;outline:none}
 input,select,textarea{font-family:inherit;outline:none}
 a{color:var(--accent);text-decoration:none}
 /* ══ SCROLLBAR ══ */
-::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar{width:7px;height:7px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 /* ══ LAYOUT ══ */
 #app{display:flex;height:100vh;height:100dvh;overflow:hidden}
 /* ══ SIDEBAR ══ */
@@ -94,7 +99,7 @@ a{color:var(--accent);text-decoration:none}
 .sidebar-header{padding:16px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);min-height:var(--topbar-h)}
 .sidebar-logo{width:32px;height:32px;border-radius:9px;background:var(--accent-grad);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;flex-shrink:0;box-shadow:0 2px 10px var(--accent-glow)}
 .sidebar-brand{overflow:hidden;white-space:nowrap}
-.sidebar-brand-name{font-weight:700;font-size:18px;color:var(--text)}
+.sidebar-brand-name{font-weight:700;font-size:19px;color:var(--text);font-family:var(--font-display)}
 .sidebar-brand-tag{font-size:14px;color:var(--text-muted)}
 .sidebar-nav{flex:1;overflow-y:auto;padding:8px 0}
 .nav-section-label{padding:8px 12px 4px;font-size:13px;font-weight:600;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;overflow:hidden}
@@ -106,7 +111,7 @@ a{color:var(--accent);text-decoration:none}
 .nav-icon{font-size:22px;flex-shrink:0;width:20px;text-align:center}
 .nav-label{font-size:17px;font-weight:500;overflow:hidden}
 .nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:13px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;flex-shrink:0}
-.user-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:#fff;flex-shrink:0}
+.user-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:#fff;flex-shrink:0;box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--border-light)}
 .sidebar-user{border-top:1px solid var(--border);padding:14px 12px;display:flex;align-items:center;gap:8px;overflow:hidden}
 .user-info{overflow:hidden;flex:1;min-width:0}
 .user-name{font-weight:700;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
@@ -123,7 +128,7 @@ a{color:var(--accent);text-decoration:none}
 #topbar{height:var(--topbar-h);background:var(--sidebar-bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:90;position:relative;box-shadow:0 1px 0 rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.06)}
 .topbar-toggle{background:none;color:var(--text-muted);font-size:22px;padding:6px;border-radius:6px}
 .topbar-toggle:hover{background:var(--elevated);color:var(--text)}
-.topbar-breadcrumb{font-weight:600;font-size:18px;white-space:nowrap;flex-shrink:0}
+.topbar-breadcrumb{font-weight:600;font-size:19px;white-space:nowrap;flex-shrink:0;font-family:var(--font-display)}
 /* ══ SEARCH ══ */
 .search-wrap{flex:1;max-width:480px;position:relative;transition:max-width .18s ease}
 @media(max-width:768px){
@@ -179,7 +184,11 @@ a{color:var(--accent);text-decoration:none}
 .notif-title{font-size:17px;font-weight:500}
 .notif-time{font-size:14px;color:var(--text-muted)}
 /* ══ CONTENT ══ */
-#content{flex:1;overflow-y:auto;overflow-x:hidden;padding:20px;background:var(--bg);-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#content{flex:1;overflow-y:auto;overflow-x:hidden;padding:20px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  background:
+    radial-gradient(circle at 100% 0%, var(--accent-dim), transparent 35%),
+    radial-gradient(circle at 0% 100%, var(--teal-dim), transparent 30%),
+    var(--bg);}
 /* ══ MODULE VIEWS ══ */
 .module-view{display:none;animation:moduleFade .2s ease}
 @keyframes moduleFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -188,7 +197,7 @@ a{color:var(--accent);text-decoration:none}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:box-shadow var(--transition),transform var(--transition)}
 .card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.card-title{font-weight:600;font-size:18px}
+.card-title{font-weight:600;font-size:18px;font-family:var(--font-display)}
 /* ══ KPI CARDS ══ */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:20px}
 .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;display:flex;gap:12px;align-items:flex-start;transition:transform var(--transition),box-shadow var(--transition)}
@@ -202,6 +211,14 @@ a{color:var(--accent);text-decoration:none}
 .kpi-label{font-size:13px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi-change{font-size:13px;margin-top:5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi-icon{font-size:22px;width:42px;height:42px;flex-shrink:0;border-radius:12px;background:var(--accent-grad);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px var(--accent-glow)}
+/* Cycle a small palette across successive KPI cards so a dashboard row
+   reads as intentionally colorful rather than one repeated icon color. */
+.kpi-grid .kpi-card:nth-of-type(4n+2) .kpi-icon{background:linear-gradient(135deg,var(--teal),#0891B2);box-shadow:0 4px 14px var(--teal-dim)}
+.kpi-grid .kpi-card:nth-of-type(4n+2)::after{background:linear-gradient(135deg,var(--teal),#0891B2)}
+.kpi-grid .kpi-card:nth-of-type(4n+3) .kpi-icon{background:linear-gradient(135deg,#F59E0B,#EA580C);box-shadow:0 4px 14px rgba(245,158,11,.30)}
+.kpi-grid .kpi-card:nth-of-type(4n+3)::after{background:linear-gradient(135deg,#F59E0B,#EA580C)}
+.kpi-grid .kpi-card:nth-of-type(4n+4) .kpi-icon{background:linear-gradient(135deg,#EC4899,#DB2777);box-shadow:0 4px 14px rgba(236,72,153,.30)}
+.kpi-grid .kpi-card:nth-of-type(4n+4)::after{background:linear-gradient(135deg,#EC4899,#DB2777)}
 /* ══ TOP PRODUCTS LIST ══ */
 .top-prod-row{display:flex;align-items:center;gap:10px;padding:8px 4px}
 .top-prod-rank{width:22px;height:22px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -302,7 +319,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 .modal-sm{max-width:380px}
 @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.modal-title{font-weight:700;font-size:19px;letter-spacing:-0.01em}
+.modal-title{font-weight:700;font-size:20px;letter-spacing:-0.01em;font-family:var(--font-display)}
 .modal-close{width:30px;height:30px;border-radius:6px;background:none;color:var(--text-muted);font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background var(--transition)}
 .modal-close:hover{background:var(--elevated);color:var(--text)}
 .modal-body{padding:20px;overflow-y:auto;flex:1}
@@ -377,14 +394,14 @@ textarea.form-control{resize:vertical;min-height:80px}
 #login-overlay{position:fixed;inset:0;z-index:1900;display:none;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;
   background:
     radial-gradient(circle at 15% 10%, var(--accent-dim), transparent 45%),
-    radial-gradient(circle at 85% 90%, var(--accent-dim), transparent 45%),
+    radial-gradient(circle at 85% 90%, var(--teal-dim), transparent 45%),
     var(--bg);}
 #login-overlay.show{display:flex}
 .lg-wrap{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.28);margin:auto;animation:modalIn .28s cubic-bezier(.16,1,.3,1)}
 .lg-top{padding:32px 32px 24px;text-align:center;border-bottom:1px solid var(--border);position:relative}
 .lg-top::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:var(--accent-grad)}
 .lg-logo{width:68px;height:68px;border-radius:18px;background:var(--accent-grad);color:#fff;font-size:31px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;box-shadow:0 6px 20px var(--accent-glow)}
-.lg-org{font-size:24px;font-weight:700}
+.lg-org{font-size:25px;font-weight:700;font-family:var(--font-display)}
 .lg-tag{font-size:15px;color:var(--text-muted);margin-top:3px}
 .lg-body{padding:24px 32px 28px}
 .lg-label{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:5px}
@@ -2346,8 +2363,29 @@ const DB_KEY = 'bms_pro_v1';
 function safeGet(key) {
   try { return localStorage.getItem(key); } catch (e) { return null; }
 }
+let _storageWarnedThisSession = false;
 function safeSet(key, val) {
-  try { localStorage.setItem(key, val); return true; } catch (e) { return false; }
+  try {
+    localStorage.setItem(key, val);
+    return true;
+  } catch (e) {
+    // This is the single most important error to NOT swallow silently.
+    // A full/blocked local storage means saveDB() looks like it "worked"
+    // (no crash) but nothing was actually written — so the very next
+    // restart shows an empty/stale app with no obvious cause. Surfacing
+    // it immediately turns a mystery bug into a one-click fix.
+    if (!_storageWarnedThisSession && typeof toast === 'function') {
+      _storageWarnedThisSession = true;
+      const isQuota = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014);
+      toast(
+        isQuota
+          ? '⚠️ Device storage is full — recent changes are NOT saved on this device. Go to Settings → Data & Backup and free up space (e.g. remove old audit history), or this device will lose data on restart.'
+          : '⚠️ Could not save to this device\'s storage — recent changes may be lost on restart.',
+        'error'
+      );
+    }
+    return false;
+  }
 }
 function safeRemove(key) {
   try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
@@ -2592,7 +2630,21 @@ function saveDB() {
     }
     return;
   }
-  try { safeSet(DB_KEY, JSON.stringify(db)); } catch(e) { toast('Storage error: ' + e.message, 'error'); }
+  const json = JSON.stringify(db);
+  let ok = safeSet(DB_KEY, json);
+  if (!ok) {
+    // Storage write failed (almost always: quota exceeded). Before giving
+    // up, automatically shrink the parts of the database that are safe to
+    // shrink — history/log data that accumulates forever but isn't a
+    // business record — and try again once. This alone recovers the
+    // device in most real-world cases without the user having to do
+    // anything, on top of the warning safeSet() already showed.
+    let trimmed = false;
+    if (db.auditLog && db.auditLog.length > 2000) { db.auditLog = db.auditLog.slice(-2000); trimmed = true; }
+    if (db.deletedRecords && db.deletedRecords.length > 200) { db.deletedRecords = db.deletedRecords.slice(-200); trimmed = true; }
+    if (db.searchHistory && db.searchHistory.length > 50) { db.searchHistory = db.searchHistory.slice(-50); trimmed = true; }
+    if (trimmed) safeSet(DB_KEY, JSON.stringify(db));
+  }
   scheduleSync();
   clearTimeout(saveDB._refreshTimer);
   saveDB._refreshTimer = setTimeout(refreshViews, 80);
@@ -3808,6 +3860,7 @@ function lgShowDiag() {
       const d = JSON.parse(raw);
       h += `<div style="color:var(--success);margin-bottom:8px">✅ Database found</div>`;
       h += `<div style="font-size:15px;margin-bottom:4px">Org: <strong>${d.settings?.orgName||'?'}</strong> | Users: <strong>${(d.users||[]).length}</strong></div>`;
+      h += `<div style="font-size:15px;margin-bottom:4px">Local data size: <strong>${(raw.length/1024/1024).toFixed(2)} MB</strong></div>`;
       (d.users||[]).forEach(u => {
         const ok = u.passwordHash && u.passwordHash.length === 64;
         h += `<div style="margin-top:8px;padding:8px 10px;background:var(--elevated);border-radius:8px;font-size:15px">
@@ -3820,8 +3873,24 @@ function lgShowDiag() {
   lgEl().innerHTML = `
     <div style="font-weight:600;margin-bottom:12px">Diagnostics</div>
     <div style="font-family:monospace">${h}</div>
+    <div id="diag-quota" style="font-size:15px;margin-top:10px;color:var(--text-muted)">Checking device storage space…</div>
     <button class="lg-ghost" style="margin-top:16px" onclick="lgShowMain()">← Back</button>
   `;
+  if (navigator.storage && navigator.storage.estimate) {
+    navigator.storage.estimate().then(est => {
+      const el = document.getElementById('diag-quota');
+      if (!el) return;
+      const usedMB = ((est.usage||0)/1024/1024).toFixed(1);
+      const quotaMB = ((est.quota||0)/1024/1024).toFixed(0);
+      const pct = est.quota ? Math.round((est.usage/est.quota)*100) : 0;
+      const warn = pct > 80;
+      el.innerHTML = `Device storage: <strong style="color:${warn?'var(--danger)':'var(--text)'}">${usedMB} MB used of ~${quotaMB} MB (${pct}%)</strong>${warn ? ' — running low; free up space or export a backup.' : ''}`;
+    }).catch(() => {
+      const el = document.getElementById('diag-quota'); if (el) el.textContent = '';
+    });
+  } else {
+    const el = document.getElementById('diag-quota'); if (el) el.textContent = '';
+  }
 }
 
 // ── SHARED UTILS ──

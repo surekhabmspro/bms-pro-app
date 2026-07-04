@@ -22,7 +22,7 @@
    list changes, so returning users actually receive the update instead
    of an old cached shell forever. ════════════════════════════════════ */
 
-const CACHE_VERSION = 'bms-pro-shell-v1';
+const CACHE_VERSION = 'bms-pro-shell-v2';
 
 // Files that make up the app shell. Keep this list in sync with what's
 // actually deployed next to this service-worker.js file. If a file in

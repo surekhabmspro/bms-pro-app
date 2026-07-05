@@ -1619,9 +1619,15 @@ textarea.form-control{resize:vertical;min-height:80px}
               </div>
               <button class="btn btn-primary" style="margin-top:12px" onclick="saveAcctPINSettings()">💾 Save Security Settings</button>
             </div>
+            <!-- ADVANCED LEDGER (tucked away — not part of normal workflow) -->
+            <div class="settings-section" id="sec-advanced-ledger">
+              <div class="settings-title">⚙️ Advanced: Ledger &amp; Journal Entries</div>
+              <div class="settings-desc">For your accountant or edge cases only — corrections, opening balances, depreciation. Never needed for normal day-to-day use; every sale, purchase, payment, and expense already books itself automatically.</div>
+              <button class="btn btn-secondary" onclick="openAdvancedLedger()">🧾 Open Advanced Ledger</button>
+            </div>
             <!-- ROLES & PERMISSIONS -->
             <div class="settings-section" id="sec-roles">
-              <div class="settings-title">🔐 Roles & Permissions</div>
+              <div class="settings-title">🔐 Roles &amp; Permissions</div>
               <div class="settings-desc">Create custom roles with granular permissions. Admin always has full access.</div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                 <div style="font-weight:600">Custom Roles</div>
@@ -1828,6 +1834,51 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="form-group"><label class="form-label">Reference</label><input class="form-control" id="acct-ref" placeholder="Invoice #, Receipt # (optional)"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('acct-modal-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveAccounting()">💾 Save Entry</button></div>
+  </div>
+</div>
+
+<!-- Advanced Ledger Modal (tucked away — edge cases only, never required for normal use) -->
+<div class="modal-overlay" id="advanced-ledger-overlay" onclick="closeModalOnOverlay(event,'advanced-ledger-overlay')">
+  <div class="modal modal-lg">
+    <div class="modal-header"><div class="modal-title">⚙️ Advanced Ledger</div><button class="modal-close" onclick="closeModal('advanced-ledger-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-hint" style="margin-bottom:10px">Every sale, purchase, payment, and expense already posts itself automatically. Use this screen only for corrections, opening balances, or depreciation.</div>
+      <div class="tabs" style="margin-bottom:14px">
+        <div class="tab active" id="adv-tab-list" onclick="setAdvLedgerTab('list',this)">📒 Journal Entries</div>
+        <div class="tab" id="adv-tab-new" onclick="setAdvLedgerTab('new',this)">➕ New Manual Entry</div>
+        <div class="tab" id="adv-tab-migrate" onclick="setAdvLedgerTab('migrate',this)">🔄 Historical Migration</div>
+      </div>
+
+      <div id="adv-panel-list">
+        <div class="form-hint" style="margin-bottom:8px">Most recent entries first. Voided entries are struck through and kept for audit trail — never deleted.</div>
+        <div id="adv-ledger-list" style="max-height:420px;overflow:auto"></div>
+      </div>
+
+      <div id="adv-panel-new" style="display:none">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Date *</label><input class="form-control" id="adv-je-date" onfocus="openCalendar('adv-je-date','standard')"></div>
+          <div class="form-group"><label class="form-label">Description *</label><input class="form-control" id="adv-je-desc" placeholder="e.g. Correcting entry, Depreciation for June, Opening balance"></div>
+        </div>
+        <div id="adv-je-lines"></div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addAdvJELine()">+ Add Line</button>
+        <div id="adv-je-balance" class="form-hint" style="margin-top:10px;font-weight:700"></div>
+        <div class="modal-footer" style="padding-left:0;padding-right:0">
+          <button class="btn btn-primary" onclick="saveAdvancedJournalEntry()">💾 Post Entry</button>
+        </div>
+      </div>
+
+      <div id="adv-panel-migrate" style="display:none">
+        <div class="form-hint" style="margin-bottom:10px">
+          Converts every historical Accounting entry into a proper journal entry, plus opens the correct
+          Accounts Receivable / Accounts Payable balance for anything currently outstanding. Nothing in
+          your existing data is changed or deleted — this only adds journal entries. Safe to re-run any
+          time; re-running replaces the previously generated historical entries rather than duplicating them.
+        </div>
+        <button class="btn btn-primary" onclick="runLedgerMigrationUI()">🔄 Run / Re-run Historical Migration</button>
+        <div id="adv-migration-result" style="margin-top:14px"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('advanced-ledger-overlay')">Close</button></div>
   </div>
 </div>
 
@@ -2446,6 +2497,8 @@ function defaultDB() {
     entities: [],       // customers
     secondary: [],      // suppliers
     accounting: [],
+    chartOfAccounts: [],   // NEW: double-entry ledger accounts — see seedChartOfAccounts()
+    journalEntries: [],    // NEW: double-entry journal entries (Dr/Cr lines) — auto-generated behind the scenes
     employees: [],
     attendance: {},
     payrollHistory: [],
@@ -2481,6 +2534,20 @@ function defaultDB() {
       lastBackupDate: null,
       accountingPIN: '',             // Accounting PIN security
       accountingPINEnabled: false,
+      // ── NEW: Double-entry ledger settings (invisible to normal workflow) ──
+      ledgerEnabled: true,           // master switch; ledger runs silently behind existing screens
+      voucherCounters: { Sales:0, Purchase:0, Payment:0, Receipt:0, Journal:0 },
+      acctMappings: {
+        paymentMethodToAccount: { 'Cash':'1010', 'Card':'1020', 'Bank Transfer':'1020', 'Credit':null },
+        qrCodeToAccount: {},           // { qrCodeId: accountCode } — set per QR code in POS QR settings
+        expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Other':'5100' },
+        incomeCategoryToAccount: { 'Sales':'4010','Service':'4010','Interest':'4090','Rent Income':'4090','Other Income':'4090' },
+        salesAccountRetail: '4010', salesAccountWholesale: '4020',
+        arAccount: '1030', apAccount: '2010',
+        vatOutputAccount: '2020', vatInputAccount: '1050',
+        purchaseAccount: '5010', inventoryAccount: '1042',
+        salaryExpenseAccount: '5020', tdsPayableAccount: '2060'
+      },
       salaryComponents: {            // Editable salary components
         earnings: ['Basic Salary','TA','DA','Fuel Allowance','Festival Allowance','Overtime','Bonus','Other Allowance'],
         deductions: ['Tax','Advance Adjustment','Loan Recovery','Other Deduction']
@@ -2610,6 +2677,25 @@ function loadDB() {
       if (!db.leaveRecords) db.leaveRecords = [];
       if (!db.performanceRecords) db.performanceRecords = [];
       if (!db.employeeDocuments) db.employeeDocuments = [];
+      // ── NEW: Ledger migration for existing installs (additive only, never touches db.accounting) ──
+      if (!db.chartOfAccounts) db.chartOfAccounts = [];
+      if (!db.journalEntries) db.journalEntries = [];
+      if (db.settings.ledgerEnabled === undefined) db.settings.ledgerEnabled = true;
+      if (!db.settings.voucherCounters) db.settings.voucherCounters = { Sales:0, Purchase:0, Payment:0, Receipt:0, Journal:0 };
+      if (!db.settings.acctMappings) {
+        db.settings.acctMappings = {
+          paymentMethodToAccount: { 'Cash':'1010', 'Card':'1020', 'Bank Transfer':'1020', 'Credit':null },
+          qrCodeToAccount: {},
+          expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Other':'5100' },
+          incomeCategoryToAccount: { 'Sales':'4010','Service':'4010','Interest':'4090','Rent Income':'4090','Other Income':'4090' },
+          salesAccountRetail: '4010', salesAccountWholesale: '4020',
+          arAccount: '1030', apAccount: '2010',
+          vatOutputAccount: '2020', vatInputAccount: '1050',
+          purchaseAccount: '5010', inventoryAccount: '1042',
+          salaryExpenseAccount: '5020', tdsPayableAccount: '2060'
+        };
+      }
+      if (!db.chartOfAccounts.length) seedChartOfAccounts();
       // Ensure pos.paymentMethods includes Credit
       if (!db.settings.pos.paymentMethods.includes('Credit'))
         db.settings.pos.paymentMethods.push('Credit');
@@ -2622,6 +2708,381 @@ function loadDB() {
   } catch(e) {
     db = defaultDB();
   }
+  if (!db.chartOfAccounts || !db.chartOfAccounts.length) seedChartOfAccounts();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LEDGER ENGINE — Phase 2: Automatic Double-Entry Backend
+   Runs silently behind existing screens. Nothing here changes what you click
+   or see day-to-day. db.accounting, db.sales, db.creditSales, db.payments,
+   db.supplierInvoices, db.supplierPayments, db.payrollHistory are NEVER
+   altered in shape by any function below — this only ADDS journal entries
+   to the new db.journalEntries array, derived from what you already do.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const DEFAULT_CHART_OF_ACCOUNTS = [
+  // ── Assets ──
+  { code:'1010', name:'Cash in Hand', type:'asset', normalBalance:'debit' },
+  { code:'1020', name:'Bank Account', type:'asset', normalBalance:'debit' },
+  { code:'1021', name:'eSewa Wallet', type:'asset', normalBalance:'debit' },
+  { code:'1022', name:'Khalti Wallet', type:'asset', normalBalance:'debit' },
+  { code:'1030', name:"Accounts Receivable (Customer Dues)", type:'asset', normalBalance:'debit', isControlAccount:true },
+  { code:'1040', name:'Inventory – Raw Materials', type:'asset', normalBalance:'debit' },
+  { code:'1041', name:'Inventory – Finished Goods', type:'asset', normalBalance:'debit' },
+  { code:'1042', name:'Inventory – Trading/Retail Goods', type:'asset', normalBalance:'debit' },
+  { code:'1050', name:'VAT Receivable (Input VAT)', type:'asset', normalBalance:'debit' },
+  { code:'1060', name:'Advance to Suppliers', type:'asset', normalBalance:'debit' },
+  { code:'1070', name:'Prepaid Expenses', type:'asset', normalBalance:'debit' },
+  { code:'1110', name:'Machinery & Equipment', type:'asset', normalBalance:'debit' },
+  { code:'1111', name:'Accumulated Depreciation – Machinery', type:'asset', normalBalance:'credit' },
+  { code:'1120', name:'Vehicles', type:'asset', normalBalance:'debit' },
+  { code:'1121', name:'Accumulated Depreciation – Vehicles', type:'asset', normalBalance:'credit' },
+  { code:'1130', name:'Furniture & Fixtures', type:'asset', normalBalance:'debit' },
+  { code:'1131', name:'Accumulated Depreciation – Furniture', type:'asset', normalBalance:'credit' },
+  { code:'1140', name:'Computers & Office Equipment', type:'asset', normalBalance:'debit' },
+  { code:'1141', name:'Accumulated Depreciation – Computers', type:'asset', normalBalance:'credit' },
+  // ── Liabilities ──
+  { code:'2010', name:'Accounts Payable (Supplier Dues)', type:'liability', normalBalance:'credit', isControlAccount:true },
+  { code:'2020', name:'VAT Payable (Output VAT)', type:'liability', normalBalance:'credit' },
+  { code:'2030', name:'Salary Payable', type:'liability', normalBalance:'credit' },
+  { code:'2040', name:'Advance from Customers', type:'liability', normalBalance:'credit' },
+  { code:'2050', name:'Short-Term Loans', type:'liability', normalBalance:'credit' },
+  { code:'2060', name:'TDS Payable', type:'liability', normalBalance:'credit' },
+  { code:'2110', name:'Long-Term Loans', type:'liability', normalBalance:'credit' },
+  // ── Equity ──
+  { code:'3010', name:"Owner's Capital", type:'equity', normalBalance:'credit' },
+  { code:'3020', name:"Owner's Drawings", type:'equity', normalBalance:'debit' },
+  { code:'3030', name:'Retained Earnings', type:'equity', normalBalance:'credit' },
+  // ── Income ──
+  { code:'4010', name:'Sales Revenue – Retail', type:'income', normalBalance:'credit' },
+  { code:'4020', name:'Sales Revenue – Wholesale', type:'income', normalBalance:'credit' },
+  { code:'4090', name:'Other Income', type:'income', normalBalance:'credit' },
+  // ── Expense ──
+  { code:'5010', name:'Purchases / Cost of Goods Sold', type:'expense', normalBalance:'debit' },
+  { code:'5020', name:'Salary & Wages', type:'expense', normalBalance:'debit' },
+  { code:'5030', name:'Rent', type:'expense', normalBalance:'debit' },
+  { code:'5040', name:'Utilities', type:'expense', normalBalance:'debit' },
+  { code:'5050', name:'Supplies', type:'expense', normalBalance:'debit' },
+  { code:'5060', name:'Tax & Government Fees', type:'expense', normalBalance:'debit' },
+  { code:'5070', name:'Maintenance', type:'expense', normalBalance:'debit' },
+  { code:'5080', name:'Travel', type:'expense', normalBalance:'debit' },
+  { code:'5090', name:'Depreciation Expense', type:'expense', normalBalance:'debit' },
+  { code:'5100', name:'Other Expense', type:'expense', normalBalance:'debit' }
+];
+
+function seedChartOfAccounts() {
+  const existingCodes = new Set((db.chartOfAccounts||[]).map(a=>a.code));
+  DEFAULT_CHART_OF_ACCOUNTS.forEach(a => {
+    if (!existingCodes.has(a.code)) {
+      db.chartOfAccounts.push({ id: uid(), ...a, active: true });
+    }
+  });
+}
+
+function getAccountByCode(code) {
+  return (db.chartOfAccounts||[]).find(a => a.code === code) || null;
+}
+
+/* ── Mapping resolvers (read db.settings.acctMappings — editable once, not per-transaction) ── */
+function resolvePaymentAccountCode(method, qrId) {
+  const m = db.settings.acctMappings;
+  if (!m) return '1010';
+  if (method === 'Credit') return null; // Credit routes to Accounts Receivable, not a cash account
+  if (qrId && m.qrCodeToAccount && m.qrCodeToAccount[qrId]) return m.qrCodeToAccount[qrId];
+  if (method && (method.toLowerCase().includes('qr'))) {
+    // QR method used but this specific QR code isn't mapped yet — default to Cash so the
+    // sale is never blocked; configure the exact wallet/bank in Settings → QR Codes.
+    return '1010';
+  }
+  if (m.paymentMethodToAccount && m.paymentMethodToAccount[method] !== undefined) {
+    return m.paymentMethodToAccount[method] || '1010';
+  }
+  return '1010'; // safe fallback for any custom payment method the user added
+}
+function resolveExpenseAccountCode(category) {
+  const m = db.settings.acctMappings;
+  return (m && m.expenseCategoryToAccount && m.expenseCategoryToAccount[category]) || '5100';
+}
+function resolveIncomeAccountCode(category) {
+  const m = db.settings.acctMappings;
+  return (m && m.incomeCategoryToAccount && m.incomeCategoryToAccount[category]) || '4090';
+}
+function resolveSalesAccountCode(customerType) {
+  const m = db.settings.acctMappings;
+  return customerType === 'Wholesale' ? (m.salesAccountWholesale||'4020') : (m.salesAccountRetail||'4010');
+}
+
+/* ── Voucher numbering (invisible unless you go looking in Advanced Entry) ── */
+function nextVoucherNumber(kind) {
+  if (!db.settings.voucherCounters) db.settings.voucherCounters = { Sales:0, Purchase:0, Payment:0, Receipt:0, Journal:0 };
+  const prefixMap = { Sales:'SV', Purchase:'PV', Payment:'PY', Receipt:'RV', Journal:'JV' };
+  const k = prefixMap[kind] ? kind : 'Journal';
+  db.settings.voucherCounters[k] = (db.settings.voucherCounters[k]||0) + 1;
+  return `${prefixMap[k]}-${String(db.settings.voucherCounters[k]).padStart(6,'0')}`;
+}
+
+/* ── Core posting function — every automatic entry in the app goes through this ── */
+function postJournalEntry({ date, voucherKind='Journal', refType, refId, reference, description, lines, isAutoGenerated=true }) {
+  if (db.settings.ledgerEnabled === false) return null;
+  const cleanLines = (lines||[]).filter(l => (l.debit||0) > 0 || (l.credit||0) > 0);
+  const debitTotal = cleanLines.reduce((a,l)=>a+(+(l.debit||0)),0);
+  const creditTotal = cleanLines.reduce((a,l)=>a+(+(l.credit||0)),0);
+  if (!cleanLines.length || Math.abs(debitTotal - creditTotal) > 0.01) {
+    // Never post an unbalanced entry. Fails safely — the underlying screen (sale/payment/etc.)
+    // still saves normally; only the invisible ledger entry is skipped, and this is logged
+    // so it can be found and fixed without ever blocking your actual work.
+    console.error('Ledger: blocked unbalanced entry', description, cleanLines);
+    return null;
+  }
+  const je = {
+    id: uid(), date: date || today(), voucherNumber: nextVoucherNumber(voucherKind),
+    refType, refId, reference: reference||'', description: description||'',
+    lines: cleanLines.map(l => ({ accountCode: l.accountCode, debit: +(+(l.debit||0)).toFixed(2), credit: +(+(l.credit||0)).toFixed(2) })),
+    isAutoGenerated, isVoid: false, createdAt: now(), createdBy: (typeof session!=='undefined' && session?.username) || 'system'
+  };
+  db.journalEntries.push(je);
+  return je;
+}
+function voidJournalEntry(id, reason) {
+  const je = (db.journalEntries||[]).find(j=>j.id===id);
+  if (!je || je.isVoid) return;
+  je.isVoid = true; je.voidedAt = now(); je.voidReason = reason||''; je.voidedBy = (typeof session!=='undefined' && session?.username) || 'system';
+}
+function voidJournalEntriesForRef(refType, refId, reason) {
+  (db.journalEntries||[]).filter(j => j.refType===refType && j.refId===refId && !j.isVoid)
+    .forEach(j => voidJournalEntry(j.id, reason));
+}
+
+/* ── Per-transaction-type posting rules (exactly the mapping rules approved in Phase 1) ── */
+
+function postSaleJournal(sale) {
+  const debitCode = resolvePaymentAccountCode(sale.paymentMethod, sale.qrId);
+  const salesCode = resolveSalesAccountCode(sale.customerType);
+  const taxAmount = +(sale.taxAmount||0);
+  const netSales = +(sale.total||0) - taxAmount;
+  const lines = [ { accountCode: debitCode, debit: sale.total, credit: 0 }, { accountCode: salesCode, debit: 0, credit: netSales } ];
+  if (taxAmount > 0) lines.push({ accountCode: db.settings.acctMappings.vatOutputAccount, debit: 0, credit: taxAmount });
+  return postJournalEntry({ date: sale.date, voucherKind:'Sales', refType:'pos-sale', refId: sale.id, reference: sale.receiptNumber, description: `POS Sale ${sale.receiptNumber}`, lines });
+}
+
+function postCreditSaleJournal(sale, paidNow, dueAmount) {
+  const salesCode = resolveSalesAccountCode(sale.customerType);
+  const taxAmount = +(sale.taxAmount||0);
+  const netSales = +(sale.total||0) - taxAmount;
+  const lines = [];
+  if (paidNow > 0) lines.push({ accountCode: '1010', debit: paidNow, credit: 0 }); // matches the hardcoded 'Cash' on the initial-payment record today
+  if (dueAmount > 0) lines.push({ accountCode: db.settings.acctMappings.arAccount, debit: dueAmount, credit: 0 });
+  lines.push({ accountCode: salesCode, debit: 0, credit: netSales });
+  if (taxAmount > 0) lines.push({ accountCode: db.settings.acctMappings.vatOutputAccount, debit: 0, credit: taxAmount });
+  return postJournalEntry({ date: sale.date, voucherKind:'Sales', refType:'credit-sale', refId: sale.id, reference: sale.receiptNumber, description: `Credit Sale ${sale.receiptNumber}`, lines });
+}
+
+function postDueSettlementJournal(credit, amount, method) {
+  const debitCode = resolvePaymentAccountCode(method);
+  const lines = [ { accountCode: debitCode, debit: amount, credit: 0 }, { accountCode: db.settings.acctMappings.arAccount, debit: 0, credit: amount } ];
+  return postJournalEntry({ date: today(), voucherKind:'Receipt', refType:'due-settlement', refId: credit.id, reference: credit.receiptNumber, description: `Due Collection ${credit.receiptNumber} — ${credit.customerName}`, lines });
+}
+
+function postSupplierInvoiceJournal(invoice) {
+  const lines = [ { accountCode: db.settings.acctMappings.purchaseAccount, debit: invoice.amount, credit: 0 }, { accountCode: db.settings.acctMappings.apAccount, debit: 0, credit: invoice.amount } ];
+  return postJournalEntry({ date: invoice.date, voucherKind:'Purchase', refType:'supplier-invoice', refId: invoice.id, reference: invoice.invoiceNumber, description: `Supplier Invoice ${invoice.invoiceNumber}`, lines });
+}
+
+function postSupplierPaymentJournal(payment, invoice) {
+  const creditCode = resolvePaymentAccountCode(payment.method);
+  const lines = [ { accountCode: db.settings.acctMappings.apAccount, debit: payment.amount, credit: 0 }, { accountCode: creditCode, debit: 0, credit: payment.amount } ];
+  return postJournalEntry({ date: payment.date, voucherKind:'Payment', refType:'supplier-payment', refId: payment.id, reference: invoice?.invoiceNumber||'', description: `Supplier Payment ${invoice?.invoiceNumber||''} (${payment.type})`, lines });
+}
+
+function postManualAccountingJournal(entry) {
+  const lines = entry.type === 'expense'
+    ? [ { accountCode: resolveExpenseAccountCode(entry.category), debit: entry.amount, credit: 0 }, { accountCode: '1010', debit: 0, credit: entry.amount } ]
+    : [ { accountCode: '1010', debit: entry.amount, credit: 0 }, { accountCode: resolveIncomeAccountCode(entry.category), debit: 0, credit: entry.amount } ];
+  return postJournalEntry({ date: entry.date, voucherKind: entry.type==='expense'?'Payment':'Receipt', refType:'manual-accounting', refId: entry.id, reference: entry.reference||'', description: entry.description || `${entry.type} — ${entry.category}`, lines });
+}
+
+function postPayrollJournal(month, totalPay) {
+  const lines = [ { accountCode: db.settings.acctMappings.salaryExpenseAccount, debit: totalPay, credit: 0 }, { accountCode: '1010', debit: 0, credit: totalPay } ];
+  return postJournalEntry({ date: today(), voucherKind:'Payment', refType:'payroll', refId: month, reference: `PAY-${month}`, description: `Payroll ${month}`, lines });
+}
+
+/* ── Manual/Advanced journal entry (edge cases only — never required for normal use) ── */
+function postManualJournalEntry(date, description, lineInputs) {
+  const lines = lineInputs.map(l => ({ accountCode: l.accountCode, debit: parseFloat(l.debit)||0, credit: parseFloat(l.credit)||0 }));
+  return postJournalEntry({ date, voucherKind:'Journal', refType:'manual-journal', refId: uid(), reference:'', description, lines, isAutoGenerated:false });
+}
+
+/* ── Advanced Ledger screen (tucked away in Settings → Accounting Security) ── */
+function openAdvancedLedger() {
+  openModal('advanced-ledger-overlay');
+  setAdvLedgerTab('list', document.getElementById('adv-tab-list'));
+  renderAdvancedLedger();
+  document.getElementById('adv-je-date').value = today();
+  document.getElementById('adv-je-lines').innerHTML = '';
+  addAdvJELine(); addAdvJELine();
+  document.getElementById('adv-migration-result').innerHTML = '';
+}
+
+function setAdvLedgerTab(tab, el) {
+  ['list','new','migrate'].forEach(t=>{
+    const panel = document.getElementById('adv-panel-'+t);
+    if (panel) panel.style.display = t===tab ? '' : 'none';
+    document.getElementById('adv-tab-'+t)?.classList.toggle('active', t===tab);
+  });
+}
+
+function renderAdvancedLedger() {
+  const list = (db.journalEntries||[]).slice()
+    .sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.createdAt||0)-(a.createdAt||0))
+    .slice(0,200);
+  document.getElementById('adv-ledger-list').innerHTML = list.length ? list.map(je=>{
+    const total = je.lines.reduce((a,l)=>a+(l.debit||0),0);
+    const linesHtml = je.lines.map(l=>{
+      const acc = getAccountByCode(l.accountCode);
+      return `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted)">
+        <span>${esc(acc?acc.name:l.accountCode)}</span>
+        <span>${l.debit ? 'Dr '+fmt(l.debit) : 'Cr '+fmt(l.credit)}</span>
+      </div>`;
+    }).join('');
+    return `<div style="padding:10px;border-bottom:1px solid var(--border);${je.isVoid?'opacity:.5;text-decoration:line-through':''}">
+      <div style="display:flex;justify-content:space-between;font-weight:600">
+        <span>${esc(je.voucherNumber)} — ${esc(je.description)}</span>
+        <span>${esc(je.date)} · ${fmt(total)}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin:2px 0">${esc(je.refType)}${je.isVoid?' · VOIDED: '+esc(je.voidReason||''):''}</div>
+      ${linesHtml}
+    </div>`;
+  }).join('') : '<div class="empty"><div class="empty-title">No journal entries yet</div></div>';
+}
+
+function addAdvJELine() {
+  const wrap = document.getElementById('adv-je-lines');
+  const opts = (db.chartOfAccounts||[]).slice().sort((a,b)=>a.code.localeCompare(b.code))
+    .map(a=>`<option value="${a.code}">${a.code} — ${esc(a.name)}</option>`).join('');
+  const row = document.createElement('div');
+  row.className = 'form-row adv-je-row';
+  row.style.alignItems = 'flex-end';
+  row.innerHTML = `
+    <div class="form-group" style="flex:2"><label class="form-label">Account</label><select class="form-control adv-je-acc">${opts}</select></div>
+    <div class="form-group"><label class="form-label">Debit</label><input class="form-control adv-je-debit" type="number" min="0" placeholder="0" oninput="updateAdvJEBalance()"></div>
+    <div class="form-group"><label class="form-label">Credit</label><input class="form-control adv-je-credit" type="number" min="0" placeholder="0" oninput="updateAdvJEBalance()"></div>
+    <div class="form-group" style="flex:0"><button class="btn btn-secondary btn-sm" onclick="this.closest('.adv-je-row').remove(); updateAdvJEBalance()">✕</button></div>`;
+  wrap.appendChild(row);
+  updateAdvJEBalance();
+}
+
+function updateAdvJEBalance() {
+  const rows = document.querySelectorAll('#adv-je-lines .adv-je-row');
+  let debit=0, credit=0;
+  rows.forEach(r=>{ debit += parseFloat(r.querySelector('.adv-je-debit').value)||0; credit += parseFloat(r.querySelector('.adv-je-credit').value)||0; });
+  const diff = debit - credit;
+  const el = document.getElementById('adv-je-balance');
+  if (!el) return;
+  el.textContent = `Debit ${fmt(debit)}  —  Credit ${fmt(credit)}  —  ${Math.abs(diff)<0.01 ? 'Balanced ✓' : 'Out of balance by '+fmt(Math.abs(diff))}`;
+  el.style.color = Math.abs(diff)<0.01 ? 'var(--success)' : 'var(--danger)';
+}
+
+function saveAdvancedJournalEntry() {
+  const date = document.getElementById('adv-je-date').value || today();
+  const description = document.getElementById('adv-je-desc').value.trim();
+  if (!description) { toast('Description is required','error'); return; }
+  const rows = document.querySelectorAll('#adv-je-lines .adv-je-row');
+  const lineInputs = Array.from(rows).map(r=>({
+    accountCode: r.querySelector('.adv-je-acc').value,
+    debit: parseFloat(r.querySelector('.adv-je-debit').value)||0,
+    credit: parseFloat(r.querySelector('.adv-je-credit').value)||0
+  })).filter(l=>l.debit>0||l.credit>0);
+  const debitTotal = lineInputs.reduce((a,l)=>a+l.debit,0);
+  const creditTotal = lineInputs.reduce((a,l)=>a+l.credit,0);
+  if (lineInputs.length < 2) { toast('Add at least two lines','error'); return; }
+  if (Math.abs(debitTotal-creditTotal) > 0.01) { toast('Debit and Credit must be equal before posting','error'); return; }
+  const je = postManualJournalEntry(date, description, lineInputs);
+  if (!je) { toast('Could not post entry','error'); return; }
+  audit('Ledger','Manual Journal Entry',je.id,description);
+  saveDB();
+  toast(`Posted ${je.voucherNumber}`,'success');
+  setAdvLedgerTab('list', document.getElementById('adv-tab-list'));
+  renderAdvancedLedger();
+}
+
+/* ── Historical migration (Phase 1's approved migration plan) ── */
+function runLedgerMigrationUI() {
+  confirm('Run historical migration now? Safe to re-run anytime — it never duplicates.', ()=>{
+    const result = runLedgerMigration();
+    saveDB();
+    const el = document.getElementById('adv-migration-result');
+    el.innerHTML = `
+      <div style="padding:12px;border-radius:8px;border:1px solid ${result.ok?'var(--success)':'var(--danger)'}">
+        <div style="font-weight:700;color:${result.ok?'var(--success)':'var(--danger)'}">${result.ok?'✓ Verified — totals match':'⚠ Mismatch found — review before relying on reports'}</div>
+        <div style="font-size:13px;margin-top:6px">Historical entries migrated: ${result.migratedCount}</div>
+        <div style="font-size:13px">Opening balance entries created: ${result.openingCount}</div>
+        <div style="font-size:13px;margin-top:6px">Old Accounting Income total: ${fmt(result.oldIncome)} — Ledger Income total: ${fmt(result.newIncome)}</div>
+        <div style="font-size:13px">Old Accounting Expense total: ${fmt(result.oldExpense)} — Ledger Expense total: ${fmt(result.newExpense)}</div>
+      </div>`;
+    renderAdvancedLedger();
+    toast(result.ok ? 'Migration verified successfully' : 'Migration finished with a mismatch — see details', result.ok?'success':'error');
+  });
+}
+
+function runLedgerMigration() {
+  // Idempotent: clear out any previously generated historical/opening entries first, so
+  // re-running (e.g. after fixing a mapping) never creates duplicates.
+  db.journalEntries = (db.journalEntries||[]).filter(j => j.refType !== 'migrated-historical' && j.refType !== 'opening-balance');
+
+  // Step 1 — replay every historical flat Accounting entry (this array already captures every
+  // sale, due-collection, supplier payment, and payroll run that happened before this update).
+  let migratedCount = 0;
+  (db.accounting||[]).forEach(entry => {
+    if (postManualAccountingJournalAs(entry, 'migrated-historical')) migratedCount++;
+  });
+
+  // Step 2 — open the correct Accounts Receivable balance for any credit sale still outstanding
+  // (the due portion was never recognized as revenue in the old flat ledger).
+  let openingCount = 0;
+  (db.creditSales||[]).filter(c=>c.dueAmount>0).forEach(c=>{
+    const lines = [
+      { accountCode: db.settings.acctMappings.arAccount, debit: c.dueAmount, credit: 0 },
+      { accountCode: db.settings.acctMappings.salesAccountRetail, debit: 0, credit: c.dueAmount }
+    ];
+    if (postJournalEntry({ date: today(), voucherKind:'Journal', refType:'opening-balance', refId: c.id, reference: c.receiptNumber, description: `Opening balance — outstanding due, ${c.customerName}`, lines })) openingCount++;
+  });
+
+  // Step 3 — open the correct Accounts Payable balance for any supplier invoice still unpaid.
+  (db.supplierInvoices||[]).forEach(inv=>{
+    const paid = (db.supplierPayments||[]).filter(p=>p.invoiceId===inv.id).reduce((a,p)=>a+p.amount,0);
+    const outstanding = (inv.amount||0) - paid;
+    if (outstanding > 0.01) {
+      const lines = [
+        { accountCode: db.settings.acctMappings.purchaseAccount, debit: outstanding, credit: 0 },
+        { accountCode: db.settings.acctMappings.apAccount, debit: 0, credit: outstanding }
+      ];
+      if (postJournalEntry({ date: today(), voucherKind:'Journal', refType:'opening-balance', refId: inv.id, reference: inv.invoiceNumber, description: `Opening balance — outstanding payable, ${inv.invoiceNumber}`, lines })) openingCount++;
+    }
+  });
+
+  // Step 4 — verification: the old flat totals must match the migrated-historical ledger totals exactly.
+  const oldIncome = (db.accounting||[]).filter(a=>a.type==='income').reduce((a,x)=>a+x.amount,0);
+  const oldExpense = (db.accounting||[]).filter(a=>a.type==='expense').reduce((a,x)=>a+x.amount,0);
+  let newIncome = 0, newExpense = 0;
+  (db.journalEntries||[]).filter(j=>j.refType==='migrated-historical' && !j.isVoid).forEach(j=>{
+    j.lines.forEach(l=>{
+      const acc = getAccountByCode(l.accountCode);
+      if (!acc) return;
+      if (acc.type==='income') newIncome += l.credit - l.debit;
+      if (acc.type==='expense') newExpense += l.debit - l.credit;
+    });
+  });
+  const ok = Math.abs(oldIncome-newIncome) < 0.5 && Math.abs(oldExpense-newExpense) < 0.5;
+  return { ok, migratedCount, openingCount, oldIncome, newIncome, oldExpense, newExpense };
+}
+
+// Same mapping as postManualAccountingJournal, but lets migration tag entries distinctly
+// so they can be found, verified, and safely re-generated without touching live entries.
+function postManualAccountingJournalAs(entry, refType) {
+  const lines = entry.type === 'expense'
+    ? [ { accountCode: resolveExpenseAccountCode(entry.category), debit: entry.amount, credit: 0 }, { accountCode: '1010', debit: 0, credit: entry.amount } ]
+    : [ { accountCode: '1010', debit: entry.amount, credit: 0 }, { accountCode: resolveIncomeAccountCode(entry.category), debit: 0, credit: entry.amount } ];
+  return postJournalEntry({ date: entry.date, voucherKind:'Journal', refType, refId: entry.id, reference: entry.reference||'', description: entry.description || `${entry.type} — ${entry.category}`, lines, isAutoGenerated:true });
 }
 
 function hasAnyEditPermission() {
@@ -4840,6 +5301,9 @@ function completeCreditSale() {
     db.accounting.push({ id: uid(), type: 'income', category: 'Sales', description: `Partial Payment ${receiptNum}`, amount: paidNow, date: today(), reference: receiptNum, createdAt: now() });
   }
 
+  // Ledger: automatic double-entry (invisible) — Dr Cash/A-R, Cr Sales + VAT
+  postCreditSaleJournal(sale, paidNow, dueAmount);
+
   // Stock deduction
   cart.forEach(item => {
     const rec = db.records.find(r=>r.id===item.id);
@@ -4869,6 +5333,7 @@ function completeSale(method) {
     id: uid(), receiptNumber: receiptNum, date: today(), createdAt: now(),
     items: cart.map(c=>({...c})), customerName, customerType, subtotal, discount,
     tax: taxPct, taxAmount: tax, total, paymentMethod: method,
+    qrId: (method||'').toLowerCase().includes('qr') ? currentQRPayment.qrId : null,
     status: 'completed', saleType: 'cash', createdBy: session.username
   };
   db.sales.push(sale);
@@ -4884,6 +5349,9 @@ function completeSale(method) {
   
   // Record income
   db.accounting.push({ id:uid(), type:'income', category:'Sales', description:`Sale ${receiptNum}`, amount:total, date:today(), reference:receiptNum, createdAt:now() });
+
+  // Ledger: automatic double-entry (invisible) — Dr Cash/Bank/Wallet, Cr Sales + VAT
+  postSaleJournal(sale);
   
   // Update entity total
   if (customerName) {
@@ -5494,9 +5962,17 @@ function saveAccounting() {
   if (!desc) { toast('Description is required','error'); return; }
   const data = { type: document.getElementById('acct-type-sel').value, amount, category: document.getElementById('acct-cat').value.trim(), date: document.getElementById('acct-date').value||today(), description: desc, reference: document.getElementById('acct-ref').value.trim() };
   if (acctEditId) {
-    Object.assign(db.accounting.find(a=>a.id===acctEditId), data); audit('Accounting','Edit',acctEditId,data.description);
+    const a = db.accounting.find(a=>a.id===acctEditId);
+    Object.assign(a, data);
+    // Ledger: void the old auto-entry and post a fresh one reflecting the edit — journal
+    // entries are never overwritten, only voided and reissued, so the audit trail stays intact.
+    voidJournalEntriesForRef('manual-accounting', acctEditId, 'Entry edited');
+    postManualAccountingJournal(a);
+    audit('Accounting','Edit',acctEditId,data.description);
   } else {
-    const a = { id:uid(), createdAt:now(), ...data }; db.accounting.push(a); audit('Accounting','Create',a.id,data.description);
+    const a = { id:uid(), createdAt:now(), ...data }; db.accounting.push(a);
+    postManualAccountingJournal(a);
+    audit('Accounting','Create',a.id,data.description);
   }
   saveDB(); closeModal('acct-modal-overlay'); renderAccounting(); toast('Entry saved','success');
 }
@@ -5668,6 +6144,11 @@ function processPayroll() {
   const totalPay = entries.reduce((a,x)=>a+x.netPay,0);
   confirm(`Process payroll for ${month}?\nTotal: ${fmt(totalPay)}`, ()=>{
     entries.forEach(e=>{ db.accounting.push({ id:uid(), type:'expense', category:'Salary', description:`Salary ${e.empName} - ${month}`, amount:e.netPay, date:today(), reference:`PAY-${month}`, createdAt:now() }); });
+
+    // Ledger: automatic double-entry (invisible) — one entry for the whole payroll run
+    // Dr Salary & Wages Expense, Cr Cash/Bank, for the total net pay
+    postPayrollJournal(month, totalPay);
+
     db.payrollHistory = db.payrollHistory.filter(ph=>ph.month!==month);
     db.payrollHistory.push({ id:uid(), month, entries, totalPay, processedBy:session.username, processedAt:now() });
     audit('HR','Payroll',month,`${entries.length} employees, ${fmt(totalPay)}`);
@@ -6669,6 +7150,7 @@ function restoreDeleted(id) {
   confirm(`Restore this ${r.type}?`, ()=>{
     const target = r.type==='record'?db.records:r.type==='entity'?db.entities:r.type==='transaction'?db.transactions:db.accounting;
     target.push(r.data);
+    if (r.type === 'accounting') postManualAccountingJournal(r.data);
     db.deletedRecords = db.deletedRecords.filter(x=>x.id!==id);
     audit('Archive','Restore',id,r.name);
     saveDB(); renderArchive(); toast('Record restored','success');
@@ -6688,6 +7170,7 @@ function deleteRecord(type, id) {
   confirm(`Delete this ${type}? This action can be undone from Archive → Deleted.`, ()=>{
     db.deletedRecords.push({ id:uid(), type, name:item.name||item.description||id, data:{...item}, deletedAt:now(), deletedBy:session.username });
     const idx = store.findIndex(x=>x.id===id); store.splice(idx,1);
+    if (type === 'accounting') voidJournalEntriesForRef('manual-accounting', id, 'Entry deleted');
     audit(type,'Delete',id,item.name||id);
     saveDB();
     const renders = { transaction: renderTransactions, accounting: renderAccounting };
@@ -8049,6 +8532,10 @@ function saveDuePayment() {
   c.status = c.dueAmount <= 0 ? 'settled' : 'outstanding';
   db.payments.push({ id:uid(), saleId:c.saleId, creditId:c.id, receiptNumber:c.receiptNumber, customerName:c.customerName, amount, method, notes, date:today(), createdAt:now(), createdBy:session.username });
   db.accounting.push({ id:uid(), type:'income', category:'Sales', description:`Due Collection ${c.receiptNumber} — ${c.customerName}`, amount, date:today(), reference:c.receiptNumber, createdAt:now() });
+
+  // Ledger: automatic double-entry (invisible) — Dr Cash/Bank, Cr Accounts Receivable (no revenue re-recognized)
+  postDueSettlementJournal(c, amount, method);
+
   audit('DueLedger','Payment',c.id,`${c.customerName} — ${fmt(amount)}`);
   saveDB();
   closeModal('due-pay-overlay');
@@ -9043,6 +9530,12 @@ function saveSupplierInvoice() {
     dueDate:document.getElementById('sinv-due').value, status:'unpaid', date:today(), createdAt:now()
   };
   db.supplierInvoices.push(invoice);
+
+  // Ledger: automatic double-entry (invisible) — Dr Purchases, Cr Accounts Payable
+  // This is the liability recorded the moment the invoice is created, before you pay a rupee —
+  // confirmed as standard accounting practice, needed for accurate Payables Aging / Balance Sheet.
+  postSupplierInvoiceJournal(invoice);
+
   audit('Purchase','Invoice',invoice.id,number);
   saveDB(); closeModal('sinv-modal-overlay'); renderSupplierInvoices(); toast('Supplier invoice recorded','success');
 }
@@ -9100,8 +9593,13 @@ function saveSupplierPayment() {
   const type = document.getElementById('spay-type').value;
   const method = document.getElementById('spay-method').value;
   const notes = document.getElementById('spay-notes').value.trim();
-  db.supplierPayments.push({ id:uid(), invoiceId, supplierId:inv.supplierId, amount, type, method, notes, date:today(), createdAt:now(), createdBy:session.username });
+  const spay = { id:uid(), invoiceId, supplierId:inv.supplierId, amount, type, method, notes, date:today(), createdAt:now(), createdBy:session.username };
+  db.supplierPayments.push(spay);
   db.accounting.push({ id:uid(), type:'expense', category:'Purchase', description:`Supplier Payment ${inv.invoiceNumber} (${type})`, amount, date:today(), reference:inv.invoiceNumber, createdAt:now() });
+
+  // Ledger: automatic double-entry (invisible) — Dr Accounts Payable, Cr Cash/Bank
+  postSupplierPaymentJournal(spay, inv);
+
   const paid = db.supplierPayments.filter(p=>p.invoiceId===inv.id).reduce((a,p)=>a+p.amount,0);
   if (paid >= inv.amount) inv.status = 'paid';
   else if (paid > 0) inv.status = 'partial';

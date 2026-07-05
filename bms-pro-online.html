@@ -1206,6 +1206,7 @@ textarea.form-control{resize:vertical;min-height:80px}
           <button class="btn btn-secondary btn-sm" onclick="exportCSV('accounting')">📤 Export CSV</button>
           <button class="btn btn-secondary btn-sm btn-print" onclick="previewAccountingPrint()">🖨️ Print</button>
           <button class="btn btn-secondary btn-sm" onclick="exportAccountingPDF()">📄 Export PDF</button>
+          <button class="btn btn-secondary btn-sm" onclick="openBankRecon()">🏦 Bank Reconciliation</button>
           <button class="btn btn-primary btn-sm" onclick="openAccountingModal()">+ Add Entry</button>
         </div>
         <div class="table-wrap"><table><thead><tr><th onclick="sortTable('acct','date')">Date ↕</th><th>Type</th><th onclick="sortTable('acct','category')">Category ↕</th><th>Description</th><th onclick="sortTable('acct','amount')">Amount ↕</th><th>Reference</th><th>Balance</th><th>Actions</th></tr></thead><tbody id="acct-tbody"></tbody></table></div>
@@ -1305,6 +1306,22 @@ textarea.form-control{resize:vertical;min-height:80px}
                   <input class="form-control" id="rpt-from" placeholder="From" onfocus="openCalendar('rpt-from','standard')">
                   <input class="form-control" id="rpt-to" placeholder="To" onfocus="openCalendar('rpt-to','standard')">
                 </div>
+              </div>
+            </div>
+            <div id="rpt-type-hint" class="form-hint" style="margin-top:-6px;margin-bottom:10px"></div>
+            <div class="form-row" id="rpt-pl-compare-group" style="display:none">
+              <div class="form-group">
+                <label class="form-label">Compare Against<span class="help-tip" data-tip="Shows a second column next to your selected period so you can see whether things went up or down.">?</span></label>
+                <select class="form-control" id="rpt-pl-compare">
+                  <option value="month">Same length period, last month</option>
+                  <option value="year">Same period, last year</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row" id="rpt-ledger-target-group" style="display:none">
+              <div class="form-group">
+                <label class="form-label">Show Ledger For<span class="help-tip" data-tip="Pick any account to see its full history, or pick a specific customer/supplier to see just what they owe or are owed — like a mini statement for that one person.">?</span></label>
+                <select class="form-control" id="rpt-ledger-target"></select>
               </div>
             </div>
             <div class="form-group">
@@ -1826,12 +1843,28 @@ textarea.form-control{resize:vertical;min-height:80px}
         <input type="hidden" id="acct-type-sel" value="income">
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Amount *</label><input class="form-control" type="number" id="acct-amount" placeholder="0" min="0"></div>
+        <div class="form-group"><label class="form-label">Amount *</label><input class="form-control" type="number" id="acct-amount" placeholder="0" min="0" oninput="computeAcctTDSPreview()"></div>
         <div class="form-group"><label class="form-label">Date *</label><input class="form-control" id="acct-date" onfocus="openCalendar('acct-date','standard')"></div>
       </div>
-      <div class="form-group"><label class="form-label">Category</label><div class="input-wrap"><input class="form-control" id="acct-cat" placeholder="e.g. Sales, Salary, Rent, Utilities"><button class="input-clear" onclick="clearInput('acct-cat')">✕</button></div></div>
+      <div class="form-group"><label class="form-label">Category</label><div class="input-wrap"><input class="form-control" id="acct-cat" placeholder="e.g. Sales, Salary, Rent, Utilities" oninput="updateAcctTDSVisibility()"><button class="input-clear" onclick="clearInput('acct-cat')">✕</button></div></div>
       <div class="form-group"><label class="form-label">Description *</label><input class="form-control" id="acct-desc" placeholder="Brief description of this entry"></div>
       <div class="form-group"><label class="form-label">Reference</label><input class="form-control" id="acct-ref" placeholder="Invoice #, Receipt # (optional)"></div>
+      <div class="form-group" id="acct-tds-section" style="display:none;background:var(--bg-alt,#f7f7f9);padding:12px;border-radius:8px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="acct-tds-toggle" onchange="toggleAcctTDSFields()">
+          <span>Withhold TDS on this payment?<span class="help-tip" data-tip="Required by Nepal's Income Tax Act for rent (to a company), contractor, or professional/consultancy payments — you deduct this before paying and owe it to the tax office.">?</span></span>
+        </label>
+        <div id="acct-tds-fields" style="display:none;margin-top:10px">
+          <label class="form-label">TDS Rate</label>
+          <select class="form-control" id="acct-tds-rate" onchange="computeAcctTDSPreview()">
+            <option value="rentCompany">Rent to a Company — 10%</option>
+            <option value="contractorVAT">Contractor/Service (VAT-registered) — 1.5%</option>
+            <option value="contractorNoVAT">Contractor/Service (PAN only, no VAT) — 15%</option>
+            <option value="consultancy">Consultancy / Professional Fee — 15%</option>
+          </select>
+          <div id="acct-tds-preview" class="form-hint" style="margin-top:8px;font-weight:600"></div>
+        </div>
+      </div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('acct-modal-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveAccounting()">💾 Save Entry</button></div>
   </div>
@@ -1879,6 +1912,94 @@ textarea.form-control{resize:vertical;min-height:80px}
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('advanced-ledger-overlay')">Close</button></div>
+  </div>
+</div>
+
+<!-- Correct an Invoice — guided Credit Note / Debit Note flow -->
+<div class="modal-overlay" id="correct-invoice-overlay" onclick="closeModalOnOverlay(event,'correct-invoice-overlay')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="correct-inv-title">Correct an Invoice</div><button class="modal-close" onclick="closeModal('correct-invoice-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-hint" style="margin-bottom:12px">The original invoice number and amount stay exactly as they were — nothing is deleted. This creates a small adjustment document instead.</div>
+
+      <div id="correct-step-1">
+        <div class="form-group">
+          <label class="form-label">Step 1 — What's wrong?</label>
+          <select class="form-control" id="correct-reason">
+            <option value="Wrong amount charged">Wrong amount charged</option>
+            <option value="Wrong item / quantity">Wrong item / quantity</option>
+            <option value="Customer returned goods">Customer returned goods</option>
+            <option value="Supplier pricing error">Supplier pricing error</option>
+            <option value="Other correction">Other correction</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Step 2 — What should the correct amount be?</label>
+          <div id="correct-original-amount" class="form-hint" style="margin-bottom:6px;font-weight:600"></div>
+          <input class="form-control" type="number" id="correct-new-amount" placeholder="Corrected total amount" oninput="updateCorrectPreview()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes (optional)</label>
+          <input class="form-control" id="correct-note" placeholder="Anything worth noting for the audit trail">
+        </div>
+        <div id="correct-preview" class="form-hint" style="margin-top:6px;font-weight:600"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('correct-invoice-overlay')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmCorrectInvoice()">Confirm Correction</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bank Reconciliation -->
+<div class="modal-overlay" id="bank-recon-overlay" onclick="closeModalOnOverlay(event,'bank-recon-overlay')">
+  <div class="modal modal-lg">
+    <div class="modal-header"><div class="modal-title">🏦 Bank Reconciliation<span class="help-tip" data-tip="Making sure your books and your actual bank statement agree — catches anything missed or entered wrong.">?</span></div><button class="modal-close" onclick="closeModal('bank-recon-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div class="tabs" style="margin-bottom:14px">
+        <div class="tab active" id="recon-tab-new" onclick="setReconTab('new',this)">📋 New Reconciliation</div>
+        <div class="tab" id="recon-tab-history" onclick="setReconTab('history',this)">🗂️ Past Reconciliations</div>
+      </div>
+
+      <div id="recon-panel-new">
+        <div id="recon-step-paste">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Statement Period Label</label><input class="form-control" id="recon-period" placeholder="e.g. June 2026"></div>
+            <div class="form-group"><label class="form-label">Statement Closing Balance</label><input class="form-control" type="number" id="recon-closing-balance" placeholder="From your bank passbook/app"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Paste Bank Statement Lines<span class="help-tip" data-tip="One line each: Date, Description, Amount. Positive = money in, negative = money out. Copy straight from your bank SMS, app, or statement.">?</span></label>
+            <textarea class="form-control" id="recon-paste-area" rows="6" placeholder="02-Jun-2026  ATM Withdrawal   -5000
+05-Jun-2026  Transfer from eSewa   +8000
+10-Jun-2026  Cheque #4521   -12000"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Or Add Lines One at a Time</label>
+            <div class="form-row" style="align-items:flex-end">
+              <div class="form-group"><label class="form-label" style="font-size:12px">Date</label><input class="form-control" id="recon-manual-date" onfocus="openCalendar('recon-manual-date','standard')"></div>
+              <div class="form-group" style="flex:2"><label class="form-label" style="font-size:12px">Description</label><input class="form-control" id="recon-manual-desc" placeholder="e.g. ATM Withdrawal"></div>
+              <div class="form-group"><label class="form-label" style="font-size:12px">Amount</label><input class="form-control" type="number" id="recon-manual-amount" placeholder="+8000 or -5000"></div>
+              <div class="form-group" style="flex:0"><button class="btn btn-secondary" onclick="addReconManualLine()">+ Add</button></div>
+            </div>
+            <div id="recon-manual-lines" style="margin-top:6px"></div>
+          </div>
+          <button class="btn btn-primary" onclick="parseBankStatement()">🔍 Parse &amp; Match Statement</button>
+        </div>
+
+        <div id="recon-step-match" style="display:none;margin-top:16px">
+          <div class="form-hint" style="margin-bottom:8px">✓ Matched automatically &nbsp; ⚡ Suggested — confirm with one click &nbsp; ⚠ Unmatched — needs a decision</div>
+          <div style="overflow:auto"><table><thead><tr><th>Bank Statement</th><th>Your Books (Bank Account)</th><th>Status</th><th>Action</th></tr></thead><tbody id="recon-match-tbody"></tbody></table></div>
+          <div id="recon-summary" style="margin-top:16px"></div>
+          <button class="btn btn-primary" style="margin-top:12px" onclick="saveBankReconciliation()">💾 Save This Reconciliation</button>
+        </div>
+      </div>
+
+      <div id="recon-panel-history" style="display:none">
+        <div id="recon-history-list"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('bank-recon-overlay')">Close</button></div>
   </div>
 </div>
 
@@ -2252,8 +2373,15 @@ textarea.form-control{resize:vertical;min-height:80px}
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Invoice Number *</label><input class="form-control" id="sinv-number"></div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Amount *</label><input class="form-control" type="number" id="sinv-amount"></div>
+        <div class="form-group"><label class="form-label">Amount (Total, incl. VAT) *</label><input class="form-control" type="number" id="sinv-amount" oninput="updateSinvVATPreview()"></div>
         <div class="form-group"><label class="form-label">Due Date</label><input class="form-control" id="sinv-due" onfocus="openCalendar('sinv-due','standard')"></div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="sinv-has-vat" onchange="updateSinvVATPreview()" checked>
+          <span>Invoice includes VAT (13%)<span class="help-tip" data-tip="Needed for your VAT Purchase Register and to correctly claim Input VAT credit. Uncheck if this supplier isn't VAT-registered.">?</span></span>
+        </label>
+        <div id="sinv-vat-preview" class="form-hint" style="margin-top:6px"></div>
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('sinv-modal-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveSupplierInvoice()">💾 Save Invoice</button></div>
@@ -2499,6 +2627,8 @@ function defaultDB() {
     accounting: [],
     chartOfAccounts: [],   // NEW: double-entry ledger accounts — see seedChartOfAccounts()
     journalEntries: [],    // NEW: double-entry journal entries (Dr/Cr lines) — auto-generated behind the scenes
+    correctionNotes: [],   // NEW: Credit Notes (sales corrections) & Debit Notes (purchase corrections)
+    bankReconciliations: [], // NEW: saved monthly bank reconciliations
     employees: [],
     attendance: {},
     payrollHistory: [],
@@ -2540,13 +2670,15 @@ function defaultDB() {
       acctMappings: {
         paymentMethodToAccount: { 'Cash':'1010', 'Card':'1020', 'Bank Transfer':'1020', 'Credit':null },
         qrCodeToAccount: {},           // { qrCodeId: accountCode } — set per QR code in POS QR settings
-        expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Other':'5100' },
+        expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Contractor':'5070','Professional Fees':'5100','Other':'5100' },
         incomeCategoryToAccount: { 'Sales':'4010','Service':'4010','Interest':'4090','Rent Income':'4090','Other Income':'4090' },
         salesAccountRetail: '4010', salesAccountWholesale: '4020',
         arAccount: '1030', apAccount: '2010',
         vatOutputAccount: '2020', vatInputAccount: '1050',
         purchaseAccount: '5010', inventoryAccount: '1042',
-        salaryExpenseAccount: '5020', tdsPayableAccount: '2060'
+        salaryExpenseAccount: '5020', tdsPayableAccount: '2060',
+        tdsRates: { rentCompany:0.10, contractorVAT:0.015, contractorNoVAT:0.15, consultancy:0.15 },
+        tdsApplicableCategories: ['Rent','Contractor','Professional Fees']
       },
       salaryComponents: {            // Editable salary components
         earnings: ['Basic Salary','TA','DA','Fuel Allowance','Festival Allowance','Overtime','Bonus','Other Allowance'],
@@ -2577,7 +2709,7 @@ function defaultDB() {
         transactions: ['Sales', 'Purchase', 'Service', 'Refund'],
         entities: ['Retail Customer', 'Wholesale Customer', 'Client', 'Member', 'VIP'],
         secondary: ['Supplier', 'Vendor', 'Partner', 'Distributor'],
-        accounting: ['Revenue', 'Salary', 'Utilities', 'Rent', 'Supplies', 'Tax', 'VAT', 'Other']
+        accounting: ['Revenue', 'Salary', 'Utilities', 'Rent', 'Supplies', 'Tax', 'VAT', 'Contractor', 'Professional Fees', 'Other']
       },
       labels: {
         records: 'Products', entities: 'Customers', secondary: 'Suppliers',
@@ -2680,19 +2812,23 @@ function loadDB() {
       // ── NEW: Ledger migration for existing installs (additive only, never touches db.accounting) ──
       if (!db.chartOfAccounts) db.chartOfAccounts = [];
       if (!db.journalEntries) db.journalEntries = [];
+      if (!db.correctionNotes) db.correctionNotes = [];
+      if (!db.bankReconciliations) db.bankReconciliations = [];
       if (db.settings.ledgerEnabled === undefined) db.settings.ledgerEnabled = true;
       if (!db.settings.voucherCounters) db.settings.voucherCounters = { Sales:0, Purchase:0, Payment:0, Receipt:0, Journal:0 };
       if (!db.settings.acctMappings) {
         db.settings.acctMappings = {
           paymentMethodToAccount: { 'Cash':'1010', 'Card':'1020', 'Bank Transfer':'1020', 'Credit':null },
           qrCodeToAccount: {},
-          expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Other':'5100' },
+          expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Contractor':'5070','Professional Fees':'5100','Other':'5100' },
           incomeCategoryToAccount: { 'Sales':'4010','Service':'4010','Interest':'4090','Rent Income':'4090','Other Income':'4090' },
           salesAccountRetail: '4010', salesAccountWholesale: '4020',
           arAccount: '1030', apAccount: '2010',
           vatOutputAccount: '2020', vatInputAccount: '1050',
           purchaseAccount: '5010', inventoryAccount: '1042',
-          salaryExpenseAccount: '5020', tdsPayableAccount: '2060'
+          salaryExpenseAccount: '5020', tdsPayableAccount: '2060',
+        tdsRates: { rentCompany:0.10, contractorVAT:0.015, contractorNoVAT:0.15, consultancy:0.15 },
+        tdsApplicableCategories: ['Rent','Contractor','Professional Fees']
         };
       }
       if (!db.chartOfAccounts.length) seedChartOfAccounts();
@@ -2702,6 +2838,8 @@ function loadDB() {
       // Ensure categories have Nepal tax
       if (!db.settings.categories.accounting.includes('VAT'))
         db.settings.categories.accounting.push('VAT', 'Tax');
+      if (!db.settings.categories.accounting.includes('Contractor'))
+        db.settings.categories.accounting.push('Contractor', 'Professional Fees');
     } else {
       db = defaultDB();
     }
@@ -2884,7 +3022,11 @@ function postDueSettlementJournal(credit, amount, method) {
 }
 
 function postSupplierInvoiceJournal(invoice) {
-  const lines = [ { accountCode: db.settings.acctMappings.purchaseAccount, debit: invoice.amount, credit: 0 }, { accountCode: db.settings.acctMappings.apAccount, debit: 0, credit: invoice.amount } ];
+  const vatAmount = invoice.vatAmount || 0;
+  const netAmount = +(invoice.amount - vatAmount).toFixed(2);
+  const lines = [ { accountCode: db.settings.acctMappings.purchaseAccount, debit: netAmount, credit: 0 } ];
+  if (vatAmount > 0) lines.push({ accountCode: db.settings.acctMappings.vatInputAccount, debit: vatAmount, credit: 0 });
+  lines.push({ accountCode: db.settings.acctMappings.apAccount, debit: 0, credit: invoice.amount });
   return postJournalEntry({ date: invoice.date, voucherKind:'Purchase', refType:'supplier-invoice', refId: invoice.id, reference: invoice.invoiceNumber, description: `Supplier Invoice ${invoice.invoiceNumber}`, lines });
 }
 
@@ -2895,9 +3037,20 @@ function postSupplierPaymentJournal(payment, invoice) {
 }
 
 function postManualAccountingJournal(entry) {
-  const lines = entry.type === 'expense'
-    ? [ { accountCode: resolveExpenseAccountCode(entry.category), debit: entry.amount, credit: 0 }, { accountCode: '1010', debit: 0, credit: entry.amount } ]
-    : [ { accountCode: '1010', debit: entry.amount, credit: 0 }, { accountCode: resolveIncomeAccountCode(entry.category), debit: 0, credit: entry.amount } ];
+  let lines;
+  if (entry.type === 'expense' && entry.tdsAmount > 0) {
+    // Full expense is still recorded (accrual-correct), but cash paid out is net of TDS,
+    // with the withheld portion booked to TDS Payable until it's deposited with the tax office.
+    lines = [
+      { accountCode: resolveExpenseAccountCode(entry.category), debit: entry.amount, credit: 0 },
+      { accountCode: '1010', debit: 0, credit: entry.amount - entry.tdsAmount },
+      { accountCode: db.settings.acctMappings.tdsPayableAccount, debit: 0, credit: entry.tdsAmount }
+    ];
+  } else {
+    lines = entry.type === 'expense'
+      ? [ { accountCode: resolveExpenseAccountCode(entry.category), debit: entry.amount, credit: 0 }, { accountCode: '1010', debit: 0, credit: entry.amount } ]
+      : [ { accountCode: '1010', debit: entry.amount, credit: 0 }, { accountCode: resolveIncomeAccountCode(entry.category), debit: 0, credit: entry.amount } ];
+  }
   return postJournalEntry({ date: entry.date, voucherKind: entry.type==='expense'?'Payment':'Receipt', refType:'manual-accounting', refId: entry.id, reference: entry.reference||'', description: entry.description || `${entry.type} — ${entry.category}`, lines });
 }
 
@@ -3083,6 +3236,629 @@ function postManualAccountingJournalAs(entry, refType) {
     ? [ { accountCode: resolveExpenseAccountCode(entry.category), debit: entry.amount, credit: 0 }, { accountCode: '1010', debit: 0, credit: entry.amount } ]
     : [ { accountCode: '1010', debit: entry.amount, credit: 0 }, { accountCode: resolveIncomeAccountCode(entry.category), debit: 0, credit: entry.amount } ];
   return postJournalEntry({ date: entry.date, voucherKind:'Journal', refType, refId: entry.id, reference: entry.reference||'', description: entry.description || `${entry.type} — ${entry.category}`, lines, isAutoGenerated:true });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PHASE 3 — REPORT DATA FUNCTIONS
+   Pure data-pulling functions for Trial Balance, P&L, Balance Sheet, Day Book,
+   and Ledger Report. Each reads only from db.journalEntries + db.chartOfAccounts
+   (plus db.creditSales/db.supplierInvoices for the per-party Ledger Report mode).
+   Nothing here writes to the database — display-only.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+function shiftDate(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+/* ══════════════════════════════════════════════════════════════════════════
+   PHASE 4 — NEPALI FISCAL-YEAR SEQUENTIAL INVOICE NUMBERING
+   Nepal's fiscal year runs Shrawan 1 – Ashad-end (~mid-July to mid-July).
+   This uses a fixed 16-July Gregorian cutover as a practical approximation
+   of Shrawan 1 (the exact date shifts by a day or two some years) — accurate
+   enough for keeping invoice numbers sequential and gap-free per fiscal year,
+   which is what IRD actually checks. Not a full Bikram Sambat calendar.
+   ══════════════════════════════════════════════════════════════════════════ */
+function nepaliFiscalYearStartADYear(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const y = d.getFullYear(), m = d.getMonth()+1, day = d.getDate();
+  return (m > 7 || (m === 7 && day >= 16)) ? y : y - 1;
+}
+function nepaliFiscalYearLabel(dateStr) {
+  const startAD = nepaliFiscalYearStartADYear(dateStr);
+  const bsStart = startAD + 57; // Shrawan of this AD year falls in the BS year = AD+57
+  return `${bsStart}/${String(bsStart+1).slice(-2)}`;
+}
+function nextFiscalInvoiceNumber(series) {
+  // series: 'sales', 'CN' (Credit Note), 'DN' (Debit Note) — each has its own sequence
+  const fyKey = nepaliFiscalYearStartADYear(today());
+  if (!db.settings.fiscalInvoiceCounters) db.settings.fiscalInvoiceCounters = {};
+  if (!db.settings.fiscalInvoiceCounters[series]) db.settings.fiscalInvoiceCounters[series] = {};
+  const c = db.settings.fiscalInvoiceCounters[series];
+  c[fyKey] = (c[fyKey]||0) + 1;
+  const label = nepaliFiscalYearLabel(today());
+  const suffix = series === 'sales' ? '' : ('-' + series);
+  return `${label}${suffix}-${String(c[fyKey]).padStart(5,'0')}`;
+}
+
+function shiftPeriod(from, to, mode) {
+  const f = new Date(from + 'T00:00:00'), t = new Date(to + 'T00:00:00');
+  if (mode === 'year') { f.setFullYear(f.getFullYear()-1); t.setFullYear(t.getFullYear()-1); }
+  else { f.setMonth(f.getMonth()-1); t.setMonth(t.getMonth()-1); }
+  const fmt2 = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  return { from: fmt2(f), to: fmt2(t) };
+}
+
+// Every non-voided journal line, up to (and including) a date, flattened with its parent entry's info.
+function ledgerLinesUpTo(date) {
+  return (db.journalEntries||[]).filter(j => !j.isVoid && (!date || j.date <= date))
+    .flatMap(j => j.lines.map(l => ({ ...l, date: j.date, voucherNumber: j.voucherNumber, description: j.description, refType: j.refType, refId: j.refId, createdAt: j.createdAt })));
+}
+
+function accountBalanceAsOf(code, date) {
+  const acc = getAccountByCode(code);
+  if (!acc) return 0;
+  const lines = ledgerLinesUpTo(date).filter(l => l.accountCode === code);
+  const debit = lines.reduce((a,l)=>a+l.debit,0), credit = lines.reduce((a,l)=>a+l.credit,0);
+  return acc.normalBalance === 'debit' ? debit - credit : credit - debit;
+}
+
+// ── 1. Trial Balance ──
+function computeTrialBalance(from, to) {
+  const toDate = to || today();
+  const accounts = (db.chartOfAccounts||[]).filter(a=>a.active!==false).sort((a,b)=>a.code.localeCompare(b.code));
+  let totalDebit = 0, totalCredit = 0;
+  const rows = accounts.map(acc => {
+    const allLines = ledgerLinesUpTo(toDate).filter(l=>l.accountCode===acc.code);
+    const priorLines = from ? allLines.filter(l=>l.date < from) : [];
+    const periodLines = from ? allLines.filter(l=>l.date >= from) : allLines;
+    const openDebit = priorLines.reduce((a,l)=>a+l.debit,0), openCredit = priorLines.reduce((a,l)=>a+l.credit,0);
+    const opening = acc.normalBalance==='debit' ? openDebit-openCredit : openCredit-openDebit;
+    const pDebit = periodLines.reduce((a,l)=>a+l.debit,0), pCredit = periodLines.reduce((a,l)=>a+l.credit,0);
+    const closing = acc.normalBalance==='debit' ? opening+pDebit-pCredit : opening+pCredit-pDebit;
+    totalDebit += pDebit; totalCredit += pCredit;
+    return { acc, opening, pDebit, pCredit, closing };
+  }).filter(r => Math.abs(r.opening)>0.004 || r.pDebit>0.004 || r.pCredit>0.004 || Math.abs(r.closing)>0.004);
+  return { rows, totalDebit, totalCredit, balanced: Math.abs(totalDebit-totalCredit) < 0.01 };
+}
+
+// ── 2. Profit & Loss ──
+function computePLPeriod(from, to) {
+  const lines = ledgerLinesUpTo(to).filter(l => !from || l.date >= from);
+  const build = type => (db.chartOfAccounts||[]).filter(a=>a.type===type).map(acc=>{
+    const accLines = lines.filter(l=>l.accountCode===acc.code);
+    const debit = accLines.reduce((a,l)=>a+l.debit,0), credit = accLines.reduce((a,l)=>a+l.credit,0);
+    const amount = acc.normalBalance==='credit' ? credit-debit : debit-credit;
+    return { acc, amount };
+  }).filter(r=>Math.abs(r.amount)>0.004);
+  const income = build('income'), expense = build('expense');
+  const totalIncome = income.reduce((a,r)=>a+r.amount,0), totalExpense = expense.reduce((a,r)=>a+r.amount,0);
+  return { income, expense, totalIncome, totalExpense, netProfit: totalIncome-totalExpense };
+}
+
+// ── 3. Balance Sheet ──
+function computeBalanceSheet(asOf) {
+  const date = asOf || today();
+  const build = type => (db.chartOfAccounts||[]).filter(a=>a.type===type).map(acc=>({ acc, balance: accountBalanceAsOf(acc.code, date) })).filter(r=>Math.abs(r.balance)>0.004);
+  const assets = build('asset'), liabilities = build('liability'), equity = build('equity');
+  const yearStart = date.slice(0,4) + '-01-01';
+  const ytd = computePLPeriod(yearStart, date);
+  const totalAssets = assets.reduce((a,r)=>a+r.balance,0);
+  const totalLiabilities = liabilities.reduce((a,r)=>a+r.balance,0);
+  const totalEquity = equity.reduce((a,r)=>a+r.balance,0) + ytd.netProfit;
+  return { assets, liabilities, equity, currentYearEarnings: ytd.netProfit, totalAssets, totalLiabilities, totalEquity, balanced: Math.abs(totalAssets - (totalLiabilities+totalEquity)) < 1 };
+}
+
+// ── 4. Day Book ──
+function computeDayBook(from, to) {
+  return (db.journalEntries||[]).filter(j => !j.isVoid && (!from||j.date>=from) && (!to||j.date<=to))
+    .sort((a,b)=> a.date.localeCompare(b.date) || (a.createdAt||0)-(b.createdAt||0));
+}
+
+// ── 5. Ledger Report — Mode A: any GL account ──
+function computeGLLedger(code, from, to) {
+  const acc = getAccountByCode(code);
+  if (!acc) return null;
+  const opening = from ? accountBalanceAsOf(code, shiftDate(from,-1)) : 0;
+  const rows = ledgerLinesUpTo(to||today()).filter(l=>l.accountCode===code && (!from||l.date>=from))
+    .sort((a,b)=> a.date.localeCompare(b.date) || (a.createdAt||0)-(b.createdAt||0));
+  let bal = opening;
+  const withBal = rows.map(r=>{
+    bal += acc.normalBalance==='debit' ? (r.debit - r.credit) : (r.credit - r.debit);
+    return { ...r, runningBal: bal };
+  });
+  return { acc, opening, rows: withBal, closing: bal };
+}
+
+// ── 5. Ledger Report — Mode B: one customer (subsidiary of Accounts Receivable) ──
+function computeCustomerLedger(customerName, from, to) {
+  const sales = (db.creditSales||[]).filter(c=>c.customerName===customerName);
+  const payments = (db.payments||[]).filter(p=>p.customerName===customerName);
+  const rows = [];
+  sales.forEach(c => rows.push({ date:c.date, voucherNumber: findVoucherFor('credit-sale', c.saleId)||findVoucherFor('opening-balance', c.id)||'—', description:`Credit Sale — ${c.receiptNumber}`, debit:c.totalAmount, credit:0 }));
+  payments.forEach(p => rows.push({ date:p.date, voucherNumber: findVoucherFor('due-settlement', p.creditId)||'—', description:`Payment received — ${p.receiptNumber}`, debit:0, credit:p.amount }));
+  const filtered = rows.filter(r=> (!from||r.date>=from) && (!to||r.date<=to)).sort((a,b)=>a.date.localeCompare(b.date));
+  let bal = 0; const withBal = filtered.map(r=>{ bal += r.debit - r.credit; return { ...r, runningBal: bal }; });
+  return { customerName, rows: withBal, closing: bal };
+}
+
+// ── 5. Ledger Report — Mode B: one supplier (subsidiary of Accounts Payable) ──
+function computeSupplierLedger(supplierId, from, to) {
+  const supplier = db.secondary.find(s=>s.id===supplierId);
+  const invoices = (db.supplierInvoices||[]).filter(i=>i.supplierId===supplierId);
+  const payments = (db.supplierPayments||[]).filter(p=>p.supplierId===supplierId);
+  const rows = [];
+  invoices.forEach(inv => rows.push({ date:inv.date, voucherNumber: findVoucherFor('supplier-invoice', inv.id)||'—', description:`Invoice ${inv.invoiceNumber}`, debit:0, credit:inv.amount }));
+  payments.forEach(p => rows.push({ date:p.date, voucherNumber: findVoucherFor('supplier-payment', p.id)||'—', description:`Payment (${p.type})`, debit:p.amount, credit:0 }));
+  const filtered = rows.filter(r=> (!from||r.date>=from) && (!to||r.date<=to)).sort((a,b)=>a.date.localeCompare(b.date));
+  let bal = 0; const withBal = filtered.map(r=>{ bal += r.credit - r.debit; return { ...r, runningBal: bal }; });
+  return { supplierName: supplier?.name||'Unknown Supplier', rows: withBal, closing: bal };
+}
+
+function findVoucherFor(refType, refId) {
+  const je = (db.journalEntries||[]).find(j=>j.refType===refType && j.refId===refId && !j.isVoid);
+  return je ? je.voucherNumber : null;
+}
+
+/* ── Phase 4: "Correct an Invoice" — guided Credit Note / Debit Note flow ── */
+function openCorrectInvoice(refType, refId) {
+  window._correctRefType = refType; window._correctRefId = refId;
+  let original;
+  if (refType === 'sale') {
+    const sale = db.sales.find(s=>s.id===refId);
+    original = sale?.total || 0;
+  } else {
+    const inv = db.supplierInvoices.find(i=>i.id===refId);
+    original = inv?.amount || 0;
+  }
+  window._correctOriginal = original;
+  document.getElementById('correct-inv-title').textContent = refType === 'sale' ? 'Correct an Invoice' : 'Correct a Purchase';
+  document.getElementById('correct-original-amount').textContent = `Original Total: ${fmt(original)}`;
+  document.getElementById('correct-new-amount').value = '';
+  document.getElementById('correct-note').value = '';
+  document.getElementById('correct-preview').textContent = '';
+  document.getElementById('correct-reason').innerHTML = refType === 'sale'
+    ? `<option value="Wrong amount charged">Wrong amount charged</option><option value="Wrong item / quantity">Wrong item / quantity</option><option value="Customer returned goods">Customer returned goods</option><option value="Other correction">Other correction</option>`
+    : `<option value="Supplier pricing error">Supplier pricing error</option><option value="Goods returned to supplier">Goods returned to supplier</option><option value="Wrong amount invoiced">Wrong amount invoiced</option><option value="Other correction">Other correction</option>`;
+  openModal('correct-invoice-overlay');
+}
+
+function updateCorrectPreview() {
+  const el = document.getElementById('correct-preview');
+  if (!el) return;
+  const newAmt = parseFloat(document.getElementById('correct-new-amount').value);
+  const original = window._correctOriginal || 0;
+  if (isNaN(newAmt)) { el.textContent = ''; return; }
+  if (newAmt >= original || newAmt < 0) {
+    el.innerHTML = `<span style="color:var(--danger)">Corrected amount must be less than the original (${fmt(original)}). To charge more, create a new sale/invoice for the extra amount instead — a correction can only reduce, never increase.</span>`;
+    return;
+  }
+  const diff = +(original - newAmt).toFixed(2);
+  const noteType = window._correctRefType === 'sale' ? 'Credit Note' : 'Debit Note';
+  el.innerHTML = `This will create a ${noteType} for <strong>${fmt(diff)}</strong> and adjust your books automatically. The original invoice stays exactly as it was.`;
+}
+
+function confirmCorrectInvoice() {
+  const refType = window._correctRefType, refId = window._correctRefId;
+  const original = window._correctOriginal || 0;
+  const newAmt = parseFloat(document.getElementById('correct-new-amount').value);
+  const reason = document.getElementById('correct-reason').value;
+  const note = document.getElementById('correct-note').value.trim();
+  if (isNaN(newAmt) || newAmt < 0 || newAmt >= original) { toast('Enter a corrected amount less than the original','error'); return; }
+  const diff = +(original - newAmt).toFixed(2);
+
+  if (refType === 'sale') {
+    const sale = db.sales.find(s=>s.id===refId);
+    if (!sale) { toast('Original sale not found','error'); return; }
+    const noteNumber = nextFiscalInvoiceNumber('CN');
+    const cn = { id:uid(), noteNumber, type:'credit', refType:'sale', refId, originalAmount:original, correctedAmount:newAmt, adjustmentAmount:diff, reason, note, date:today(), createdAt:now(), createdBy:session.username };
+    db.correctionNotes.push(cn);
+    postCreditNoteJournal(cn, sale);
+    audit('Sale','Correction Issued', sale.id, sale.receiptNumber, fmt(original), fmt(newAmt) + (reason?` — ${reason}`:'') + (note?` (${note})`:''));
+    toast(`Credit Note ${noteNumber} created`,'success');
+  } else {
+    const inv = db.supplierInvoices.find(i=>i.id===refId);
+    if (!inv) { toast('Original invoice not found','error'); return; }
+    const noteNumber = nextFiscalInvoiceNumber('DN');
+    const dn = { id:uid(), noteNumber, type:'debit', refType:'supplier-invoice', refId, originalAmount:original, correctedAmount:newAmt, adjustmentAmount:diff, reason, note, date:today(), createdAt:now(), createdBy:session.username };
+    db.correctionNotes.push(dn);
+    postDebitNoteJournal(dn, inv);
+    audit('Purchase','Correction Issued', inv.id, inv.invoiceNumber, fmt(original), fmt(newAmt) + (reason?` — ${reason}`:'') + (note?` (${note})`:''));
+    toast(`Debit Note ${noteNumber} created`,'success');
+  }
+  saveDB();
+  closeModal('correct-invoice-overlay');
+  if (typeof renderSupplierInvoices === 'function') renderSupplierInvoices();
+  if (currentProfile && currentProfile.id === refId) viewProfile(currentProfile.type, refId);
+}
+
+// Sales correction: proportionally reverses Sales Revenue + VAT Payable, and reduces
+// whichever account originally received the money (Cash/Bank/Wallet) or, if the sale is
+// still outstanding, reduces Accounts Receivable first (the common real-world case).
+function postCreditNoteJournal(cn, sale) {
+  const original = sale.total || 0;
+  const taxAmount = sale.taxAmount || 0;
+  const taxPortion = original > 0 ? +(cn.adjustmentAmount * (taxAmount/original)).toFixed(2) : 0;
+  const netPortion = +(cn.adjustmentAmount - taxPortion).toFixed(2);
+  const salesCode = resolveSalesAccountCode(sale.customerType);
+  const creditAccount = (sale.dueAmount > 0) ? db.settings.acctMappings.arAccount : resolvePaymentAccountCode(sale.paymentMethod, sale.qrId);
+  const lines = [ { accountCode: salesCode, debit: netPortion, credit: 0 } ];
+  if (taxPortion > 0) lines.push({ accountCode: db.settings.acctMappings.vatOutputAccount, debit: taxPortion, credit: 0 });
+  lines.push({ accountCode: creditAccount, debit: 0, credit: cn.adjustmentAmount });
+  return postJournalEntry({ date: cn.date, voucherKind:'Journal', refType:'credit-note', refId: cn.id, reference: cn.noteNumber, description: `Credit Note ${cn.noteNumber} — ${cn.reason}`, lines });
+}
+
+// Purchase correction: reduces what you owe the supplier and reduces the recorded Purchase
+// expense and VAT input proportionally to the original invoice's own net/VAT split.
+function postDebitNoteJournal(dn, invoice) {
+  const original = invoice.amount || 0;
+  const vatAmount = invoice.vatAmount || 0;
+  const vatPortion = original > 0 ? +(dn.adjustmentAmount * (vatAmount/original)).toFixed(2) : 0;
+  const netPortion = +(dn.adjustmentAmount - vatPortion).toFixed(2);
+  const lines = [ { accountCode: db.settings.acctMappings.apAccount, debit: dn.adjustmentAmount, credit: 0 } ];
+  lines.push({ accountCode: db.settings.acctMappings.purchaseAccount, debit: 0, credit: netPortion });
+  if (vatPortion > 0) lines.push({ accountCode: db.settings.acctMappings.vatInputAccount, debit: 0, credit: vatPortion });
+  return postJournalEntry({ date: dn.date, voucherKind:'Journal', refType:'debit-note', refId: dn.id, reference: dn.noteNumber, description: `Debit Note ${dn.noteNumber} — ${dn.reason}`, lines });
+}
+
+// ── VAT Sales Register (net of Credit Notes) — Phase 4 ──
+function computeVATSalesRegister(from, to) {
+  const vatCode = db.settings.acctMappings.vatOutputAccount;
+  const entries = (db.journalEntries||[]).filter(j => !j.isVoid && ['pos-sale','credit-sale','credit-note'].includes(j.refType) && (!from||j.date>=from) && (!to||j.date<=to));
+  const rows = entries.map(j => {
+    const isReversal = j.refType === 'credit-note';
+    const vatLine = j.lines.find(l=>l.accountCode===vatCode);
+    const salesLine = j.lines.find(l=>{ const acc=getAccountByCode(l.accountCode); return acc && acc.type==='income'; });
+    const vat = vatLine ? (isReversal ? -(vatLine.debit||0) : (vatLine.credit||0)) : 0;
+    const taxable = salesLine ? (isReversal ? -(salesLine.debit||0) : (salesLine.credit||0)) : 0;
+    return { date:j.date, voucherNumber:j.voucherNumber, description:j.description, taxable, vat, isReversal };
+  }).sort((a,b)=>a.date.localeCompare(b.date));
+  return { rows, totalTaxable: rows.reduce((a,r)=>a+r.taxable,0), totalVAT: rows.reduce((a,r)=>a+r.vat,0) };
+}
+
+// ── VAT Purchase Register (net of Debit Notes) — Phase 4 ──
+function computeVATPurchaseRegister(from, to) {
+  const vatCode = db.settings.acctMappings.vatInputAccount;
+  const entries = (db.journalEntries||[]).filter(j => !j.isVoid && ['supplier-invoice','debit-note'].includes(j.refType) && (!from||j.date>=from) && (!to||j.date<=to));
+  const rows = entries.map(j => {
+    const isReversal = j.refType === 'debit-note';
+    const vatLine = j.lines.find(l=>l.accountCode===vatCode);
+    const purchaseLine = j.lines.find(l=>l.accountCode===db.settings.acctMappings.purchaseAccount);
+    const vat = vatLine ? (isReversal ? -(vatLine.credit||0) : (vatLine.debit||0)) : 0;
+    const taxable = purchaseLine ? (isReversal ? -(purchaseLine.credit||0) : (purchaseLine.debit||0)) : 0;
+    return { date:j.date, voucherNumber:j.voucherNumber, description:j.description, taxable, vat, isReversal };
+  }).sort((a,b)=>a.date.localeCompare(b.date));
+  return { rows, totalTaxable: rows.reduce((a,r)=>a+r.taxable,0), totalVAT: rows.reduce((a,r)=>a+r.vat,0) };
+}
+
+// ── TDS Register — Phase 4 (Rent/Contractor/Professional withholding, distinct from payroll tax) ──
+function computeTDSRegister(from, to) {
+  const tdsCode = db.settings.acctMappings.tdsPayableAccount;
+  const entries = (db.journalEntries||[]).filter(j => !j.isVoid && j.refType==='manual-accounting' && (!from||j.date>=from) && (!to||j.date<=to));
+  const rows = entries.map(j => {
+    const tdsLine = j.lines.find(l=>l.accountCode===tdsCode);
+    if (!tdsLine || !tdsLine.credit) return null;
+    return { date:j.date, voucherNumber:j.voucherNumber, description:j.description, tdsAmount:tdsLine.credit };
+  }).filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date));
+  return { rows, total: rows.reduce((a,r)=>a+r.tdsAmount,0) };
+}
+
+/* ── Phase 5: Bank Reconciliation ── */
+function openBankRecon() {
+  window._reconState = null;
+  window._reconManualLines = [];
+  document.getElementById('recon-period').value = '';
+  document.getElementById('recon-closing-balance').value = '';
+  document.getElementById('recon-paste-area').value = '';
+  document.getElementById('recon-manual-lines').innerHTML = '';
+  document.getElementById('recon-step-match').style.display = 'none';
+  setReconTab('new', document.getElementById('recon-tab-new'));
+  openModal('bank-recon-overlay');
+}
+
+function setReconTab(tab, el) {
+  document.getElementById('recon-panel-new').style.display = tab==='new' ? '' : 'none';
+  document.getElementById('recon-panel-history').style.display = tab==='history' ? '' : 'none';
+  document.getElementById('recon-tab-new')?.classList.toggle('active', tab==='new');
+  document.getElementById('recon-tab-history')?.classList.toggle('active', tab==='history');
+  if (tab === 'history') renderReconHistory();
+}
+
+function parseReconLine(line) {
+  const amtMatch = line.match(/([+\-]?\s?[\d,]+(?:\.\d+)?)\s*$/);
+  if (!amtMatch) return null;
+  const amount = parseFloat(amtMatch[1].replace(/[,\s]/g,''));
+  if (isNaN(amount)) return null;
+  let rest = line.slice(0, amtMatch.index).trim();
+  const dateMatch = rest.match(/^(\d{1,2}[-\/][A-Za-z0-9]{2,9}[-\/]\d{2,4}|\d{4}-\d{2}-\d{2})/);
+  let date = today(), description = rest;
+  if (dateMatch) {
+    date = normalizeReconDate(dateMatch[1]);
+    description = rest.slice(dateMatch[0].length).trim().replace(/^[,\-\t]+/,'').trim();
+  }
+  if (!description) description = 'Bank Statement Line';
+  return { id: uid(), date, description, amount, status:'unmatched', matchedJE:null, candidates:[] };
+}
+
+function normalizeReconDate(str) {
+  const months = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  let m = str.match(/^(\d{1,2})-([A-Za-z]{3,9})-(\d{2,4})$/);
+  if (m) {
+    const mo = months[m[2].toLowerCase().slice(0,3)];
+    const yr = m[3].length===2 ? '20'+m[3] : m[3];
+    if (mo) return `${yr}-${String(mo).padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (m) {
+    const yr = m[3].length===2 ? '20'+m[3] : m[3];
+    return `${yr}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  }
+  return today();
+}
+
+function parseBankStatement() {
+  const raw = document.getElementById('recon-paste-area').value.trim();
+  const pasted = raw ? raw.split('\n').map(l=>l.trim()).filter(Boolean).map(parseReconLine).filter(Boolean) : [];
+  const manual = (window._reconManualLines||[]).map(l=>({ id:l.id, date:l.date, description:l.description, amount:l.amount, status:'unmatched', matchedJE:null, candidates:[] }));
+  const parsed = [...pasted, ...manual];
+  if (!parsed.length) { toast('Paste at least one statement line, or add one manually','error'); return; }
+  window._reconState = {
+    period: document.getElementById('recon-period').value.trim() || nepaliFiscalYearLabel(today()),
+    closingBalance: parseFloat(document.getElementById('recon-closing-balance').value) || 0,
+    statementLines: parsed
+  };
+  runAutoMatch();
+  renderReconMatches();
+  document.getElementById('recon-step-match').style.display = '';
+}
+
+function addReconManualLine() {
+  const date = document.getElementById('recon-manual-date').value || today();
+  const description = document.getElementById('recon-manual-desc').value.trim() || 'Bank Statement Line';
+  const amount = parseFloat(document.getElementById('recon-manual-amount').value);
+  if (isNaN(amount)) { toast('Enter an amount (positive = money in, negative = money out)','error'); return; }
+  if (!window._reconManualLines) window._reconManualLines = [];
+  window._reconManualLines.push({ id: uid(), date, description, amount });
+  document.getElementById('recon-manual-date').value = '';
+  document.getElementById('recon-manual-desc').value = '';
+  document.getElementById('recon-manual-amount').value = '';
+  renderReconManualLines();
+}
+
+function removeReconManualLine(id) {
+  window._reconManualLines = (window._reconManualLines||[]).filter(l=>l.id!==id);
+  renderReconManualLines();
+}
+
+function renderReconManualLines() {
+  const lines = window._reconManualLines || [];
+  document.getElementById('recon-manual-lines').innerHTML = lines.length ? lines.map(l=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--bg-alt,#f7f7f9);border-radius:6px;margin-bottom:4px">
+      <span>${fmtDate(l.date)} — ${esc(l.description)} — <strong class="mono">${fmt(l.amount)}</strong></span>
+      <button class="btn btn-xs btn-secondary" onclick="removeReconManualLine('${l.id}')">✕</button>
+    </div>`).join('') : '';
+}
+
+// Matches each statement line against the Bank Account ledger: same amount + same date = auto-matched;
+// same amount within 5 days = suggested (needs one click); otherwise flagged unmatched with candidates
+// from a wider 15-day window if any exist at all.
+function runAutoMatch() {
+  const st = window._reconState;
+  const dates = st.statementLines.map(l=>l.date).sort();
+  const from = shiftDate(dates[0], -20), to = shiftDate(dates[dates.length-1], 20);
+  const gl = computeGLLedger('1020', from, to);
+  const bookLines = gl.rows.map(r => ({ ...r, consumed:false }));
+  st.statementLines.forEach(line => {
+    const wantDebit = line.amount > 0;
+    let best = null, bestDiff = Infinity;
+    bookLines.forEach(bl => {
+      if (bl.consumed) return;
+      const blAmt = wantDebit ? bl.debit : bl.credit;
+      if (!blAmt || Math.abs(blAmt - Math.abs(line.amount)) > 1) return;
+      const dayDiff = Math.abs((new Date(line.date) - new Date(bl.date)) / 86400000);
+      if (dayDiff < bestDiff) { bestDiff = dayDiff; best = bl; }
+    });
+    if (best && bestDiff <= 5) {
+      best.consumed = true;
+      line.matchedJE = best;
+      line.status = bestDiff === 0 ? 'matched' : 'suggested';
+    } else {
+      line.candidates = bookLines.filter(bl => {
+        if (bl.consumed) return false;
+        const blAmt = wantDebit ? bl.debit : bl.credit;
+        return blAmt && Math.abs(blAmt - Math.abs(line.amount)) <= 1;
+      });
+      line.status = 'unmatched';
+    }
+  });
+  st.bookLines = bookLines;
+}
+
+function confirmReconMatch(lineId) {
+  const line = window._reconState.statementLines.find(l=>l.id===lineId);
+  if (line) { line.status = 'matched'; renderReconMatches(); }
+}
+
+function rejectReconMatch(lineId) {
+  const st = window._reconState;
+  const line = st.statementLines.find(l=>l.id===lineId);
+  if (!line) return;
+  if (line.matchedJE) { line.matchedJE.consumed = false; }
+  line.matchedJE = null; line.status = 'unmatched';
+  const wantDebit = line.amount > 0;
+  line.candidates = st.bookLines.filter(bl => { if (bl.consumed) return false; const blAmt = wantDebit?bl.debit:bl.credit; return blAmt && Math.abs(blAmt-Math.abs(line.amount))<=1; });
+  renderReconMatches();
+}
+
+function pickReconCandidate(lineId, idx) {
+  if (idx === '') return;
+  const line = window._reconState.statementLines.find(l=>l.id===lineId);
+  const cand = line.candidates[+idx];
+  if (!cand) return;
+  cand.consumed = true;
+  line.matchedJE = cand;
+  line.status = 'matched';
+  renderReconMatches();
+}
+
+// Records a bank-only line (e.g. a bank charge) straight into Accounting, then marks it matched.
+function quickRecordReconLine(lineId) {
+  const line = window._reconState.statementLines.find(l=>l.id===lineId);
+  if (!line) return;
+  const isIncome = line.amount >= 0;
+  const a = { id:uid(), type: isIncome?'income':'expense', amount: Math.abs(line.amount), category: isIncome?'Other Income':'Other', date: line.date, description: line.description, reference:'', createdAt:now() };
+  db.accounting.push(a);
+  const je = postManualAccountingJournal(a);
+  audit('Accounting','Create (via Bank Reconciliation)', a.id, a.description);
+  line.status = 'matched';
+  line.matchedJE = { date: a.date, voucherNumber: je?.voucherNumber||'—', debit: isIncome?Math.abs(line.amount):0, credit: isIncome?0:Math.abs(line.amount) };
+  saveDB();
+  toast('Recorded and matched','success');
+  renderReconMatches();
+}
+
+function renderReconMatches() {
+  const st = window._reconState;
+  const rows = [];
+  st.statementLines.forEach(line => {
+    const bankCell = `${fmtDate(line.date)}<br>${esc(line.description)}<br><strong class="mono">${fmt(line.amount)}</strong>`;
+    let bookCell = '—', statusCell = '', actionCell = '';
+    if (line.status === 'matched') {
+      bookCell = line.matchedJE ? `${fmtDate(line.matchedJE.date)}<br>${esc(line.matchedJE.voucherNumber)}<br><strong class="mono">${fmt(line.matchedJE.debit||line.matchedJE.credit)}</strong>` : '<em>Recorded above</em>';
+      statusCell = '<span class="badge badge-success">✓ Matched</span>';
+    } else if (line.status === 'suggested') {
+      bookCell = `${fmtDate(line.matchedJE.date)}<br>${esc(line.matchedJE.voucherNumber)}<br><strong class="mono">${fmt(line.matchedJE.debit||line.matchedJE.credit)}</strong>`;
+      statusCell = '<span class="badge badge-warning">⚡ Suggested</span>';
+      actionCell = `<button class="btn btn-xs btn-success" onclick="confirmReconMatch('${line.id}')">Confirm</button> <button class="btn btn-xs btn-secondary" onclick="rejectReconMatch('${line.id}')">Not a Match</button>`;
+    } else {
+      statusCell = '<span class="badge badge-danger">⚠ Unmatched</span>';
+      if (line.candidates.length) {
+        actionCell = `<select class="form-control" onchange="pickReconCandidate('${line.id}', this.value)"><option value="">Find in Books ▾</option>${line.candidates.map((c,i)=>`<option value="${i}">${fmtDate(c.date)} — ${esc(c.voucherNumber)} — ${fmt(c.debit||c.credit)}</option>`).join('')}</select>`;
+      } else {
+        actionCell = `<button class="btn btn-xs btn-primary" onclick="quickRecordReconLine('${line.id}')">Record as ${line.amount>=0?'Income':'Expense'}</button>`;
+      }
+    }
+    rows.push(`<tr><td>${bankCell}</td><td>${bookCell}</td><td>${statusCell}</td><td>${actionCell}</td></tr>`);
+  });
+  st.bookLines.filter(bl=>!bl.consumed).forEach(bl => {
+    rows.push(`<tr style="background:#fff8e1"><td>—</td><td>${fmtDate(bl.date)}<br>${esc(bl.voucherNumber)} — ${esc(bl.description)}<br><strong class="mono">${fmt(bl.debit||bl.credit)}</strong></td><td><span class="badge badge-warning">⚠ Not yet in bank</span></td><td class="form-hint">Likely still clearing (e.g. an unpresented cheque) — no action needed unless it's unusually old.</td></tr>`);
+  });
+  document.getElementById('recon-match-tbody').innerHTML = rows.join('');
+  renderReconSummary();
+}
+
+function renderReconSummary() {
+  const st = window._reconState;
+  const bookBalance = accountBalanceAsOf('1020', today());
+  const bankUnmatchedNet = st.statementLines.filter(l=>l.status==='unmatched').reduce((a,l)=>a+l.amount,0);
+  const bookUnmatchedLines = st.bookLines.filter(bl=>!bl.consumed);
+  const bookUnmatchedNet = bookUnmatchedLines.reduce((a,bl)=>a+(bl.debit-bl.credit),0);
+  const adjusted = bookBalance - bookUnmatchedNet + bankUnmatchedNet;
+  const stated = st.closingBalance || 0;
+  const reconciled = Math.abs(adjusted - stated) < 1;
+  document.getElementById('recon-summary').innerHTML = `
+    <table><tbody>
+      <tr><td>Balance per your Books (Bank Account, today)</td><td style="text-align:right" class="mono">${fmt(bookBalance)}</td></tr>
+      <tr><td>Items on your statement not yet in your books</td><td style="text-align:right" class="mono">${bankUnmatchedNet>=0?'+':''}${fmt(bankUnmatchedNet)}</td></tr>
+      <tr><td>Items in your books not yet cleared by the bank</td><td style="text-align:right" class="mono">${-bookUnmatchedNet>=0?'+':''}${fmt(-bookUnmatchedNet)}</td></tr>
+      <tr style="background:#f0f0f0"><td><strong>Adjusted Balance</strong></td><td style="text-align:right"><strong>${fmt(adjusted)}</strong></td></tr>
+      <tr><td>Balance per Bank Statement (as entered)</td><td style="text-align:right" class="mono">${fmt(stated)}</td></tr>
+    </tbody></table>
+    <p style="margin-top:10px;font-weight:700;color:${reconciled?'green':'red'}">${reconciled?'✓ Reconciled':'⚠ Difference of '+fmt(Math.abs(adjusted-stated))+' — check for a missed or duplicate entry'}</p>`;
+}
+
+function saveBankReconciliation() {
+  const st = window._reconState;
+  if (!st) return;
+  const rec = {
+    id: uid(), periodLabel: st.period, asOfDate: today(),
+    statementLines: st.statementLines.map(l=>({ date:l.date, description:l.description, amount:l.amount, status:l.status, matchedVoucher:l.matchedJE?.voucherNumber||null })),
+    unmatchedBookLines: st.bookLines.filter(bl=>!bl.consumed).map(bl=>({ date:bl.date, voucherNumber:bl.voucherNumber, description:bl.description, debit:bl.debit, credit:bl.credit })),
+    closingBalance: st.closingBalance,
+    createdAt: now(), createdBy: session.username
+  };
+  db.bankReconciliations.push(rec);
+  audit('Accounting','Bank Reconciliation Saved', rec.id, rec.periodLabel);
+  saveDB();
+  toast('Reconciliation saved','success');
+  setReconTab('history', document.getElementById('recon-tab-history'));
+}
+
+function renderReconHistory() {
+  const list = (db.bankReconciliations||[]).slice().reverse();
+  document.getElementById('recon-history-list').innerHTML = list.length ? list.map(r=>`
+    <div style="padding:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div><strong>${esc(r.periodLabel)}</strong><br><span class="form-hint">Saved ${fmtDate(r.asOfDate)} by ${esc(r.createdBy)} — ${r.statementLines.length} statement lines</span></div>
+      <button class="btn btn-secondary btn-sm" onclick="printSavedRecon('${r.id}')">🖨️ View / Print</button>
+    </div>`).join('') : '<div class="empty"><div class="empty-title">No reconciliations saved yet</div></div>';
+}
+
+function printSavedRecon(id) {
+  const r = db.bankReconciliations.find(x=>x.id===id);
+  if (!r) return;
+  const html = `<h2>Bank Reconciliation — ${esc(r.periodLabel)}</h2>
+    <p>Saved ${fmtDate(r.asOfDate)} by ${esc(r.createdBy)}</p>
+    <h3>Statement Lines</h3>
+    <table><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Status</th><th>Matched Voucher</th></tr></thead><tbody>
+      ${r.statementLines.map(l=>`<tr><td>${fmtDate(l.date)}</td><td>${esc(l.description)}</td><td>${fmt(l.amount)}</td><td>${esc(l.status)}</td><td>${esc(l.matchedVoucher||'—')}</td></tr>`).join('')}
+    </tbody></table>
+    <h3 style="margin-top:16px">Still Outstanding in Books (not yet cleared by bank)</h3>
+    <table><thead><tr><th>Date</th><th>Voucher #</th><th>Description</th><th>Amount</th></tr></thead><tbody>
+      ${r.unmatchedBookLines.length?r.unmatchedBookLines.map(bl=>`<tr><td>${fmtDate(bl.date)}</td><td>${esc(bl.voucherNumber)}</td><td>${esc(bl.description)}</td><td>${fmt(bl.debit||bl.credit)}</td></tr>`).join(''):'<tr><td colspan="4">None</td></tr>'}
+    </tbody></table>
+    <p style="margin-top:14px"><strong>Statement Closing Balance:</strong> ${fmt(r.closingBalance)}</p>`;
+  document.getElementById('profile-view-title').textContent = `Bank Reconciliation — ${r.periodLabel}`;
+  document.getElementById('profile-view-body').innerHTML = html;
+  currentProfile = { type:'print', id:'' };
+  document.getElementById('profile-print-btn').style.display = '';
+  document.getElementById('profile-archive-btn').style.display = 'none';
+  document.getElementById('profile-delete-btn').style.display = 'none';
+  closeModal('bank-recon-overlay');
+  openModal('profile-view-overlay');
+}
+
+// ── Receivables / Payables Aging — Phase 5 ──
+function agingBucket(daysOverdue) {
+  if (daysOverdue <= 0) return 'notDue';
+  if (daysOverdue <= 30) return 'd30';
+  if (daysOverdue <= 60) return 'd60';
+  if (daysOverdue <= 90) return 'd90';
+  return 'd90plus';
+}
+function computeReceivablesAging(asOf) {
+  const date = asOf || today();
+  const rows = (db.creditSales||[]).filter(c=>c.dueAmount>0).map(c=>{
+    const refDate = c.dueDate || c.date;
+    const daysOverdue = Math.floor((new Date(date) - new Date(refDate)) / 86400000);
+    const bucket = agingBucket(daysOverdue);
+    return { name:c.customerName, amount:c.dueAmount, bucket };
+  });
+  return aggregateAging(rows);
+}
+function computePayablesAging(asOf) {
+  const date = asOf || today();
+  const rows = (db.supplierInvoices||[]).map(inv=>{
+    const paid = (db.supplierPayments||[]).filter(p=>p.invoiceId===inv.id).reduce((a,p)=>a+p.amount,0);
+    const due = inv.amount - paid;
+    if (due <= 0.01) return null;
+    const refDate = inv.dueDate || inv.date;
+    const daysOverdue = Math.floor((new Date(date) - new Date(refDate)) / 86400000);
+    const supplier = db.secondary.find(s=>s.id===inv.supplierId);
+    return { name: supplier?.name||'Unknown Supplier', amount:due, bucket: agingBucket(daysOverdue) };
+  }).filter(Boolean);
+  return aggregateAging(rows);
+}
+function aggregateAging(rows) {
+  const byName = {};
+  rows.forEach(r => {
+    if (!byName[r.name]) byName[r.name] = { name:r.name, notDue:0, d30:0, d60:0, d90:0, d90plus:0, total:0 };
+    byName[r.name][r.bucket] += r.amount;
+    byName[r.name].total += r.amount;
+  });
+  const parties = Object.values(byName).sort((a,b)=>b.total-a.total);
+  const totals = parties.reduce((acc,p)=>{ ['notDue','d30','d60','d90','d90plus','total'].forEach(k=>acc[k]=(acc[k]||0)+p[k]); return acc; }, {});
+  return { parties, totals };
 }
 
 function hasAnyEditPermission() {
@@ -5272,8 +6048,8 @@ function completeCreditSale() {
   const dueDate = document.getElementById('credit-due-date')?.value || '';
   const notes = document.getElementById('credit-notes')?.value || '';
   const dueAmount = total - paidNow;
-  const prefix = db.settings.pos.receiptPrefix || 'INV';
-  const receiptNum = prefix + '-' + Date.now().toString(36).toUpperCase();
+  // Fiscal-year sequential invoice numbering (IRD-compliant format), replaces the old timestamp-based number
+  const receiptNum = nextFiscalInvoiceNumber('sales');
   const customerType = document.getElementById('pos-customer-type')?.value || 'Retail';
 
   const sale = {
@@ -5326,8 +6102,8 @@ function completeSale(method) {
   const {subtotal, discount, tax, total, taxPct} = getCartTotals();
   const customerName = document.getElementById('pos-customer-input')?.value?.trim() || '';
   const customerType = document.getElementById('pos-customer-type')?.value || 'Retail';
-  const prefix = db.settings.pos.receiptPrefix || 'INV';
-  const receiptNum = prefix + '-' + Date.now().toString(36).toUpperCase();
+  // Fiscal-year sequential invoice numbering (IRD-compliant format), replaces the old timestamp-based number
+  const receiptNum = nextFiscalInvoiceNumber('sales');
   
   const sale = {
     id: uid(), receiptNumber: receiptNum, date: today(), createdAt: now(),
@@ -5939,6 +6715,38 @@ function setAcctType(type) {
   const incCats = ['Revenue', 'Sales', 'Service', 'Interest', 'Rent Income', 'Other Income'];
   const expCats = db.settings.categories.accounting||['Salary','Utilities','Rent','Supplies','Tax','VAT','Maintenance','Travel'];
   attachSuggest('acct-cat', type==='income' ? incCats : expCats);
+  if (type === 'income') {
+    document.getElementById('acct-tds-section').style.display = 'none';
+    document.getElementById('acct-tds-toggle').checked = false;
+    toggleAcctTDSFields();
+  } else {
+    updateAcctTDSVisibility();
+  }
+}
+
+function updateAcctTDSVisibility() {
+  const cat = (document.getElementById('acct-cat')?.value || '').trim();
+  const applicable = (db.settings.acctMappings.tdsApplicableCategories||[]).some(c => c.toLowerCase() === cat.toLowerCase());
+  const section = document.getElementById('acct-tds-section');
+  if (section) section.style.display = applicable ? '' : 'none';
+  if (!applicable) { document.getElementById('acct-tds-toggle').checked = false; toggleAcctTDSFields(); }
+}
+
+function toggleAcctTDSFields() {
+  const on = document.getElementById('acct-tds-toggle').checked;
+  document.getElementById('acct-tds-fields').style.display = on ? '' : 'none';
+  computeAcctTDSPreview();
+}
+
+function computeAcctTDSPreview() {
+  const preview = document.getElementById('acct-tds-preview');
+  if (!preview) return;
+  if (!document.getElementById('acct-tds-toggle').checked) { preview.textContent = ''; return; }
+  const amount = parseFloat(document.getElementById('acct-amount').value) || 0;
+  const rateKey = document.getElementById('acct-tds-rate').value;
+  const rate = (db.settings.acctMappings.tdsRates||{})[rateKey] || 0;
+  const tds = +(amount * rate).toFixed(2);
+  preview.textContent = `TDS: ${fmt(tds)} — You'll actually pay out: ${fmt(amount - tds)} (the rest goes to TDS Payable, owed to the tax office)`;
 }
 
 function openAccountingModal(id=null) {
@@ -5952,6 +6760,11 @@ function openAccountingModal(id=null) {
   document.getElementById('acct-ref').value = a?.reference||'';
   openModal('acct-modal-overlay');
   setAcctType(a?.type||'income');
+  if (a?.tdsAmount > 0) {
+    document.getElementById('acct-tds-toggle').checked = true;
+    document.getElementById('acct-tds-rate').value = a.tdsRateKey || 'rentCompany';
+    toggleAcctTDSFields();
+  }
   setTimeout(()=>document.getElementById('acct-amount')?.focus(), 50);
 }
 
@@ -5960,7 +6773,11 @@ function saveAccounting() {
   if (!amount || amount<=0) { toast('Valid amount required','error'); return; }
   const desc = document.getElementById('acct-desc').value.trim();
   if (!desc) { toast('Description is required','error'); return; }
-  const data = { type: document.getElementById('acct-type-sel').value, amount, category: document.getElementById('acct-cat').value.trim(), date: document.getElementById('acct-date').value||today(), description: desc, reference: document.getElementById('acct-ref').value.trim() };
+  const tdsOn = document.getElementById('acct-tds-toggle')?.checked && document.getElementById('acct-tds-section').style.display !== 'none';
+  const tdsRateKey = tdsOn ? document.getElementById('acct-tds-rate').value : null;
+  const tdsRate = tdsOn ? ((db.settings.acctMappings.tdsRates||{})[tdsRateKey] || 0) : 0;
+  const tdsAmount = tdsOn ? +(amount * tdsRate).toFixed(2) : 0;
+  const data = { type: document.getElementById('acct-type-sel').value, amount, category: document.getElementById('acct-cat').value.trim(), date: document.getElementById('acct-date').value||today(), description: desc, reference: document.getElementById('acct-ref').value.trim(), tdsRateKey, tdsAmount };
   if (acctEditId) {
     const a = db.accounting.find(a=>a.id===acctEditId);
     Object.assign(a, data);
@@ -6703,6 +7520,7 @@ function viewProfile(type, id) {
     </div>
     <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Items</h3>
     <div class="table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead><tbody>${itemRows}</tbody></table></div>
+    ${(session.role==='admin'||hasPermission('Accounting'))?`<div class="no-print-audit" style="margin-top:14px"><button class="btn btn-secondary" onclick="openCorrectInvoice('sale','${sale.id}')">🧾 Correct an Invoice</button></div>`:''}
     ${profileAuditHtml(type,id)}`;
   } else if (type==='accounting') {
     const a = db.accounting.find(x=>x.id===id);
@@ -7216,16 +8034,24 @@ const REPORT_CATEGORIES = [
     {v:'attendance-report', label:'Attendance Summary'},
     {v:'payroll-report', label:'Payroll Summary'}
   ]},
-  { id:'financial', icon:'💰', title:'Financial Reports', desc:'Income, expense, executive summary', types:[
+  { id:'financial', icon:'💰', title:'Financial Reports & Statements', desc:'Trial Balance, P&L, Balance Sheet, Day Book, Account Ledger — from the automatic double-entry ledger', types:[
     {v:'executive', label:'Executive Summary / SITREP'},
-    {v:'financial', label:'Financial Report (Income & Expense)'},
+    {v:'trial-balance', label:'Trial Balance'},
+    {v:'profit-loss-ledger', label:'Profit & Loss Statement'},
+    {v:'balance-sheet', label:'Balance Sheet'},
+    {v:'day-book', label:'Day Book'},
+    {v:'account-ledger', label:'Account Ledger (Cash, Bank, any account)'},
+    {v:'receivables-aging', label:'Receivables Aging'},
+    {v:'payables-aging', label:'Payables Aging'},
     {v:'audit', label:'Audit & Compliance (Admin)'}
   ]},
   { id:'tax', icon:'🧮', title:'Compliance & Regulatory Reports', desc:'Nepal VAT, PAN, government submission, annual & audit reports', types:[
     {v:'vat-summary', label:'Monthly VAT Summary'},
-    {v:'vat-sales', label:'VAT Sales Report'},
-    {v:'vat-purchase', label:'VAT Purchase Report'},
-    {v:'tax-deduction', label:'Tax Deduction Report'},
+    {v:'vat-sales', label:'VAT Sales Register'},
+    {v:'vat-purchase', label:'VAT Purchase Register'},
+    {v:'tds-register', label:'TDS Register (Rent/Contractor/Professional)'},
+    {v:'correction-notes', label:'Credit & Debit Notes (Corrections)'},
+    {v:'tax-deduction', label:'Tax Deduction Report (Payroll)'},
     {v:'govt-submission', label:'Government Submission Summary'},
     {v:'annual-report', label:'Annual Business Report'},
     {v:'audit-support', label:'Audit Support Report'}
@@ -7272,8 +8098,51 @@ function selectReportCategory(catId) {
   onReportTypeChange();
 }
 
+const REPORT_TYPE_HELP = {
+  'executive': 'A plain narrative summary of how the business did this period, with key numbers.',
+  'trial-balance': 'A health-check page — lists every account with its balance. If bookkeeping is correct, Debit and Credit totals always match exactly.',
+  'profit-loss-ledger': 'Did the business make money this period? Income minus Expenses.',
+  'balance-sheet': 'A snapshot as of one date: what the business owns, owes, and what\'s left for you.',
+  'day-book': 'Everything that happened, in the order it happened — the business\'s diary.',
+  'account-ledger': 'Pick any single account (Cash, Bank, Sales, etc.) and see its full history with a running balance.',
+  'audit': 'Full list of every change made in the system, by whom and when — for admin/audit use.',
+  'supplier-ledger': 'See what you owe each supplier — pick one for a detailed statement, or leave blank for a summary of all.',
+  'due-ledger': 'See what each customer owes you — pick one for a detailed statement, or leave blank for a summary of all.',
+  'vat-sales': 'Every taxable sale and its VAT, in the format Nepal\'s tax office expects — corrections are already netted in.',
+  'vat-purchase': 'Every taxable purchase and its VAT, same format, for the VAT you can claim back.',
+  'tds-register': 'What you\'ve withheld from rent/contractor/professional payments and still owe the tax office.',
+  'correction-notes': 'Every Credit Note (sales correction) and Debit Note (purchase correction) ever issued.',
+  'receivables-aging': 'How overdue each customer\'s balance is — 0-30, 31-60, 61-90, 90+ days — so you know who to chase first.',
+  'payables-aging': 'How overdue each amount you owe a supplier is — so you know who to pay first.'
+};
+
 function onReportTypeChange() {
-  // Reserved for type-specific parameter adjustments in future
+  const type = document.getElementById('rpt-type').value;
+  const hintEl = document.getElementById('rpt-type-hint');
+  if (hintEl) hintEl.innerHTML = REPORT_TYPE_HELP[type] ? `ℹ️ ${esc(REPORT_TYPE_HELP[type])}` : '';
+
+  const compareGroup = document.getElementById('rpt-pl-compare-group');
+  if (compareGroup) compareGroup.style.display = (type==='profit-loss-ledger') ? '' : 'none';
+
+  const targetGroup = document.getElementById('rpt-ledger-target-group');
+  const targetSelect = document.getElementById('rpt-ledger-target');
+  if (targetGroup && targetSelect) {
+    if (type === 'account-ledger') {
+      targetGroup.style.display = '';
+      targetSelect.innerHTML = (db.chartOfAccounts||[]).slice().sort((a,b)=>a.code.localeCompare(b.code))
+        .map(a=>`<option value="${a.code}">${a.code} — ${esc(a.name)}</option>`).join('');
+    } else if (type === 'due-ledger') {
+      targetGroup.style.display = '';
+      const names = Array.from(new Set((db.creditSales||[]).map(c=>c.customerName))).sort();
+      targetSelect.innerHTML = `<option value="">— All Customers (Summary) —</option>` + names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    } else if (type === 'supplier-ledger') {
+      targetGroup.style.display = '';
+      targetSelect.innerHTML = `<option value="">— All Suppliers (Summary) —</option>` + (db.secondary||[]).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+    } else {
+      targetGroup.style.display = 'none';
+      targetSelect.innerHTML = '';
+    }
+  }
 }
 
 function backToReportCategories() {
@@ -7323,7 +8192,7 @@ function generateReport() {
   const footer = reportDocFooter();
   let bodyHtml = '';
 
-  if (type==='executive' || type==='financial') {
+  if (type==='executive') {
     bodyHtml = `<h2>Executive Summary / Situation Report</h2>
     <p style="font-size:17px;margin-bottom:16px;line-height:1.7">During the period ${periodLabel}, total income recorded was <strong>${fmt(totalIncome)}</strong>. Total expenditure stood at <strong>${fmt(totalExp)}</strong>, resulting in a net ${netBalance>=0?'surplus':'deficit'} of <strong>${fmt(Math.abs(netBalance))}</strong>. A total of <strong>${periodSales.length}</strong> sales transactions were processed during this period, generating revenue of <strong>${fmt(totalRevenue)}</strong>.</p>
     <h2>Key Performance Indicators</h2>
@@ -7334,12 +8203,96 @@ function generateReport() {
       <tr><td>Sales Revenue</td><td>${fmt(totalRevenue)}</td><td>${periodLabel}</td></tr>
       <tr><td>Transactions</td><td>${periodSales.length}</td><td>${periodLabel}</td></tr>
     </tbody></table>`;
-    if (type==='financial') {
-      const incCats = {}; periodAcct.filter(a=>a.type==='income').forEach(a=>{ incCats[a.category||'Other']=(incCats[a.category||'Other']||0)+a.amount; });
-      const expCats = {}; periodAcct.filter(a=>a.type==='expense').forEach(a=>{ expCats[a.category||'Other']=(expCats[a.category||'Other']||0)+a.amount; });
-      bodyHtml += `<h2>Income Breakdown</h2><table><thead><tr><th>Category</th><th>Amount</th><th>%</th></tr></thead><tbody>${Object.entries(incCats).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${fmt(v)}</td><td>${totalIncome?Math.round(v/totalIncome*100):0}%</td></tr>`).join('')}</tbody></table>`;
-      bodyHtml += `<h2>Expense Breakdown</h2><table><thead><tr><th>Category</th><th>Amount</th><th>%</th></tr></thead><tbody>${Object.entries(expCats).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${fmt(v)}</td><td>${totalExp?Math.round(v/totalExp*100):0}%</td></tr>`).join('')}</tbody></table>`;
+  } else if (type==='trial-balance') {
+    const tb = computeTrialBalance(from, to);
+    bodyHtml = `<h2>Trial Balance</h2>
+    <p style="font-size:15px;color:#555">A health-check page — if your bookkeeping is correct, the Debit and Credit totals below always add up to the exact same number.</p>
+    <table><thead><tr><th>Account</th><th style="text-align:right">Opening</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Closing</th></tr></thead><tbody>
+      ${tb.rows.map(r=>`<tr><td>${esc(r.acc.code)} — ${esc(r.acc.name)}</td><td style="text-align:right" class="mono">${fmt(r.opening)}</td><td style="text-align:right" class="mono">${fmt(r.pDebit)}</td><td style="text-align:right" class="mono">${fmt(r.pCredit)}</td><td style="text-align:right" class="mono">${fmt(r.closing)}</td></tr>`).join('') || '<tr><td colspan="5">No ledger activity in this period</td></tr>'}
+      <tr style="background:#f0f0f0"><td><strong>TOTAL</strong></td><td></td><td style="text-align:right"><strong>${fmt(tb.totalDebit)}</strong></td><td style="text-align:right"><strong>${fmt(tb.totalCredit)}</strong></td><td></td></tr>
+    </tbody></table>
+    <p style="margin-top:10px;font-weight:700;color:${tb.balanced?'green':'red'}">${tb.balanced?'✓ Balanced — Debit and Credit totals match':'⚠ Out of balance — this needs review before relying on other reports'}</p>`;
+  } else if (type==='profit-loss-ledger') {
+    const cur = computePLPeriod(from, to);
+    const compareMode = document.getElementById('rpt-pl-compare')?.value || 'month';
+    let priorLabel = '', priorObj = { income:[], expense:[], totalIncome:0, totalExpense:0, netProfit:0 };
+    if (from && to) {
+      const shifted = shiftPeriod(from, to, compareMode);
+      priorObj = computePLPeriod(shifted.from, shifted.to);
+      priorLabel = compareMode==='year' ? 'Same Period, Last Year' : 'Same Length, Last Month';
     }
+    const pct = (a,b) => b ? Math.round(((a-b)/Math.abs(b))*100) : (a?100:0);
+    const rowsFor = (curList, priorList) => {
+      const names = Array.from(new Set([...curList.map(r=>r.acc.code), ...priorList.map(r=>r.acc.code)]));
+      return names.map(code=>{
+        const acc = getAccountByCode(code);
+        const c = curList.find(r=>r.acc.code===code)?.amount || 0;
+        const p = priorList.find(r=>r.acc.code===code)?.amount || 0;
+        return `<tr><td>${esc(acc.name)}</td><td style="text-align:right" class="mono">${fmt(c)}</td>${priorLabel?`<td style="text-align:right" class="mono">${fmt(p)}</td><td style="text-align:right">${pct(c,p)}%</td>`:''}</tr>`;
+      }).join('');
+    };
+    bodyHtml = `<h2>Profit &amp; Loss Statement</h2>
+    <p style="font-size:15px;color:#555">Did the business make money in this period? Income minus Expenses, below.</p>
+    <h3 style="margin-top:16px">Income</h3>
+    <table><thead><tr><th>Account</th><th style="text-align:right">${periodLabel}</th>${priorLabel?`<th style="text-align:right">${priorLabel}</th><th style="text-align:right">Change</th>`:''}</tr></thead>
+    <tbody>${rowsFor(cur.income, priorObj.income) || `<tr><td colspan="${priorLabel?4:2}">No income this period</td></tr>`}
+      <tr style="background:#f0f0f0"><td><strong>TOTAL INCOME</strong></td><td style="text-align:right"><strong>${fmt(cur.totalIncome)}</strong></td>${priorLabel?`<td style="text-align:right"><strong>${fmt(priorObj.totalIncome)}</strong></td><td style="text-align:right">${pct(cur.totalIncome,priorObj.totalIncome)}%</td>`:''}</tr>
+    </tbody></table>
+    <h3 style="margin-top:16px">Expenses</h3>
+    <table><thead><tr><th>Account</th><th style="text-align:right">${periodLabel}</th>${priorLabel?`<th style="text-align:right">${priorLabel}</th><th style="text-align:right">Change</th>`:''}</tr></thead>
+    <tbody>${rowsFor(cur.expense, priorObj.expense) || `<tr><td colspan="${priorLabel?4:2}">No expenses this period</td></tr>`}
+      <tr style="background:#f0f0f0"><td><strong>TOTAL EXPENSES</strong></td><td style="text-align:right"><strong>${fmt(cur.totalExpense)}</strong></td>${priorLabel?`<td style="text-align:right"><strong>${fmt(priorObj.totalExpense)}</strong></td><td style="text-align:right">${pct(cur.totalExpense,priorObj.totalExpense)}%</td>`:''}</tr>
+    </tbody></table>
+    <p style="margin-top:14px;font-size:18px;font-weight:700;color:${cur.netProfit>=0?'green':'red'}">NET ${cur.netProfit>=0?'PROFIT':'LOSS'}: ${fmt(Math.abs(cur.netProfit))}${priorLabel?` &nbsp;(vs ${fmt(Math.abs(priorObj.netProfit))} — ${pct(cur.netProfit,priorObj.netProfit)}%)`:''}</p>`;
+  } else if (type==='balance-sheet') {
+    const bs = computeBalanceSheet(to || today());
+    const section = (title, rows) => `<h3 style="margin-top:16px">${title}</h3><table><tbody>${rows.map(r=>`<tr><td>${esc(r.acc.name)}</td><td style="text-align:right" class="mono">${fmt(r.balance)}</td></tr>`).join('') || '<tr><td colspan="2">None</td></tr>'}</tbody></table>`;
+    bodyHtml = `<h2>Balance Sheet</h2>
+    <p style="font-size:15px;color:#555">What the business owns, owes, and what's left for you — as of ${fmtDate(to||today())}.</p>
+    <h3>Assets</h3>${section('', bs.assets)}
+    <table><tbody><tr style="background:#f0f0f0"><td><strong>TOTAL ASSETS</strong></td><td style="text-align:right"><strong>${fmt(bs.totalAssets)}</strong></td></tr></tbody></table>
+    <h3 style="margin-top:16px">Liabilities</h3>${section('', bs.liabilities)}
+    <table><tbody><tr style="background:#f0f0f0"><td><strong>TOTAL LIABILITIES</strong></td><td style="text-align:right"><strong>${fmt(bs.totalLiabilities)}</strong></td></tr></tbody></table>
+    <h3 style="margin-top:16px">Equity</h3>${section('', bs.equity)}
+    <table><tbody>
+      <tr><td>Current Year Earnings (auto-calculated, this year so far)</td><td style="text-align:right" class="mono">${fmt(bs.currentYearEarnings)}</td></tr>
+      <tr style="background:#f0f0f0"><td><strong>TOTAL EQUITY</strong></td><td style="text-align:right"><strong>${fmt(bs.totalEquity)}</strong></td></tr>
+    </tbody></table>
+    <p style="margin-top:14px;font-weight:700;color:${bs.balanced?'green':'red'}">${bs.balanced?`✓ Total Assets (${fmt(bs.totalAssets)}) = Total Liabilities + Equity (${fmt(bs.totalLiabilities+bs.totalEquity)})`:'⚠ Out of balance — this needs review'}</p>`;
+  } else if (type==='day-book') {
+    const entries = computeDayBook(from, to);
+    bodyHtml = `<h2>Day Book</h2>
+    <p style="font-size:15px;color:#555">Everything that happened, in the order it happened.</p>
+    <table><thead><tr><th>Date</th><th>Voucher #</th><th>What Happened</th><th style="text-align:right">Amount</th></tr></thead><tbody>
+      ${entries.map(j=>`<tr><td>${fmtDate(j.date)}</td><td class="mono">${esc(j.voucherNumber)}</td><td>${esc(j.description)}</td><td style="text-align:right" class="mono">${fmt(j.lines.reduce((a,l)=>a+l.debit,0))}</td></tr>`).join('') || '<tr><td colspan="4">No activity in this period</td></tr>'}
+    </tbody></table>`;
+  } else if (type==='account-ledger') {
+    const code = document.getElementById('rpt-ledger-target')?.value;
+    const gl = code ? computeGLLedger(code, from, to) : null;
+    bodyHtml = gl ? `<h2>Account Ledger: ${esc(gl.acc.name)}</h2>
+    <table><thead><tr><th>Date</th><th>Voucher #</th><th>Description</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead><tbody>
+      <tr><td colspan="5"><strong>Opening Balance</strong></td><td style="text-align:right" class="mono"><strong>${fmt(gl.opening)}</strong></td></tr>
+      ${gl.rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td class="mono">${esc(r.voucherNumber)}</td><td>${esc(r.description)}</td><td style="text-align:right" class="mono">${r.debit?fmt(r.debit):''}</td><td style="text-align:right" class="mono">${r.credit?fmt(r.credit):''}</td><td style="text-align:right" class="mono">${fmt(r.runningBal)}</td></tr>`).join('')}
+      <tr style="background:#f0f0f0"><td colspan="5"><strong>Closing Balance</strong></td><td style="text-align:right"><strong>${fmt(gl.closing)}</strong></td></tr>
+    </tbody></table>` : `<h2>Account Ledger</h2><p>Choose an account above, then click Generate Report.</p>`;
+  } else if (type==='receivables-aging') {
+    const aging = computeReceivablesAging(to || today());
+    const bucketCell = (v) => `<td style="text-align:right" class="mono">${v?fmt(v):'0'}</td>`;
+    bodyHtml = `<h2>Receivables Aging<span class="help-tip" data-tip="How overdue each customer's balance is — helps you see who to chase first.">?</span></h2>
+    <p style="font-size:15px;color:#555">As of ${fmtDate(to||today())}</p>
+    <table><thead><tr><th>Customer</th><th style="text-align:right">Total Due</th><th style="text-align:right">Not Yet Due</th><th style="text-align:right">0-30 days</th><th style="text-align:right">31-60 days</th><th style="text-align:right">61-90 days</th><th style="text-align:right">90+ days</th></tr></thead><tbody>
+      ${aging.parties.length?aging.parties.map(p=>`<tr><td>${esc(p.name)}</td>${bucketCell(p.total)}${bucketCell(p.notDue)}${bucketCell(p.d30)}${bucketCell(p.d60)}${bucketCell(p.d90)}${bucketCell(p.d90plus)}</tr>`).join(''):'<tr><td colspan="7">No outstanding receivables</td></tr>'}
+      <tr style="background:#f0f0f0"><td><strong>TOTAL</strong></td>${bucketCell(aging.totals.total)}${bucketCell(aging.totals.notDue)}${bucketCell(aging.totals.d30)}${bucketCell(aging.totals.d60)}${bucketCell(aging.totals.d90)}${bucketCell(aging.totals.d90plus)}</tr>
+    </tbody></table>`;
+  } else if (type==='payables-aging') {
+    const aging = computePayablesAging(to || today());
+    const bucketCell = (v) => `<td style="text-align:right" class="mono">${v?fmt(v):'0'}</td>`;
+    bodyHtml = `<h2>Payables Aging<span class="help-tip" data-tip="How overdue each amount you owe is — helps you see who to pay first.">?</span></h2>
+    <p style="font-size:15px;color:#555">As of ${fmtDate(to||today())}</p>
+    <table><thead><tr><th>Supplier</th><th style="text-align:right">Total Due</th><th style="text-align:right">Not Yet Due</th><th style="text-align:right">0-30 days</th><th style="text-align:right">31-60 days</th><th style="text-align:right">61-90 days</th><th style="text-align:right">90+ days</th></tr></thead><tbody>
+      ${aging.parties.length?aging.parties.map(p=>`<tr><td>${esc(p.name)}</td>${bucketCell(p.total)}${bucketCell(p.notDue)}${bucketCell(p.d30)}${bucketCell(p.d60)}${bucketCell(p.d90)}${bucketCell(p.d90plus)}</tr>`).join(''):'<tr><td colspan="7">No outstanding payables</td></tr>'}
+      <tr style="background:#f0f0f0"><td><strong>TOTAL</strong></td>${bucketCell(aging.totals.total)}${bucketCell(aging.totals.notDue)}${bucketCell(aging.totals.d30)}${bucketCell(aging.totals.d60)}${bucketCell(aging.totals.d90)}${bucketCell(aging.totals.d90plus)}</tr>
+    </tbody></table>`;
   } else if (type==='sales') {
     bodyHtml = `<h2>Sales / Transaction Report</h2>
     <table><thead><tr><th>Date</th><th>Receipt</th><th>Customer</th><th>Items</th><th>Subtotal</th><th>Total</th><th>Payment</th></tr></thead><tbody>
@@ -7424,10 +8377,21 @@ function generateReport() {
       ${batches.length?batches.map(b=>{const p=db.records.find(r=>r.id===b.productId); return `<tr><td>${esc(b.batchNumber)}</td><td>${esc(p?.name||'—')}</td><td>${b.qtyProduced}</td><td>${fmt(b.cost||0)}</td><td>${fmt(b.qtyProduced?b.cost/b.qtyProduced:0)}</td></tr>`;}).join(''):'<tr><td colspan="5">No data</td></tr>'}
     </tbody></table>`;
   } else if (type==='supplier-ledger') {
-    bodyHtml = `<h2>Supplier Ledger</h2>
-    <table><thead><tr><th>Supplier</th><th>Total Invoiced</th><th>Total Paid</th><th>Outstanding</th></tr></thead><tbody>
-      ${db.secondary.map(sp=>{const invs=db.supplierInvoices.filter(i=>i.supplierId===sp.id); const totalInv=invs.reduce((a,i)=>a+i.amount,0); const totalPaid=db.supplierPayments.filter(p=>p.supplierId===sp.id).reduce((a,p)=>a+p.amount,0); return `<tr><td>${esc(sp.name)}</td><td>${fmt(totalInv)}</td><td>${fmt(totalPaid)}</td><td style="${totalInv-totalPaid>0?'color:red':''}">${fmt(totalInv-totalPaid)}</td></tr>`;}).join('')||'<tr><td colspan="4">No suppliers</td></tr>'}
-    </tbody></table>`;
+    const supplierId = document.getElementById('rpt-ledger-target')?.value;
+    if (supplierId) {
+      const sl = computeSupplierLedger(supplierId, from, to);
+      bodyHtml = `<h2>Supplier Ledger: ${esc(sl.supplierName)}</h2>
+      <table><thead><tr><th>Date</th><th>Voucher #</th><th>Description</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead><tbody>
+        ${sl.rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td class="mono">${esc(r.voucherNumber)}</td><td>${esc(r.description)}</td><td style="text-align:right" class="mono">${r.debit?fmt(r.debit):''}</td><td style="text-align:right" class="mono">${r.credit?fmt(r.credit):''}</td><td style="text-align:right" class="mono">${fmt(r.runningBal)}</td></tr>`).join('') || '<tr><td colspan="6">No activity</td></tr>'}
+        <tr style="background:#f0f0f0"><td colspan="5"><strong>${sl.closing>0?'You owe them':'Settled'}</strong></td><td style="text-align:right"><strong>${fmt(sl.closing)}</strong></td></tr>
+      </tbody></table>`;
+    } else {
+      bodyHtml = `<h2>Supplier Ledger — All Suppliers</h2>
+      <p style="font-size:15px;color:#555">Pick one supplier above for a detailed statement with running balance, or leave blank for this summary.</p>
+      <table><thead><tr><th>Supplier</th><th>Total Invoiced</th><th>Total Paid</th><th>Outstanding</th></tr></thead><tbody>
+        ${db.secondary.map(sp=>{const invs=db.supplierInvoices.filter(i=>i.supplierId===sp.id); const totalInv=invs.reduce((a,i)=>a+i.amount,0); const totalPaid=db.supplierPayments.filter(p=>p.supplierId===sp.id).reduce((a,p)=>a+p.amount,0); return `<tr><td>${esc(sp.name)}</td><td>${fmt(totalInv)}</td><td>${fmt(totalPaid)}</td><td style="${totalInv-totalPaid>0?'color:red':''}">${fmt(totalInv-totalPaid)}</td></tr>`;}).join('')||'<tr><td colspan="4">No suppliers</td></tr>'}
+      </tbody></table>`;
+    }
   } else if (type==='supplier-outstanding') {
     const rows = db.secondary.map(sp=>{const invs=db.supplierInvoices.filter(i=>i.supplierId===sp.id); const totalInv=invs.reduce((a,i)=>a+i.amount,0); const totalPaid=db.supplierPayments.filter(p=>p.supplierId===sp.id).reduce((a,p)=>a+p.amount,0); return {name:sp.name, due:totalInv-totalPaid};}).filter(r=>r.due>0);
     bodyHtml = `<h2>Outstanding Payables</h2>
@@ -7442,10 +8406,21 @@ function generateReport() {
       ${entSorted.map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.category||'—')}</td><td>${esc(e.phone||'—')}</td><td>${esc(e.email||'—')}</td><td class="mono"><strong>${fmt(e.totalValue||0)}</strong></td></tr>`).join('')}
     </tbody></table>`;
   } else if (type==='due-ledger') {
-    bodyHtml = `<h2>Customer Due Ledger</h2>
-    <table><thead><tr><th>Receipt</th><th>Customer</th><th>Total</th><th>Paid</th><th>Due</th><th>Status</th></tr></thead><tbody>
-      ${db.creditSales.length?db.creditSales.map(c=>`<tr><td>${esc(c.receiptNumber)}</td><td>${esc(c.customerName)}</td><td>${fmt(c.totalAmount)}</td><td>${fmt(c.paidAmount)}</td><td>${fmt(c.dueAmount)}</td><td>${esc(c.status)}</td></tr>`).join(''):'<tr><td colspan="6">No credit sales recorded</td></tr>'}
-    </tbody></table>`;
+    const customerName = document.getElementById('rpt-ledger-target')?.value;
+    if (customerName) {
+      const cl = computeCustomerLedger(customerName, from, to);
+      bodyHtml = `<h2>Customer Ledger: ${esc(cl.customerName)}</h2>
+      <table><thead><tr><th>Date</th><th>Voucher #</th><th>Description</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead><tbody>
+        ${cl.rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td class="mono">${esc(r.voucherNumber)}</td><td>${esc(r.description)}</td><td style="text-align:right" class="mono">${r.debit?fmt(r.debit):''}</td><td style="text-align:right" class="mono">${r.credit?fmt(r.credit):''}</td><td style="text-align:right" class="mono">${fmt(r.runningBal)}</td></tr>`).join('') || '<tr><td colspan="6">No activity</td></tr>'}
+        <tr style="background:#f0f0f0"><td colspan="5"><strong>${cl.closing>0?'They owe you':'Settled'}</strong></td><td style="text-align:right"><strong>${fmt(cl.closing)}</strong></td></tr>
+      </tbody></table>`;
+    } else {
+      bodyHtml = `<h2>Customer Due Ledger — All Customers</h2>
+      <p style="font-size:15px;color:#555">Pick one customer above for a detailed statement with running balance, or leave blank for this summary.</p>
+      <table><thead><tr><th>Receipt</th><th>Customer</th><th>Total</th><th>Paid</th><th>Due</th><th>Status</th></tr></thead><tbody>
+        ${db.creditSales.length?db.creditSales.map(c=>`<tr><td>${esc(c.receiptNumber)}</td><td>${esc(c.customerName)}</td><td>${fmt(c.totalAmount)}</td><td>${fmt(c.paidAmount)}</td><td>${fmt(c.dueAmount)}</td><td>${esc(c.status)}</td></tr>`).join(''):'<tr><td colspan="6">No credit sales recorded</td></tr>'}
+      </tbody></table>`;
+    }
   } else if (type==='hr') {
     const emps = db.employees.filter(e=>e.status==='active');
     bodyHtml = `<h2>HR Strength Report</h2>
@@ -7474,22 +8449,37 @@ function generateReport() {
       ${logs.slice(-500).reverse().map(a=>`<tr><td class="mono" style="font-size:14px">${(a.timestamp||'').replace('T',' ').slice(0,19)}</td><td>${esc(a.username||'—')}</td><td>${esc(a.module||'—')}</td><td>${esc(a.action||'—')}</td><td>${esc(a.recordName||a.recordId||'—')}</td></tr>`).join('')}
     </tbody></table>`;
   } else if (type==='vat-summary' || type==='vat-sales') {
-    const sales = db.sales.filter(x=>x.taxAmount>0 && (!from||x.date>=from) && (!to||x.date<=to));
-    const totalVAT = sales.reduce((a,x)=>a+(x.taxAmount||0),0);
-    const totalTaxable = sales.reduce((a,x)=>a+(x.subtotal||0),0);
-    bodyHtml = `<h2>${type==='vat-summary'?'Monthly VAT Summary':'VAT Sales Report'}</h2>
+    const reg = computeVATSalesRegister(from, to);
+    bodyHtml = `<h2>${type==='vat-summary'?'Monthly VAT Summary':'VAT Sales Register (Bikri Khata)'}</h2>
     <p style="font-size:17px;margin-bottom:12px">PAN: ${esc(s.panNumber||'N/A')} | VAT Reg: ${esc(s.vatNumber||'N/A')} | Rate: ${s.pos?.defaultTax||13}%</p>
-    <table><thead><tr><th>Date</th><th>Invoice</th><th>Customer</th><th>Taxable Amt</th><th>VAT</th><th>Total</th></tr></thead><tbody>
-      ${sales.length?sales.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.receiptNumber)}</td><td>${esc(x.customerName||'Walk-in')}</td><td>${fmt(x.subtotal||0)}</td><td>${fmt(x.taxAmount||0)}</td><td>${fmt(x.total||0)}</td></tr>`).join(''):'<tr><td colspan="6">No taxable sales in period</td></tr>'}
-      <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL</strong></td><td><strong>${fmt(totalTaxable)}</strong></td><td><strong>${fmt(totalVAT)}</strong></td><td><strong>${fmt(totalTaxable+totalVAT)}</strong></td></tr>
-    </tbody></table>`;
+    <table><thead><tr><th>Date</th><th>Voucher #</th><th>Description</th><th style="text-align:right">Taxable Amt</th><th style="text-align:right">VAT</th><th style="text-align:right">Total</th></tr></thead><tbody>
+      ${reg.rows.length?reg.rows.map(r=>`<tr${r.isReversal?' style="color:#b00"':''}><td>${fmtDate(r.date)}</td><td class="mono">${esc(r.voucherNumber)}</td><td>${esc(r.description)}</td><td style="text-align:right" class="mono">${fmt(r.taxable)}</td><td style="text-align:right" class="mono">${fmt(r.vat)}</td><td style="text-align:right" class="mono">${fmt(r.taxable+r.vat)}</td></tr>`).join(''):'<tr><td colspan="6">No taxable sales in period</td></tr>'}
+      <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL</strong></td><td style="text-align:right"><strong>${fmt(reg.totalTaxable)}</strong></td><td style="text-align:right"><strong>${fmt(reg.totalVAT)}</strong></td><td style="text-align:right"><strong>${fmt(reg.totalTaxable+reg.totalVAT)}</strong></td></tr>
+    </tbody></table>
+    <p style="font-size:13px;color:#777;margin-top:8px">Rows in red are Credit Notes (corrections) — already netted into the total above.</p>`;
   } else if (type==='vat-purchase') {
-    const purchases = db.accounting.filter(a=>a.type==='expense'&&(a.category==='Purchase'||a.category==='Supplies')&&(!from||a.date>=from)&&(!to||a.date<=to));
-    bodyHtml = `<h2>VAT Purchase Report</h2>
+    const reg = computeVATPurchaseRegister(from, to);
+    bodyHtml = `<h2>VAT Purchase Register (Kharid Khata)</h2>
     <p style="font-size:17px;margin-bottom:12px">PAN: ${esc(s.panNumber||'N/A')} | VAT Reg: ${esc(s.vatNumber||'N/A')}</p>
-    <table><thead><tr><th>Date</th><th>Description</th><th>Reference</th><th>Amount</th></tr></thead><tbody>
-      ${purchases.length?purchases.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${esc(p.description)}</td><td>${esc(p.reference||'—')}</td><td>${fmt(p.amount)}</td></tr>`).join(''):'<tr><td colspan="4">No purchases in period</td></tr>'}
-      <tr style="background:#f0f0f0"><td colspan="3"><strong>Total</strong></td><td><strong>${fmt(purchases.reduce((a,p)=>a+p.amount,0))}</strong></td></tr>
+    <table><thead><tr><th>Date</th><th>Voucher #</th><th>Description</th><th style="text-align:right">Taxable Amt</th><th style="text-align:right">VAT</th><th style="text-align:right">Total</th></tr></thead><tbody>
+      ${reg.rows.length?reg.rows.map(r=>`<tr${r.isReversal?' style="color:#b00"':''}><td>${fmtDate(r.date)}</td><td class="mono">${esc(r.voucherNumber)}</td><td>${esc(r.description)}</td><td style="text-align:right" class="mono">${fmt(r.taxable)}</td><td style="text-align:right" class="mono">${fmt(r.vat)}</td><td style="text-align:right" class="mono">${fmt(r.taxable+r.vat)}</td></tr>`).join(''):'<tr><td colspan="6">No purchases in period</td></tr>'}
+      <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL</strong></td><td style="text-align:right"><strong>${fmt(reg.totalTaxable)}</strong></td><td style="text-align:right"><strong>${fmt(reg.totalVAT)}</strong></td><td style="text-align:right"><strong>${fmt(reg.totalTaxable+reg.totalVAT)}</strong></td></tr>
+    </tbody></table>
+    <p style="font-size:13px;color:#777;margin-top:8px">Rows in red are Debit Notes (corrections) — already netted into the total above.</p>`;
+  } else if (type==='tds-register') {
+    const tds = computeTDSRegister(from, to);
+    bodyHtml = `<h2>TDS Register (Rent / Contractor / Professional)</h2>
+    <p style="font-size:15px;color:#555;margin-bottom:12px">What you've withheld from rent-to-company, contractor, and professional fee payments — deposit deadline is the 25th of the following month.</p>
+    <table><thead><tr><th>Date</th><th>Voucher #</th><th>Description</th><th style="text-align:right">TDS Withheld</th></tr></thead><tbody>
+      ${tds.rows.length?tds.rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td class="mono">${esc(r.voucherNumber)}</td><td>${esc(r.description)}</td><td style="text-align:right" class="mono">${fmt(r.tdsAmount)}</td></tr>`).join(''):'<tr><td colspan="4">No TDS withheld in this period</td></tr>'}
+      <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL DUE TO IRD</strong></td><td style="text-align:right"><strong>${fmt(tds.total)}</strong></td></tr>
+    </tbody></table>`;
+  } else if (type==='correction-notes') {
+    const notes = (db.correctionNotes||[]).filter(n=>(!from||n.date>=from)&&(!to||n.date<=to)).sort((a,b)=>a.date.localeCompare(b.date));
+    bodyHtml = `<h2>Credit &amp; Debit Notes (Invoice Corrections)</h2>
+    <p style="font-size:15px;color:#555;margin-bottom:12px">Every correction made to a finalized invoice — nothing here means an original number or amount was ever edited directly.</p>
+    <table><thead><tr><th>Date</th><th>Note #</th><th>Type</th><th>Original</th><th>Corrected</th><th style="text-align:right">Adjustment</th><th>Reason</th></tr></thead><tbody>
+      ${notes.length?notes.map(n=>`<tr><td>${fmtDate(n.date)}</td><td class="mono">${esc(n.noteNumber)}</td><td>${n.type==='credit'?'Credit Note (Sale)':'Debit Note (Purchase)'}</td><td>${fmt(n.originalAmount)}</td><td>${fmt(n.correctedAmount)}</td><td style="text-align:right" class="mono">${fmt(n.adjustmentAmount)}</td><td>${esc(n.reason)}${n.note?' — '+esc(n.note):''}</td></tr>`).join(''):'<tr><td colspan="7">No corrections issued in this period</td></tr>'}
     </tbody></table>`;
   } else if (type==='tax-deduction') {
     bodyHtml = `<h2>Tax Deduction Report</h2>
@@ -9517,21 +10507,38 @@ function openSupplierInvoiceModal(poId, grnId) {
   document.getElementById('sinv-number').value = '';
   document.getElementById('sinv-amount').value = total||'';
   document.getElementById('sinv-due').value = '';
+  document.getElementById('sinv-has-vat').checked = true;
   openModal('sinv-modal-overlay');
+  updateSinvVATPreview();
+}
+
+function updateSinvVATPreview() {
+  const amount = parseFloat(document.getElementById('sinv-amount').value) || 0;
+  const hasVat = document.getElementById('sinv-has-vat').checked;
+  const preview = document.getElementById('sinv-vat-preview');
+  if (!hasVat || !amount) { preview.textContent = ''; return; }
+  const rate = db.settings.pos?.defaultTax || 13;
+  const taxable = +(amount / (1 + rate/100)).toFixed(2);
+  const vat = +(amount - taxable).toFixed(2);
+  preview.textContent = `Taxable: ${fmt(taxable)}  +  VAT (${rate}%): ${fmt(vat)}  =  ${fmt(amount)}`;
 }
 
 function saveSupplierInvoice() {
   const number = document.getElementById('sinv-number').value.trim();
   if (!number) { toast('Invoice number required','error'); return; }
   const po = db.purchaseOrders.find(x=>x.id===window._sinvPO);
+  const amount = parseFloat(document.getElementById('sinv-amount').value)||0;
+  const hasVat = document.getElementById('sinv-has-vat').checked;
+  const rate = db.settings.pos?.defaultTax || 13;
+  const vatAmount = hasVat ? +(amount - amount/(1+rate/100)).toFixed(2) : 0;
   const invoice = {
     id:uid(), poId:window._sinvPO, grnId:window._sinvGRN, invoiceNumber:number,
-    supplierId:po?.supplierId, amount:parseFloat(document.getElementById('sinv-amount').value)||0,
+    supplierId:po?.supplierId, amount, vatAmount,
     dueDate:document.getElementById('sinv-due').value, status:'unpaid', date:today(), createdAt:now()
   };
   db.supplierInvoices.push(invoice);
 
-  // Ledger: automatic double-entry (invisible) — Dr Purchases, Cr Accounts Payable
+  // Ledger: automatic double-entry (invisible) — Dr Purchases (net) + Dr VAT Receivable, Cr Accounts Payable (gross)
   // This is the liability recorded the moment the invoice is created, before you pay a rupee —
   // confirmed as standard accounting practice, needed for accurate Payables Aging / Balance Sheet.
   postSupplierInvoiceJournal(invoice);
@@ -9554,7 +10561,8 @@ function renderSupplierInvoices() {
       <td class="mono amt-purchase">${fmt(inv.amount)}</td>
       <td>${fmtDate(inv.dueDate)||'—'}</td>
       <td><span class="badge ${status==='paid'?'badge-success':status==='partial'?'badge-warning':'badge-danger'}">${status==='paid'?'Paid':status==='partial'?'Partial':'Unpaid'}</span></td>
-      <td>${due>0?`<button class="btn btn-xs btn-success" onclick="openSupplierPaymentModal('${inv.id}')">💰 Pay</button>`:'<span class="text-muted">Settled</span>'}</td>
+      <td style="display:flex;gap:6px">${due>0?`<button class="btn btn-xs btn-success" onclick="openSupplierPaymentModal('${inv.id}')">💰 Pay</button>`:'<span class="text-muted">Settled</span>'}
+      ${(session.role==='admin'||hasPermission('Accounting'))?`<button class="btn btn-xs btn-secondary" onclick="openCorrectInvoice('supplier-invoice','${inv.id}')">🧾 Correct</button>`:''}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">No supplier invoices yet</div></div></td></tr>';
 }

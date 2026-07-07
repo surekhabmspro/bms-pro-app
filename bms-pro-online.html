@@ -488,6 +488,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 .report-signature{margin-top:60px;page-break-inside:avoid;break-inside:avoid;page-break-before:avoid;break-before:avoid;font-size:14px}
 /* Report category selector grid */
 .report-cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:16px}
+.report-group-heading{font-size:16px;font-weight:700;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--border,#e2e2e2);display:flex;align-items:center;gap:6px}
 .report-cat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all var(--transition)}
 .report-cat-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.15)}
 .report-cat-icon{font-size:31px;margin-bottom:8px}
@@ -1207,6 +1208,8 @@ textarea.form-control{resize:vertical;min-height:80px}
           <button class="btn btn-secondary btn-sm btn-print" onclick="previewAccountingPrint()">🖨️ Print</button>
           <button class="btn btn-secondary btn-sm" onclick="exportAccountingPDF()">📄 Export PDF</button>
           <button class="btn btn-secondary btn-sm" onclick="openBankRecon()">🏦 Bank Reconciliation</button>
+          <button class="btn btn-secondary btn-sm" onclick="openMyEquipment()">🏗️ My Equipment</button>
+          <button class="btn btn-secondary btn-sm" onclick="openOwnerTxn()">🤝 Owner/Partner Transaction</button>
           <button class="btn btn-primary btn-sm" onclick="openAccountingModal()">+ Add Entry</button>
         </div>
         <div class="table-wrap"><table><thead><tr><th onclick="sortTable('acct','date')">Date ↕</th><th>Type</th><th onclick="sortTable('acct','category')">Category ↕</th><th>Description</th><th onclick="sortTable('acct','amount')">Amount ↕</th><th>Reference</th><th>Balance</th><th>Actions</th></tr></thead><tbody id="acct-tbody"></tbody></table></div>
@@ -1376,6 +1379,8 @@ textarea.form-control{resize:vertical;min-height:80px}
             <div class="settings-nav-item" onclick="setSettingsSection('pos',this)">🛒 POS Settings</div>
             <div class="settings-nav-item" onclick="setSettingsSection('currency',this)">💱 Currency & Dates</div>
             <div class="settings-nav-item" onclick="setSettingsSection('accounting-sec',this)">🔒 Accounting Security</div>
+            <div class="settings-nav-item" onclick="setSettingsSection('advanced-ledger',this)">⚙️ Advanced Ledger</div>
+            <div class="settings-nav-item" onclick="setSettingsSection('ownership',this)">🤝 Business Ownership</div>
             <div class="settings-nav-item" onclick="setSettingsSection('salary-comp',this)">💵 Salary Components</div>
             <div class="settings-nav-item" onclick="setSettingsSection('tax',this)">🧾 Nepal Tax & VAT</div>
             <div class="settings-nav-item" onclick="setSettingsSection('notifications',this)">🔔 Notifications</div>
@@ -1635,6 +1640,23 @@ textarea.form-control{resize:vertical;min-height:80px}
                 <div class="form-hint" style="color:var(--warning);margin-top:6px">⚠️ Set and confirm a PIN below, then click Save, before relying on this feature — enabling the checkbox alone without saving a PIN can lock you out of Accounting.</div>
               </div>
               <button class="btn btn-primary" style="margin-top:12px" onclick="saveAcctPINSettings()">💾 Save Security Settings</button>
+            </div>
+            <!-- BUSINESS OWNERSHIP (Single Owner or Partnership) -->
+            <div class="settings-section" id="sec-ownership">
+              <div class="settings-title">🤝 Business Ownership<span class="help-tip" data-tip="Controls how profit and capital are tracked and shown on your Balance Sheet — Single Owner (one capital account) or Partnership (one capital account per partner, split by their agreed share).">?</span></div>
+              <div class="settings-desc">Doesn't change anything on your daily screens — only affects how profit is shown on your Balance Sheet and equity reports.</div>
+              <div class="form-group">
+                <select class="form-control" id="ownership-type" onchange="toggleOwnershipUI()">
+                  <option value="single">Single Owner</option>
+                  <option value="partnership">Partnership</option>
+                </select>
+              </div>
+              <div id="partners-editor" style="display:none">
+                <div id="partners-rows"></div>
+                <button class="btn btn-secondary btn-sm" onclick="addPartnerRow()">+ Add Partner</button>
+                <div id="partners-total-hint" class="form-hint" style="margin-top:8px;font-weight:600"></div>
+              </div>
+              <button class="btn btn-primary" style="margin-top:12px" onclick="saveOwnershipSettings()">💾 Save Ownership Settings</button>
             </div>
             <!-- ADVANCED LEDGER (tucked away — not part of normal workflow) -->
             <div class="settings-section" id="sec-advanced-ledger">
@@ -2000,6 +2022,67 @@ textarea.form-control{resize:vertical;min-height:80px}
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('bank-recon-overlay')">Close</button></div>
+  </div>
+</div>
+
+<!-- My Equipment (Fixed Asset Register) -->
+<div class="modal-overlay" id="equipment-overlay" onclick="closeModalOnOverlay(event,'equipment-overlay')">
+  <div class="modal modal-lg">
+    <div class="modal-header"><div class="modal-title">🏗️ My Equipment<span class="help-tip" data-tip="Machinery, vehicles, furniture, computers — anything the business owns long-term. Enter it once; its value reduces automatically every month (called depreciation) with nothing more for you to do.">?</span></div><button class="modal-close" onclick="closeModal('equipment-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-hint" style="margin-bottom:12px">Enter what you own, once. Its book value updates by itself every month after that.</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">What is it?</label><input class="form-control" id="eq-name" placeholder="e.g. Delivery Van, Weighing Machine"></div>
+        <div class="form-group"><label class="form-label">Type</label>
+          <select class="form-control" id="eq-type" onchange="applyEquipmentPreset()">
+            <option value="vehicle">Vehicle (5 years)</option>
+            <option value="machinery">Machinery (10 years)</option>
+            <option value="computer">Computer/Office Equipment (4 years)</option>
+            <option value="furniture">Furniture &amp; Fixtures (7 years)</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">What did it cost?</label><input class="form-control" type="number" id="eq-cost" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Purchase Date</label><input class="form-control" id="eq-date" onfocus="openCalendar('eq-date','standard')"></div>
+        <div class="form-group"><label class="form-label">Useful Life (years)</label><input class="form-control" type="number" id="eq-life" value="10"></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveFixedAsset()">💾 Add to My Equipment</button>
+
+      <h3 style="margin-top:20px;font-size:16px;font-weight:700">Your Equipment</h3>
+      <div class="table-wrap"><table><thead><tr><th>Name</th><th>Type</th><th>Cost</th><th>Depreciated So Far</th><th>Current Value</th><th></th></tr></thead><tbody id="equipment-tbody"></tbody></table></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('equipment-overlay')">Close</button></div>
+  </div>
+</div>
+
+<!-- Owner/Partner Transaction (money in/out from the owner(s), not a sale or expense) -->
+<div class="modal-overlay" id="owner-txn-overlay" onclick="closeModalOnOverlay(event,'owner-txn-overlay')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Owner/Partner Transaction<span class="help-tip" data-tip="Use this when you (or a partner) put personal money into the business, or take money out for personal use — not a sale, not a business expense.">?</span></div><button class="modal-close" onclick="closeModal('owner-txn-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">What happened?</label>
+        <select class="form-control" id="owner-txn-type">
+          <option value="in">Invested money into the business</option>
+          <option value="out">Withdrew money for personal use</option>
+        </select>
+      </div>
+      <div class="form-group" id="owner-txn-partner-group" style="display:none">
+        <label class="form-label">Which partner?</label>
+        <select class="form-control" id="owner-txn-partner"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Amount</label><input class="form-control" type="number" id="owner-txn-amount" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Date</label><input class="form-control" id="owner-txn-date" onfocus="openCalendar('owner-txn-date','standard')"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Paid Via</label>
+        <select class="form-control" id="owner-txn-method"><option value="Cash">Cash</option><option value="Bank Transfer">Bank</option></select>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('owner-txn-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveOwnerTxn()">💾 Save</button></div>
   </div>
 </div>
 
@@ -2629,6 +2712,7 @@ function defaultDB() {
     journalEntries: [],    // NEW: double-entry journal entries (Dr/Cr lines) — auto-generated behind the scenes
     correctionNotes: [],   // NEW: Credit Notes (sales corrections) & Debit Notes (purchase corrections)
     bankReconciliations: [], // NEW: saved monthly bank reconciliations
+    fixedAssets: [],       // NEW: "My Equipment" — cost, purchase date, useful life; depreciated automatically
     employees: [],
     attendance: {},
     payrollHistory: [],
@@ -2664,6 +2748,8 @@ function defaultDB() {
       lastBackupDate: null,
       accountingPIN: '',             // Accounting PIN security
       accountingPINEnabled: false,
+      ownershipType: 'single',       // 'single' or 'partnership'
+      partners: [],                  // [{id, name, sharePct, capitalCode, drawCode}] — only used when ownershipType==='partnership'
       // ── NEW: Double-entry ledger settings (invisible to normal workflow) ──
       ledgerEnabled: true,           // master switch; ledger runs silently behind existing screens
       voucherCounters: { Sales:0, Purchase:0, Payment:0, Receipt:0, Journal:0 },
@@ -2675,7 +2761,7 @@ function defaultDB() {
         salesAccountRetail: '4010', salesAccountWholesale: '4020',
         arAccount: '1030', apAccount: '2010',
         vatOutputAccount: '2020', vatInputAccount: '1050',
-        purchaseAccount: '5010', inventoryAccount: '1042',
+        purchaseAccount: '5010', inventoryAccount: '1042', cogsAccount: '5010',
         salaryExpenseAccount: '5020', tdsPayableAccount: '2060',
         tdsRates: { rentCompany:0.10, contractorVAT:0.015, contractorNoVAT:0.15, consultancy:0.15 },
         tdsApplicableCategories: ['Rent','Contractor','Professional Fees']
@@ -2814,6 +2900,9 @@ function loadDB() {
       if (!db.journalEntries) db.journalEntries = [];
       if (!db.correctionNotes) db.correctionNotes = [];
       if (!db.bankReconciliations) db.bankReconciliations = [];
+      if (!db.fixedAssets) db.fixedAssets = [];
+      if (db.settings.ownershipType === undefined) db.settings.ownershipType = 'single';
+      if (!db.settings.partners) db.settings.partners = [];
       if (db.settings.ledgerEnabled === undefined) db.settings.ledgerEnabled = true;
       if (!db.settings.voucherCounters) db.settings.voucherCounters = { Sales:0, Purchase:0, Payment:0, Receipt:0, Journal:0 };
       if (!db.settings.acctMappings) {
@@ -2825,13 +2914,16 @@ function loadDB() {
           salesAccountRetail: '4010', salesAccountWholesale: '4020',
           arAccount: '1030', apAccount: '2010',
           vatOutputAccount: '2020', vatInputAccount: '1050',
-          purchaseAccount: '5010', inventoryAccount: '1042',
+          purchaseAccount: '5010', inventoryAccount: '1042', cogsAccount: '5010',
           salaryExpenseAccount: '5020', tdsPayableAccount: '2060',
         tdsRates: { rentCompany:0.10, contractorVAT:0.015, contractorNoVAT:0.15, consultancy:0.15 },
         tdsApplicableCategories: ['Rent','Contractor','Professional Fees']
         };
       }
       if (!db.chartOfAccounts.length) seedChartOfAccounts();
+      // Phase 6: 5010 is now perpetual Cost of Goods Sold (recognized at sale), not Purchases-at-buy-time
+      const acc5010 = db.chartOfAccounts.find(a=>a.code==='5010');
+      if (acc5010 && acc5010.name.includes('Purchases')) acc5010.name = 'Cost of Goods Sold';
       // Ensure pos.paymentMethods includes Credit
       if (!db.settings.pos.paymentMethods.includes('Credit'))
         db.settings.pos.paymentMethods.push('Credit');
@@ -2847,6 +2939,7 @@ function loadDB() {
     db = defaultDB();
   }
   if (!db.chartOfAccounts || !db.chartOfAccounts.length) seedChartOfAccounts();
+  runDepreciationCatchup();
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -2896,7 +2989,7 @@ const DEFAULT_CHART_OF_ACCOUNTS = [
   { code:'4020', name:'Sales Revenue – Wholesale', type:'income', normalBalance:'credit' },
   { code:'4090', name:'Other Income', type:'income', normalBalance:'credit' },
   // ── Expense ──
-  { code:'5010', name:'Purchases / Cost of Goods Sold', type:'expense', normalBalance:'debit' },
+  { code:'5010', name:'Cost of Goods Sold', type:'expense', normalBalance:'debit' },
   { code:'5020', name:'Salary & Wages', type:'expense', normalBalance:'debit' },
   { code:'5030', name:'Rent', type:'expense', normalBalance:'debit' },
   { code:'5040', name:'Utilities', type:'expense', normalBalance:'debit' },
@@ -2993,6 +3086,24 @@ function voidJournalEntriesForRef(refType, refId, reason) {
 
 /* ── Per-transaction-type posting rules (exactly the mapping rules approved in Phase 1) ── */
 
+// Perpetual inventory: recognizes the cost of what was actually sold, moving it from the
+// Inventory asset to Cost of Goods Sold at the moment of sale — using the cost price already
+// stored on each product. This is what makes Gross Profit and Balance Sheet Inventory accurate.
+function postCOGSJournal(sale) {
+  let totalCost = 0;
+  (sale.items||[]).forEach(item => {
+    const rec = db.records.find(r=>r.id===item.id);
+    const cost = (rec?.costPrice || 0) * (item.qty || 0);
+    totalCost += cost;
+  });
+  if (totalCost <= 0) return null; // no cost data available — skips silently rather than posting a wrong number
+  const lines = [
+    { accountCode: db.settings.acctMappings.cogsAccount, debit: totalCost, credit: 0 },
+    { accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: totalCost }
+  ];
+  return postJournalEntry({ date: sale.date, voucherKind:'Sales', refType:'cogs', refId: sale.id, reference: sale.receiptNumber, description: `Cost of Goods Sold — ${sale.receiptNumber}`, lines });
+}
+
 function postSaleJournal(sale) {
   const debitCode = resolvePaymentAccountCode(sale.paymentMethod, sale.qrId);
   const salesCode = resolveSalesAccountCode(sale.customerType);
@@ -3024,7 +3135,8 @@ function postDueSettlementJournal(credit, amount, method) {
 function postSupplierInvoiceJournal(invoice) {
   const vatAmount = invoice.vatAmount || 0;
   const netAmount = +(invoice.amount - vatAmount).toFixed(2);
-  const lines = [ { accountCode: db.settings.acctMappings.purchaseAccount, debit: netAmount, credit: 0 } ];
+  // Perpetual inventory: goods bought sit as an ASSET until sold, not expensed at purchase time.
+  const lines = [ { accountCode: db.settings.acctMappings.inventoryAccount, debit: netAmount, credit: 0 } ];
   if (vatAmount > 0) lines.push({ accountCode: db.settings.acctMappings.vatInputAccount, debit: vatAmount, credit: 0 });
   lines.push({ accountCode: db.settings.acctMappings.apAccount, debit: 0, credit: invoice.amount });
   return postJournalEntry({ date: invoice.date, voucherKind:'Purchase', refType:'supplier-invoice', refId: invoice.id, reference: invoice.invoiceNumber, description: `Supplier Invoice ${invoice.invoiceNumber}`, lines });
@@ -3206,7 +3318,7 @@ function runLedgerMigration() {
     const outstanding = (inv.amount||0) - paid;
     if (outstanding > 0.01) {
       const lines = [
-        { accountCode: db.settings.acctMappings.purchaseAccount, debit: outstanding, credit: 0 },
+        { accountCode: db.settings.acctMappings.inventoryAccount, debit: outstanding, credit: 0 },
         { accountCode: db.settings.acctMappings.apAccount, debit: 0, credit: outstanding }
       ];
       if (postJournalEntry({ date: today(), voucherKind:'Journal', refType:'opening-balance', refId: inv.id, reference: inv.invoiceNumber, description: `Opening balance — outstanding payable, ${inv.invoiceNumber}`, lines })) openingCount++;
@@ -3346,7 +3458,11 @@ function computeBalanceSheet(asOf) {
   const totalAssets = assets.reduce((a,r)=>a+r.balance,0);
   const totalLiabilities = liabilities.reduce((a,r)=>a+r.balance,0);
   const totalEquity = equity.reduce((a,r)=>a+r.balance,0) + ytd.netProfit;
-  return { assets, liabilities, equity, currentYearEarnings: ytd.netProfit, totalAssets, totalLiabilities, totalEquity, balanced: Math.abs(totalAssets - (totalLiabilities+totalEquity)) < 1 };
+  let earningsSplit = null;
+  if (db.settings.ownershipType === 'partnership' && (db.settings.partners||[]).length) {
+    earningsSplit = db.settings.partners.map(p => ({ name:p.name, sharePct:p.sharePct, amount: +(ytd.netProfit * (p.sharePct/100)).toFixed(2) }));
+  }
+  return { assets, liabilities, equity, currentYearEarnings: ytd.netProfit, earningsSplit, totalAssets, totalLiabilities, totalEquity, balanced: Math.abs(totalAssets - (totalLiabilities+totalEquity)) < 1 };
 }
 
 // ── 4. Day Book ──
@@ -3488,15 +3604,15 @@ function postCreditNoteJournal(cn, sale) {
   return postJournalEntry({ date: cn.date, voucherKind:'Journal', refType:'credit-note', refId: cn.id, reference: cn.noteNumber, description: `Credit Note ${cn.noteNumber} — ${cn.reason}`, lines });
 }
 
-// Purchase correction: reduces what you owe the supplier and reduces the recorded Purchase
-// expense and VAT input proportionally to the original invoice's own net/VAT split.
+// Purchase correction: reduces what you owe the supplier and reduces the recorded Inventory
+// asset and VAT input proportionally to the original invoice's own net/VAT split.
 function postDebitNoteJournal(dn, invoice) {
   const original = invoice.amount || 0;
   const vatAmount = invoice.vatAmount || 0;
   const vatPortion = original > 0 ? +(dn.adjustmentAmount * (vatAmount/original)).toFixed(2) : 0;
   const netPortion = +(dn.adjustmentAmount - vatPortion).toFixed(2);
   const lines = [ { accountCode: db.settings.acctMappings.apAccount, debit: dn.adjustmentAmount, credit: 0 } ];
-  lines.push({ accountCode: db.settings.acctMappings.purchaseAccount, debit: 0, credit: netPortion });
+  lines.push({ accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: netPortion });
   if (vatPortion > 0) lines.push({ accountCode: db.settings.acctMappings.vatInputAccount, debit: 0, credit: vatPortion });
   return postJournalEntry({ date: dn.date, voucherKind:'Journal', refType:'debit-note', refId: dn.id, reference: dn.noteNumber, description: `Debit Note ${dn.noteNumber} — ${dn.reason}`, lines });
 }
@@ -3523,7 +3639,7 @@ function computeVATPurchaseRegister(from, to) {
   const rows = entries.map(j => {
     const isReversal = j.refType === 'debit-note';
     const vatLine = j.lines.find(l=>l.accountCode===vatCode);
-    const purchaseLine = j.lines.find(l=>l.accountCode===db.settings.acctMappings.purchaseAccount);
+    const purchaseLine = j.lines.find(l=>l.accountCode===db.settings.acctMappings.inventoryAccount);
     const vat = vatLine ? (isReversal ? -(vatLine.credit||0) : (vatLine.debit||0)) : 0;
     const taxable = purchaseLine ? (isReversal ? -(purchaseLine.credit||0) : (purchaseLine.debit||0)) : 0;
     return { date:j.date, voucherNumber:j.voucherNumber, description:j.description, taxable, vat, isReversal };
@@ -3859,6 +3975,278 @@ function aggregateAging(rows) {
   const parties = Object.values(byName).sort((a,b)=>b.total-a.total);
   const totals = parties.reduce((acc,p)=>{ ['notDue','d30','d60','d90','d90plus','total'].forEach(k=>acc[k]=(acc[k]||0)+p[k]); return acc; }, {});
   return { parties, totals };
+}
+
+/* ── Phase 6-B: My Equipment (Fixed Asset Register) + automatic straight-line depreciation ── */
+const EQUIPMENT_PRESETS = {
+  vehicle:   { life:5,  assetCode:'1120', depCode:'1121' },
+  machinery: { life:10, assetCode:'1110', depCode:'1111' },
+  computer:  { life:4,  assetCode:'1140', depCode:'1141' },
+  furniture: { life:7,  assetCode:'1130', depCode:'1131' },
+  other:     { life:10, assetCode:'1110', depCode:'1111' }
+};
+
+function applyEquipmentPreset() {
+  const type = document.getElementById('eq-type').value;
+  document.getElementById('eq-life').value = EQUIPMENT_PRESETS[type]?.life || 10;
+}
+
+function openMyEquipment() {
+  document.getElementById('eq-name').value = '';
+  document.getElementById('eq-type').value = 'machinery';
+  document.getElementById('eq-cost').value = '';
+  document.getElementById('eq-date').value = today();
+  document.getElementById('eq-life').value = 10;
+  renderEquipmentList();
+  openModal('equipment-overlay');
+}
+
+function saveFixedAsset() {
+  const name = document.getElementById('eq-name').value.trim();
+  const cost = parseFloat(document.getElementById('eq-cost').value) || 0;
+  const type = document.getElementById('eq-type').value;
+  const purchaseDate = document.getElementById('eq-date').value || today();
+  const usefulLifeYears = parseFloat(document.getElementById('eq-life').value) || 10;
+  if (!name || cost <= 0) { toast('Enter a name and cost','error'); return; }
+  const preset = EQUIPMENT_PRESETS[type] || EQUIPMENT_PRESETS.other;
+  const asset = {
+    id: uid(), name, type, assetCode: preset.assetCode, depCode: preset.depCode,
+    cost, purchaseDate, usefulLifeYears, accumulatedDepreciation: 0, lastDepreciatedMonth: null,
+    status:'active', createdAt: now(), createdBy: session.username
+  };
+  db.fixedAssets.push(asset);
+  // Ledger: the asset moves onto the books at cost, paid from Cash (adjust in Advanced Ledger if paid from Bank)
+  postJournalEntry({ date: purchaseDate, voucherKind:'Journal', refType:'fixed-asset-purchase', refId: asset.id, reference: name, description: `Equipment purchased — ${name}`, lines: [
+    { accountCode: preset.assetCode, debit: cost, credit: 0 },
+    { accountCode: '1010', debit: 0, credit: cost }
+  ]});
+  audit('Accounting','Equipment Added', asset.id, name);
+  saveDB();
+  toast('Added to My Equipment','success');
+  openMyEquipment();
+}
+
+function removeFixedAsset(id) {
+  const asset = db.fixedAssets.find(a=>a.id===id);
+  if (!asset) return;
+  confirm(`Remove "${asset.name}"? This won't undo its depreciation history.`, ()=>{
+    asset.status = 'removed';
+    audit('Accounting','Equipment Removed', asset.id, asset.name);
+    saveDB();
+    renderEquipmentList();
+  });
+}
+
+function renderEquipmentList() {
+  const assets = (db.fixedAssets||[]).filter(a=>a.status==='active');
+  document.getElementById('equipment-tbody').innerHTML = assets.length ? assets.map(a=>{
+    const bookValue = a.cost - a.accumulatedDepreciation;
+    return `<tr><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td>${fmt(a.cost)}</td><td>${fmt(a.accumulatedDepreciation)}</td><td><strong>${fmt(bookValue)}</strong></td><td><button class="btn btn-xs btn-secondary" onclick="removeFixedAsset('${a.id}')">Remove</button></td></tr>`;
+  }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-title">No equipment added yet</div></div></td></tr>';
+}
+
+// Runs automatically on every app load (and before Balance Sheet/P&L generation) — catches up any
+// months of depreciation that haven't been posted yet, so you never have to calculate or post this.
+function runDepreciationCatchup() {
+  const currentMonth = today().slice(0,7); // YYYY-MM
+  (db.fixedAssets||[]).filter(a=>a.status==='active').forEach(asset => {
+    const monthlyDep = asset.cost / (asset.usefulLifeYears * 12);
+    if (!monthlyDep || monthlyDep <= 0) return;
+    let cursor = asset.lastDepreciatedMonth
+      ? shiftMonth(asset.lastDepreciatedMonth, 1)
+      : asset.purchaseDate.slice(0,7);
+    let guard = 0;
+    while (cursor <= currentMonth && guard < 1200) {
+      guard++;
+      if (asset.accumulatedDepreciation >= asset.cost - 0.01) break;
+      const amount = Math.min(monthlyDep, asset.cost - asset.accumulatedDepreciation);
+      postJournalEntry({ date: cursor+'-28', voucherKind:'Journal', refType:'depreciation', refId: asset.id+':'+cursor, reference: asset.name, description: `Depreciation — ${asset.name} (${cursor})`, lines: [
+        { accountCode: '5090', debit: amount, credit: 0 },
+        { accountCode: asset.depCode, debit: 0, credit: amount }
+      ]});
+      asset.accumulatedDepreciation = +(asset.accumulatedDepreciation + amount).toFixed(2);
+      asset.lastDepreciatedMonth = cursor;
+      cursor = shiftMonth(cursor, 1);
+    }
+  });
+}
+function shiftMonth(ym, delta) {
+  const [y,m] = ym.split('-').map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+
+// ── Cash Flow Statement (Indirect Method) — Phase 6-C, no extra data entry needed ──
+function computeCashFlow(from, to) {
+  const toDate = to || today();
+  const fromDate = from || toDate;
+  const priorDate = shiftDate(fromDate, -1);
+  const pl = computePLPeriod(fromDate, toDate);
+  const netProfit = pl.netProfit;
+
+  const depLines = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && l.accountCode==='5090');
+  const depreciation = depLines.reduce((a,l)=>a+l.debit,0);
+
+  const arCode = db.settings.acctMappings.arAccount, apCode = db.settings.acctMappings.apAccount;
+  const changeInAR = accountBalanceAsOf(arCode, toDate) - accountBalanceAsOf(arCode, priorDate);
+  const invCodes = ['1040','1041','1042'];
+  const changeInInventory = invCodes.reduce((a,c)=>a+accountBalanceAsOf(c,toDate)-accountBalanceAsOf(c,priorDate),0);
+  const changeInAP = accountBalanceAsOf(apCode, toDate) - accountBalanceAsOf(apCode, priorDate);
+  const operating = netProfit + depreciation - changeInAR - changeInInventory + changeInAP;
+
+  // Investing: net cash spent buying fixed assets this period (negative = cash out)
+  const fixedAssetCodes = ['1110','1120','1130','1140'];
+  const assetPurchases = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && fixedAssetCodes.includes(l.accountCode)).reduce((a,l)=>a+l.debit-l.credit,0);
+  const investing = -assetPurchases;
+
+  // Financing: net owner/partner capital movement this period (credit=invested in, debit=withdrawn)
+  const equityCodes = (db.chartOfAccounts||[]).filter(a=>a.type==='equity').map(a=>a.code);
+  const financing = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && equityCodes.includes(l.accountCode)).reduce((a,l)=>a+l.credit-l.debit,0);
+
+  const netChange = operating + investing + financing;
+  const cashCodes = ['1010','1020','1021','1022'];
+  const openingCash = cashCodes.reduce((a,c)=>a+accountBalanceAsOf(c,priorDate),0);
+  const closingCash = cashCodes.reduce((a,c)=>a+accountBalanceAsOf(c,toDate),0);
+
+  return { netProfit, depreciation, changeInAR, changeInInventory, changeInAP, operating, investing, financing, netChange, openingCash, closingCash };
+}
+
+/* ── Phase 6-D: Business Ownership (Single Owner or Partnership) ── */
+function loadOwnershipSettings() {
+  document.getElementById('ownership-type').value = db.settings.ownershipType || 'single';
+  toggleOwnershipUI();
+  renderPartnersRows();
+}
+
+function toggleOwnershipUI() {
+  const type = document.getElementById('ownership-type').value;
+  document.getElementById('partners-editor').style.display = type === 'partnership' ? '' : 'none';
+}
+
+function renderPartnersRows() {
+  const partners = db.settings.partners || [];
+  document.getElementById('partners-rows').innerHTML = partners.length ? partners.map(p => `
+    <div class="form-row" style="align-items:flex-end">
+      <div class="form-group" style="flex:2"><label class="form-label" style="font-size:12px">Name</label><input class="form-control" value="${esc(p.name)}" oninput="updatePartnerField('${p.id}','name',this.value)"></div>
+      <div class="form-group"><label class="form-label" style="font-size:12px">Share %</label><input class="form-control" type="number" value="${p.sharePct}" oninput="updatePartnerField('${p.id}','sharePct',this.value)"></div>
+      <div class="form-group" style="flex:0"><button class="btn btn-xs btn-secondary" onclick="removePartnerRow('${p.id}')">✕</button></div>
+    </div>`).join('') : '<div class="form-hint">No partners added yet — click "+ Add Partner" below.</div>';
+  updatePartnersTotalHint();
+}
+
+function updatePartnerField(id, field, value) {
+  const p = (db.settings.partners||[]).find(x=>x.id===id);
+  if (!p) return;
+  p[field] = field==='sharePct' ? (parseFloat(value)||0) : value;
+  updatePartnersTotalHint();
+}
+
+function addPartnerRow() {
+  if (!db.settings.partners) db.settings.partners = [];
+  const id = uid();
+  db.settings.partners.push({ id, name:'', sharePct:0, capitalCode:'CAP-'+id.slice(0,6), drawCode:'DRAW-'+id.slice(0,6) });
+  renderPartnersRows();
+}
+
+function removePartnerRow(id) {
+  db.settings.partners = (db.settings.partners||[]).filter(p=>p.id!==id);
+  renderPartnersRows();
+}
+
+function updatePartnersTotalHint() {
+  const total = (db.settings.partners||[]).reduce((a,p)=>a+(p.sharePct||0),0);
+  const el = document.getElementById('partners-total-hint');
+  if (!el) return;
+  el.textContent = `Total: ${total}%${Math.abs(total-100)>0.01 ? ' — must add up to exactly 100% before saving' : ' ✓'}`;
+  el.style.color = Math.abs(total-100)>0.01 ? 'var(--danger)' : 'var(--success)';
+}
+
+function saveOwnershipSettings() {
+  const type = document.getElementById('ownership-type').value;
+  if (type === 'partnership') {
+    const partners = db.settings.partners || [];
+    if (!partners.length) { toast('Add at least one partner','error'); return; }
+    if (partners.some(p=>!p.name.trim())) { toast('Every partner needs a name','error'); return; }
+    const total = partners.reduce((a,p)=>a+(p.sharePct||0),0);
+    if (Math.abs(total-100) > 0.01) { toast('Partner shares must add up to exactly 100%','error'); return; }
+    partners.forEach(p => {
+      const cap = getAccountByCode(p.capitalCode);
+      if (!cap) db.chartOfAccounts.push({ id:uid(), code:p.capitalCode, name:`${p.name} — Capital`, type:'equity', normalBalance:'credit', active:true });
+      else cap.name = `${p.name} — Capital`;
+      const draw = getAccountByCode(p.drawCode);
+      if (!draw) db.chartOfAccounts.push({ id:uid(), code:p.drawCode, name:`${p.name} — Drawings`, type:'equity', normalBalance:'debit', active:true });
+      else draw.name = `${p.name} — Drawings`;
+    });
+  }
+  db.settings.ownershipType = type;
+  saveDB();
+  toast('Ownership settings saved','success');
+}
+
+function openOwnerTxn() {
+  document.getElementById('owner-txn-type').value = 'in';
+  document.getElementById('owner-txn-amount').value = '';
+  document.getElementById('owner-txn-date').value = today();
+  document.getElementById('owner-txn-method').value = 'Cash';
+  const partnerGroup = document.getElementById('owner-txn-partner-group');
+  const partnerSelect = document.getElementById('owner-txn-partner');
+  if (db.settings.ownershipType === 'partnership' && (db.settings.partners||[]).length) {
+    partnerGroup.style.display = '';
+    partnerSelect.innerHTML = db.settings.partners.map(p=>`<option value="${p.id}">${esc(p.name)} (${p.sharePct}%)</option>`).join('');
+  } else {
+    partnerGroup.style.display = 'none';
+  }
+  openModal('owner-txn-overlay');
+}
+
+function saveOwnerTxn() {
+  const type = document.getElementById('owner-txn-type').value;
+  const amount = parseFloat(document.getElementById('owner-txn-amount').value) || 0;
+  const date = document.getElementById('owner-txn-date').value || today();
+  const method = document.getElementById('owner-txn-method').value;
+  if (amount <= 0) { toast('Enter an amount','error'); return; }
+  const cashCode = method === 'Cash' ? '1010' : '1020';
+  let capitalCode = '3010', drawCode = '3020', label = "Owner's";
+  if (db.settings.ownershipType === 'partnership' && (db.settings.partners||[]).length) {
+    const partnerId = document.getElementById('owner-txn-partner').value;
+    const p = (db.settings.partners||[]).find(x=>x.id===partnerId);
+    if (!p) { toast('Select a partner','error'); return; }
+    capitalCode = p.capitalCode; drawCode = p.drawCode; label = `${p.name}'s`;
+  }
+  const lines = type === 'in'
+    ? [ { accountCode: cashCode, debit: amount, credit: 0 }, { accountCode: capitalCode, debit: 0, credit: amount } ]
+    : [ { accountCode: drawCode, debit: amount, credit: 0 }, { accountCode: cashCode, debit: 0, credit: amount } ];
+  const je = postJournalEntry({ date, voucherKind:'Journal', refType:'owner-transaction', refId: uid(), reference:'', description: type==='in' ? `${label} investment into the business` : `${label} withdrawal for personal use`, lines, isAutoGenerated:false });
+  if (!je) { toast('Could not post — check the amount','error'); return; }
+  audit('Accounting','Owner/Partner Transaction', je.id, je.description);
+  saveDB();
+  toast('Recorded','success');
+  closeModal('owner-txn-overlay');
+}
+
+// ── Owner's Equity / Partners' Capital — Phase 6-D ──
+function computeOwnersEquityStatement(from, to) {
+  const toDate = to || today();
+  const fromDate = from || (toDate.slice(0,4)+'-01-01');
+  const priorDate = shiftDate(fromDate, -1);
+  const netProfit = computePLPeriod(fromDate, toDate).netProfit;
+  const isPartnership = db.settings.ownershipType === 'partnership' && (db.settings.partners||[]).length;
+  if (!isPartnership) {
+    const opening = accountBalanceAsOf('3010', priorDate);
+    const investments = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && l.accountCode==='3010').reduce((a,l)=>a+l.credit-l.debit,0);
+    const drawings = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && l.accountCode==='3020').reduce((a,l)=>a+l.debit-l.credit,0);
+    const closing = opening + investments + netProfit - drawings;
+    return { single:true, rows:[{ name:'Owner', opening, investments, profitShare:netProfit, drawings, closing }], totalProfit: netProfit };
+  }
+  const rows = db.settings.partners.map(p => {
+    const opening = accountBalanceAsOf(p.capitalCode, priorDate);
+    const investments = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && l.accountCode===p.capitalCode).reduce((a,l)=>a+l.credit-l.debit,0);
+    const drawings = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && l.accountCode===p.drawCode).reduce((a,l)=>a+l.debit-l.credit,0);
+    const profitShare = +(netProfit * (p.sharePct/100)).toFixed(2);
+    const closing = opening + investments + profitShare - drawings;
+    return { name:p.name, sharePct:p.sharePct, opening, investments, profitShare, drawings, closing };
+  });
+  return { single:false, rows, totalProfit: netProfit };
 }
 
 function hasAnyEditPermission() {
@@ -6079,6 +6467,7 @@ function completeCreditSale() {
 
   // Ledger: automatic double-entry (invisible) — Dr Cash/A-R, Cr Sales + VAT
   postCreditSaleJournal(sale, paidNow, dueAmount);
+  postCOGSJournal(sale);
 
   // Stock deduction
   cart.forEach(item => {
@@ -6128,6 +6517,7 @@ function completeSale(method) {
 
   // Ledger: automatic double-entry (invisible) — Dr Cash/Bank/Wallet, Cr Sales + VAT
   postSaleJournal(sale);
+  postCOGSJournal(sale);
   
   // Update entity total
   if (customerName) {
@@ -8001,60 +8391,60 @@ function deleteRecord(type, id) {
 /* ══ REPORTS ══ */
 /* ══ REPORT CATEGORIES ══ */
 const REPORT_CATEGORIES = [
-  { id:'sales', icon:'🧾', title:'Sales Reports', desc:'Transactions, revenue, top products', types:[
+  { id:'sales', group:'business', icon:'🧾', title:'Sales Reports', desc:'Transactions, revenue, top products', types:[
     {v:'sales', label:'Sales / Transaction Report'},
-    {v:'sales-register', label:'Sales Register (Retail vs Wholesale)'},
-    {v:'credit-sales', label:'Credit Sales & Due Ledger'}
+    {v:'sales-register', label:'Sales Register (Retail vs Wholesale)'}
   ]},
-  { id:'purchase', icon:'🛍️', title:'Purchase Reports', desc:'Purchase orders, GRN, supplier spend', types:[
+  { id:'purchase', group:'business', icon:'🛍️', title:'Purchase Reports', desc:'Purchase orders, GRN, supplier spend', types:[
     {v:'purchase-orders', label:'Purchase Order Summary'},
-    {v:'purchase-register', label:'Purchase Register'},
     {v:'grn-report', label:'Goods Received Report'}
   ]},
-  { id:'inventory', icon:'📦', title:'Inventory Reports', desc:'Stock levels, valuation, movement', types:[
+  { id:'inventory', group:'business', icon:'📦', title:'Inventory Reports', desc:'Stock levels, valuation, movement', types:[
     {v:'stock', label:'Stock / Inventory Report'},
     {v:'material-stock', label:'Raw Material Stock Report'},
     {v:'reorder', label:'Reorder Alert Report'},
     {v:'stock-movement', label:'Stock Movement / Adjustment History'}
   ]},
-  { id:'production', icon:'⚙️', title:'Production Reports', desc:'BOM usage, batches, cost', types:[
+  { id:'production', group:'business', icon:'⚙️', title:'Production Reports', desc:'BOM usage, batches, cost', types:[
     {v:'production-batches', label:'Production Batch Report'},
     {v:'production-cost', label:'Production Cost Analysis'}
   ]},
-  { id:'supplier', icon:'🏭', title:'Supplier Reports', desc:'Outstanding balances, payment history', types:[
-    {v:'supplier-ledger', label:'Supplier Ledger'},
-    {v:'supplier-outstanding', label:'Outstanding Payables'}
+  { id:'supplier', group:'business', icon:'🏭', title:'Supplier Reports', desc:'Outstanding balances, payment history', types:[
+    {v:'supplier-ledger', label:'Supplier Ledger'}
   ]},
-  { id:'customer', icon:'👥', title:'Customer Reports', desc:'Customer value, due balances', types:[
+  { id:'customer', group:'business', icon:'👥', title:'Customer Reports', desc:'Customer value, due balances', types:[
     {v:'entity', label:'Customer / Contact Report'},
     {v:'due-ledger', label:'Customer Due Ledger'}
   ]},
-  { id:'hr', icon:'👥', title:'HR Reports', desc:'Strength, attendance, payroll', types:[
+  { id:'hr', group:'business', icon:'👥', title:'HR Reports', desc:'Strength, attendance, payroll', types:[
     {v:'hr', label:'HR Strength Report'},
     {v:'attendance-report', label:'Attendance Summary'},
     {v:'payroll-report', label:'Payroll Summary'}
   ]},
-  { id:'financial', icon:'💰', title:'Financial Reports & Statements', desc:'Trial Balance, P&L, Balance Sheet, Day Book, Account Ledger — from the automatic double-entry ledger', types:[
+  { id:'financial-statements', group:'official', icon:'💰', title:'Financial Statements', desc:'Trial Balance, P&L, Balance Sheet, Cash Flow — for your tax office, bank, or auditor', types:[
     {v:'executive', label:'Executive Summary / SITREP'},
     {v:'trial-balance', label:'Trial Balance'},
     {v:'profit-loss-ledger', label:'Profit & Loss Statement'},
     {v:'balance-sheet', label:'Balance Sheet'},
+    {v:'cash-flow', label:'Cash Flow Statement'},
+    {v:'owners-equity', label:"Owner's Equity / Partners' Capital"},
+    {v:'audit', label:'Audit & Compliance (Admin)'}
+  ]},
+  { id:'ledger-tools', group:'business', icon:'🗂️', title:'Ledger & Management Tools', desc:'Day Book, Account Ledger, Aging, Equipment — for your own day-to-day tracking', types:[
     {v:'day-book', label:'Day Book'},
     {v:'account-ledger', label:'Account Ledger (Cash, Bank, any account)'},
     {v:'receivables-aging', label:'Receivables Aging'},
     {v:'payables-aging', label:'Payables Aging'},
-    {v:'audit', label:'Audit & Compliance (Admin)'}
+    {v:'fixed-asset-register', label:'Fixed Asset Register'},
+    {v:'depreciation-schedule', label:'Depreciation Schedule'}
   ]},
-  { id:'tax', icon:'🧮', title:'Compliance & Regulatory Reports', desc:'Nepal VAT, PAN, government submission, annual & audit reports', types:[
-    {v:'vat-summary', label:'Monthly VAT Summary'},
+  { id:'tax', group:'official', icon:'🧮', title:'Compliance & Regulatory Reports', desc:'Nepal VAT, PAN, government submission, annual & audit reports', types:[
     {v:'vat-sales', label:'VAT Sales Register'},
     {v:'vat-purchase', label:'VAT Purchase Register'},
     {v:'tds-register', label:'TDS Register (Rent/Contractor/Professional)'},
     {v:'correction-notes', label:'Credit & Debit Notes (Corrections)'},
     {v:'tax-deduction', label:'Tax Deduction Report (Payroll)'},
-    {v:'govt-submission', label:'Government Submission Summary'},
-    {v:'annual-report', label:'Annual Business Report'},
-    {v:'audit-support', label:'Audit Support Report'}
+    {v:'govt-submission', label:'Government Submission Summary (Net VAT Payable)'}
   ]}
 ];
 // Which compliance report templates are currently enabled — lets a business turn off templates
@@ -8074,12 +8464,19 @@ function initReportsView() {
 }
 
 function renderReportCategoryGrid() {
-  document.getElementById('rpt-category-grid').innerHTML = REPORT_CATEGORIES.map(c=>`
+  const official = REPORT_CATEGORIES.filter(c=>c.group==='official');
+  const business = REPORT_CATEGORIES.filter(c=>c.group!=='official');
+  const cardHtml = c => `
     <div class="report-cat-card" onclick="selectReportCategory('${c.id}')">
       <div class="report-cat-icon">${c.icon}</div>
       <div class="report-cat-title">${esc(c.title)}</div>
       <div class="report-cat-desc">${esc(c.desc)}</div>
-    </div>`).join('');
+    </div>`;
+  document.getElementById('rpt-category-grid').innerHTML = `
+    <div class="report-group-heading">📑 Official Reports <span class="help-tip" data-tip="For your tax office, bank, or auditor — financial statements, VAT/TDS registers, and audit trail.">?</span></div>
+    <div class="report-cat-grid">${official.map(cardHtml).join('')}</div>
+    <div class="report-group-heading" style="margin-top:20px">📊 Business Reports <span class="help-tip" data-tip="For your own day-to-day use — sales, purchasing, stock, production, and people.">?</span></div>
+    <div class="report-cat-grid">${business.map(cardHtml).join('')}</div>`;
 }
 
 function selectReportCategory(catId) {
@@ -8113,7 +8510,11 @@ const REPORT_TYPE_HELP = {
   'tds-register': 'What you\'ve withheld from rent/contractor/professional payments and still owe the tax office.',
   'correction-notes': 'Every Credit Note (sales correction) and Debit Note (purchase correction) ever issued.',
   'receivables-aging': 'How overdue each customer\'s balance is — 0-30, 31-60, 61-90, 90+ days — so you know who to chase first.',
-  'payables-aging': 'How overdue each amount you owe a supplier is — so you know who to pay first.'
+  'payables-aging': 'How overdue each amount you owe a supplier is — so you know who to pay first.',
+  'fixed-asset-register': 'Everything the business owns long-term (equipment, vehicles) and what it\'s worth today.',
+  'depreciation-schedule': 'The month-by-month plan for how each asset\'s value reduces over time.',
+  'cash-flow': 'Where actual cash came from and went — different from profit, which can look fine on paper while cash is tight.',
+  'owners-equity': 'Shows the owner\'s (or each partner\'s) stake in the business — opening capital, their share of profit, and what they\'ve taken out.'
 };
 
 function onReportTypeChange() {
@@ -8256,6 +8657,7 @@ function generateReport() {
     <h3 style="margin-top:16px">Equity</h3>${section('', bs.equity)}
     <table><tbody>
       <tr><td>Current Year Earnings (auto-calculated, this year so far)</td><td style="text-align:right" class="mono">${fmt(bs.currentYearEarnings)}</td></tr>
+      ${bs.earningsSplit ? bs.earningsSplit.map(p=>`<tr><td style="padding-left:24px;color:#777">— ${esc(p.name)}'s share (${p.sharePct}%)</td><td style="text-align:right" class="mono">${fmt(p.amount)}</td></tr>`).join('') : ''}
       <tr style="background:#f0f0f0"><td><strong>TOTAL EQUITY</strong></td><td style="text-align:right"><strong>${fmt(bs.totalEquity)}</strong></td></tr>
     </tbody></table>
     <p style="margin-top:14px;font-weight:700;color:${bs.balanced?'green':'red'}">${bs.balanced?`✓ Total Assets (${fmt(bs.totalAssets)}) = Total Liabilities + Equity (${fmt(bs.totalLiabilities+bs.totalEquity)})`:'⚠ Out of balance — this needs review'}</p>`;
@@ -8293,6 +8695,76 @@ function generateReport() {
       ${aging.parties.length?aging.parties.map(p=>`<tr><td>${esc(p.name)}</td>${bucketCell(p.total)}${bucketCell(p.notDue)}${bucketCell(p.d30)}${bucketCell(p.d60)}${bucketCell(p.d90)}${bucketCell(p.d90plus)}</tr>`).join(''):'<tr><td colspan="7">No outstanding payables</td></tr>'}
       <tr style="background:#f0f0f0"><td><strong>TOTAL</strong></td>${bucketCell(aging.totals.total)}${bucketCell(aging.totals.notDue)}${bucketCell(aging.totals.d30)}${bucketCell(aging.totals.d60)}${bucketCell(aging.totals.d90)}${bucketCell(aging.totals.d90plus)}</tr>
     </tbody></table>`;
+  } else if (type==='fixed-asset-register') {
+    const assets = (db.fixedAssets||[]).filter(a=>a.status==='active');
+    const totalCost = assets.reduce((a,x)=>a+x.cost,0), totalDep = assets.reduce((a,x)=>a+x.accumulatedDepreciation,0);
+    bodyHtml = `<h2>Fixed Asset Register</h2>
+    <p style="font-size:15px;color:#555">Everything the business owns long-term, and what it's worth today.</p>
+    <table><thead><tr><th>Asset</th><th>Type</th><th>Purchase Date</th><th style="text-align:right">Cost</th><th style="text-align:right">Accumulated Depreciation</th><th style="text-align:right">Book Value</th></tr></thead><tbody>
+      ${assets.length?assets.map(a=>`<tr><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td>${fmtDate(a.purchaseDate)}</td><td style="text-align:right" class="mono">${fmt(a.cost)}</td><td style="text-align:right" class="mono">${fmt(a.accumulatedDepreciation)}</td><td style="text-align:right" class="mono"><strong>${fmt(a.cost-a.accumulatedDepreciation)}</strong></td></tr>`).join(''):'<tr><td colspan="6">No equipment recorded yet</td></tr>'}
+      <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL</strong></td><td style="text-align:right"><strong>${fmt(totalCost)}</strong></td><td style="text-align:right"><strong>${fmt(totalDep)}</strong></td><td style="text-align:right"><strong>${fmt(totalCost-totalDep)}</strong></td></tr>
+    </tbody></table>`;
+  } else if (type==='depreciation-schedule') {
+    const assets = (db.fixedAssets||[]).filter(a=>a.status==='active');
+    bodyHtml = `<h2>Depreciation Schedule</h2>
+    <p style="font-size:15px;color:#555">Straight-line method — equal amount every month until the asset's cost is fully written off.</p>
+    <table><thead><tr><th>Asset</th><th style="text-align:right">Cost</th><th style="text-align:right">Useful Life</th><th style="text-align:right">Monthly Depreciation</th><th style="text-align:right">Remaining Months</th></tr></thead><tbody>
+      ${assets.length?assets.map(a=>{const monthly=a.cost/(a.usefulLifeYears*12); const remaining=monthly?Math.ceil((a.cost-a.accumulatedDepreciation)/monthly):0; return `<tr><td>${esc(a.name)}</td><td style="text-align:right" class="mono">${fmt(a.cost)}</td><td style="text-align:right">${a.usefulLifeYears} years</td><td style="text-align:right" class="mono">${fmt(monthly)}</td><td style="text-align:right">${remaining}</td></tr>`;}).join(''):'<tr><td colspan="5">No equipment recorded yet</td></tr>'}
+    </tbody></table>`;
+  } else if (type==='cash-flow') {
+    const cf = computeCashFlow(from, to);
+    const row = (label, val, bold) => `<tr><td>${label}</td><td style="text-align:right" class="mono">${bold?'<strong>':''}${fmt(val)}${bold?'</strong>':''}</td></tr>`;
+    bodyHtml = `<h2>Cash Flow Statement<span class="help-tip" data-tip="Where actual cash came from and went — different from profit, which can look fine on paper while cash is tight.">?</span></h2>
+    <p style="font-size:15px;color:#555">${periodLabel} — Indirect Method</p>
+    <h3 style="margin-top:14px">Operating Activities</h3>
+    <table><tbody>
+      ${row('Net Profit for the period', cf.netProfit)}
+      ${row('Add back: Depreciation (non-cash expense)', cf.depreciation)}
+      ${row('Change in Accounts Receivable', -cf.changeInAR)}
+      ${row('Change in Inventory', -cf.changeInInventory)}
+      ${row('Change in Accounts Payable', cf.changeInAP)}
+      <tr style="background:#f0f0f0">${row('Cash from Operating Activities', cf.operating, true).replace('<tr>','').replace('</tr>','')}</tr>
+    </tbody></table>
+    <h3 style="margin-top:14px">Investing Activities</h3>
+    <table><tbody>
+      ${row('Equipment purchased', cf.investing)}
+      <tr style="background:#f0f0f0">${row('Cash from Investing Activities', cf.investing, true).replace('<tr>','').replace('</tr>','')}</tr>
+    </tbody></table>
+    <h3 style="margin-top:14px">Financing Activities</h3>
+    <table><tbody>
+      ${row('Owner/Partner investment & withdrawals (net)', cf.financing)}
+      <tr style="background:#f0f0f0">${row('Cash from Financing Activities', cf.financing, true).replace('<tr>','').replace('</tr>','')}</tr>
+    </tbody></table>
+    <table style="margin-top:14px"><tbody>
+      <tr style="background:#f0f0f0"><td><strong>NET CHANGE IN CASH</strong></td><td style="text-align:right"><strong>${fmt(cf.netChange)}</strong></td></tr>
+      <tr><td>Opening Cash &amp; Bank Balance</td><td style="text-align:right" class="mono">${fmt(cf.openingCash)}</td></tr>
+      <tr><td>Closing Cash &amp; Bank Balance</td><td style="text-align:right" class="mono">${fmt(cf.closingCash)}</td></tr>
+    </tbody></table>`;
+  } else if (type==='owners-equity') {
+    const oe = computeOwnersEquityStatement(from, to);
+    if (oe.single) {
+      const r = oe.rows[0];
+      bodyHtml = `<h2>Statement of Owner's Equity</h2>
+      <p style="font-size:15px;color:#555">${periodLabel}</p>
+      <table><tbody>
+        <tr><td>Opening Capital</td><td style="text-align:right" class="mono">${fmt(r.opening)}</td></tr>
+        <tr><td>Add: Investments during the period</td><td style="text-align:right" class="mono">${fmt(r.investments)}</td></tr>
+        <tr><td>Add: Share of Profit</td><td style="text-align:right" class="mono">${fmt(r.profitShare)}</td></tr>
+        <tr><td>Less: Drawings during the period</td><td style="text-align:right" class="mono">-${fmt(r.drawings)}</td></tr>
+        <tr style="background:#f0f0f0"><td><strong>Closing Capital</strong></td><td style="text-align:right"><strong>${fmt(r.closing)}</strong></td></tr>
+      </tbody></table>`;
+    } else {
+      bodyHtml = `<h2>Partners' Capital Accounts</h2>
+      <p style="font-size:15px;color:#555">${periodLabel}</p>
+      <table><thead><tr><th>Partner</th><th style="text-align:right">Opening</th><th style="text-align:right">Investments</th><th style="text-align:right">Share of Profit</th><th style="text-align:right">Drawings</th><th style="text-align:right">Closing</th></tr></thead><tbody>
+        ${oe.rows.map(r=>`<tr><td>${esc(r.name)} (${r.sharePct}%)</td><td style="text-align:right" class="mono">${fmt(r.opening)}</td><td style="text-align:right" class="mono">${fmt(r.investments)}</td><td style="text-align:right" class="mono">${fmt(r.profitShare)}</td><td style="text-align:right" class="mono">${fmt(r.drawings)}</td><td style="text-align:right" class="mono"><strong>${fmt(r.closing)}</strong></td></tr>`).join('')}
+      </tbody></table>
+      <h2 style="margin-top:20px">Profit &amp; Loss Appropriation Account<span class="help-tip" data-tip="The formal page showing exactly how total profit was divided between partners, by their agreed percentage.">?</span></h2>
+      <table><thead><tr><th>Partner</th><th style="text-align:right">Share %</th><th style="text-align:right">Amount</th></tr></thead><tbody>
+        ${oe.rows.map(r=>`<tr><td>${esc(r.name)}</td><td style="text-align:right">${r.sharePct}%</td><td style="text-align:right" class="mono">${fmt(r.profitShare)}</td></tr>`).join('')}
+        <tr style="background:#f0f0f0"><td colspan="2"><strong>TOTAL NET PROFIT DISTRIBUTED</strong></td><td style="text-align:right"><strong>${fmt(oe.totalProfit)}</strong></td></tr>
+      </tbody></table>`;
+    }
   } else if (type==='sales') {
     bodyHtml = `<h2>Sales / Transaction Report</h2>
     <table><thead><tr><th>Date</th><th>Receipt</th><th>Customer</th><th>Items</th><th>Subtotal</th><th>Total</th><th>Payment</th></tr></thead><tbody>
@@ -8309,13 +8781,6 @@ function generateReport() {
     <table><thead><tr><th>Date</th><th>Invoice</th><th>Customer</th><th>Total</th></tr></thead><tbody>${retail.length?retail.map(s=>`<tr><td>${fmtDate(s.date)}</td><td>${esc(s.receiptNumber)}</td><td>${esc(s.customerName||'Walk-in')}</td><td>${fmt(s.total)}</td></tr>`).join(''):'<tr><td colspan="4">No retail sales</td></tr>'}<tr style="background:#f0f0f0"><td colspan="3"><strong>Retail Total</strong></td><td><strong>${fmt(retail.reduce((a,s)=>a+s.total,0))}</strong></td></tr></tbody></table>
     <!-- LAST_SECTION --><h3>Wholesale Sales</h3>
     <table><thead><tr><th>Date</th><th>Invoice</th><th>Customer</th><th>Total</th></tr></thead><tbody>${wholesale.length?wholesale.map(s=>`<tr><td>${fmtDate(s.date)}</td><td>${esc(s.receiptNumber)}</td><td>${esc(s.customerName||'Walk-in')}</td><td>${fmt(s.total)}</td></tr>`).join(''):'<tr><td colspan="4">No wholesale sales</td></tr>'}<tr style="background:#f0f0f0"><td colspan="3"><strong>Wholesale Total</strong></td><td><strong>${fmt(wholesale.reduce((a,s)=>a+s.total,0))}</strong></td></tr></tbody></table>`;
-  } else if (type==='credit-sales') {
-    const credits = db.creditSales.filter(c=>(!from||c.date>=from)&&(!to||c.date<=to));
-    bodyHtml = `<h2>Credit Sales & Due Ledger</h2>
-    <table><thead><tr><th>Receipt</th><th>Customer</th><th>Date</th><th>Total</th><th>Paid</th><th>Due</th><th>Status</th></tr></thead><tbody>
-      ${credits.length?credits.map(c=>`<tr><td>${esc(c.receiptNumber)}</td><td>${esc(c.customerName)}</td><td>${fmtDate(c.date)}</td><td>${fmt(c.totalAmount)}</td><td>${fmt(c.paidAmount)}</td><td>${fmt(c.dueAmount)}</td><td>${esc(c.status)}</td></tr>`).join(''):'<tr><td colspan="7">No credit sales in period</td></tr>'}
-      <tr style="background:#f0f0f0"><td colspan="5"><strong>Total Outstanding</strong></td><td><strong>${fmt(credits.filter(c=>c.status==='outstanding').reduce((a,c)=>a+c.dueAmount,0))}</strong></td><td></td></tr>
-    </tbody></table>`;
   } else if (type==='purchase-orders') {
     const pos2 = db.purchaseOrders.filter(p=>(!from||p.date>=from)&&(!to||p.date<=to));
     bodyHtml = `<h2>Purchase Order Summary</h2>
@@ -8386,19 +8851,10 @@ function generateReport() {
         <tr style="background:#f0f0f0"><td colspan="5"><strong>${sl.closing>0?'You owe them':'Settled'}</strong></td><td style="text-align:right"><strong>${fmt(sl.closing)}</strong></td></tr>
       </tbody></table>`;
     } else {
-      bodyHtml = `<h2>Supplier Ledger — All Suppliers</h2>
-      <p style="font-size:15px;color:#555">Pick one supplier above for a detailed statement with running balance, or leave blank for this summary.</p>
-      <table><thead><tr><th>Supplier</th><th>Total Invoiced</th><th>Total Paid</th><th>Outstanding</th></tr></thead><tbody>
-        ${db.secondary.map(sp=>{const invs=db.supplierInvoices.filter(i=>i.supplierId===sp.id); const totalInv=invs.reduce((a,i)=>a+i.amount,0); const totalPaid=db.supplierPayments.filter(p=>p.supplierId===sp.id).reduce((a,p)=>a+p.amount,0); return `<tr><td>${esc(sp.name)}</td><td>${fmt(totalInv)}</td><td>${fmt(totalPaid)}</td><td style="${totalInv-totalPaid>0?'color:red':''}">${fmt(totalInv-totalPaid)}</td></tr>`;}).join('')||'<tr><td colspan="4">No suppliers</td></tr>'}
-      </tbody></table>`;
+      bodyHtml = `<h2>Supplier Ledger</h2>
+      <p style="font-size:15px;color:#555">Pick a supplier above for their detailed statement with running balance.</p>
+      <p style="font-size:14px;color:#777">For an overview of everyone you owe — with how overdue each balance is — use <strong>Payables Aging</strong> instead.</p>`;
     }
-  } else if (type==='supplier-outstanding') {
-    const rows = db.secondary.map(sp=>{const invs=db.supplierInvoices.filter(i=>i.supplierId===sp.id); const totalInv=invs.reduce((a,i)=>a+i.amount,0); const totalPaid=db.supplierPayments.filter(p=>p.supplierId===sp.id).reduce((a,p)=>a+p.amount,0); return {name:sp.name, due:totalInv-totalPaid};}).filter(r=>r.due>0);
-    bodyHtml = `<h2>Outstanding Payables</h2>
-    <table><thead><tr><th>Supplier</th><th>Amount Due</th></tr></thead><tbody>
-      ${rows.length?rows.map(r=>`<tr><td>${esc(r.name)}</td><td style="color:red"><strong>${fmt(r.due)}</strong></td></tr>`).join(''):'<tr><td colspan="2">No outstanding payables</td></tr>'}
-      <tr style="background:#f0f0f0"><td><strong>Total</strong></td><td><strong>${fmt(rows.reduce((a,r)=>a+r.due,0))}</strong></td></tr>
-    </tbody></table>`;
   } else if (type==='entity') {
     const entSorted = [...db.entities].sort((a,b)=>(b.totalValue||0)-(a.totalValue||0));
     bodyHtml = `<h2>Entity / Contact Report</h2>
@@ -8415,11 +8871,9 @@ function generateReport() {
         <tr style="background:#f0f0f0"><td colspan="5"><strong>${cl.closing>0?'They owe you':'Settled'}</strong></td><td style="text-align:right"><strong>${fmt(cl.closing)}</strong></td></tr>
       </tbody></table>`;
     } else {
-      bodyHtml = `<h2>Customer Due Ledger — All Customers</h2>
-      <p style="font-size:15px;color:#555">Pick one customer above for a detailed statement with running balance, or leave blank for this summary.</p>
-      <table><thead><tr><th>Receipt</th><th>Customer</th><th>Total</th><th>Paid</th><th>Due</th><th>Status</th></tr></thead><tbody>
-        ${db.creditSales.length?db.creditSales.map(c=>`<tr><td>${esc(c.receiptNumber)}</td><td>${esc(c.customerName)}</td><td>${fmt(c.totalAmount)}</td><td>${fmt(c.paidAmount)}</td><td>${fmt(c.dueAmount)}</td><td>${esc(c.status)}</td></tr>`).join(''):'<tr><td colspan="6">No credit sales recorded</td></tr>'}
-      </tbody></table>`;
+      bodyHtml = `<h2>Customer Due Ledger</h2>
+      <p style="font-size:15px;color:#555">Pick a customer above for their detailed statement with running balance.</p>
+      <p style="font-size:14px;color:#777">For an overview of everyone who owes you money — with how overdue each balance is — use <strong>Receivables Aging</strong> instead.</p>`;
     }
   } else if (type==='hr') {
     const emps = db.employees.filter(e=>e.status==='active');
@@ -8664,7 +9118,7 @@ function exportReportCSV() {
   else if (type==='material-stock') data = db.rawMaterials;
   else if (type==='hr') data = db.employees;
   else if (type==='entity') data = db.entities;
-  else if (type==='supplier-ledger'||type==='supplier-outstanding') data = db.secondary;
+  else if (type==='supplier-ledger') data = db.secondary;
   else if (type==='purchase-orders') data = db.purchaseOrders;
   else if (type==='production-batches'||type==='production-cost') data = db.productionBatches;
   else if (type==='credit-sales'||type==='due-ledger') data = db.creditSales;
@@ -8716,6 +9170,7 @@ function setSettingsSection(id, el) {
     if (pinChk) { pinChk.checked = !!db.settings.accountingPINEnabled; toggleAcctPINSection(); }
   }
   if (id==='tax') loadTaxSettings();
+  if (id==='ownership') loadOwnershipSettings();
 }
 
 function loadSettingsValues() {
@@ -10079,6 +10534,7 @@ function confirmMakeNow() {
     if (!m || m.stock < needed) { toast(`Insufficient stock: ${m?.name||'ingredient'} (need ${needed.toFixed(2)}, have ${m?.stock||0})`,'error'); return; }
   }
   let totalCost = 0;
+  let rawMaterialCost = 0;
   const consumed = [];
   const batchNumber = 'BATCH-'+Date.now().toString(36).toUpperCase();
   bom.items.forEach(it=>{
@@ -10086,7 +10542,9 @@ function confirmMakeNow() {
     const m = store.find(x=>x.id===it.materialId);
     const needed = it.qty * batches;
     m.stock -= needed;
-    totalCost += needed * (it.itemType==='product' ? (m.costPrice||0) : (m.cost||0));
+    const lineCost = needed * (it.itemType==='product' ? (m.costPrice||0) : (m.cost||0));
+    totalCost += lineCost;
+    if (it.itemType !== 'product') rawMaterialCost += lineCost; // only raw-material consumption moves value out of 1040
     consumed.push({ materialId:m.id, materialName:m.name, qty:needed, unit:m.unit, itemType:it.itemType||'material' });
     db.stockHistory.push({ id:uid(), recordId:m.id, recordName:m.name, type:'production_consumption', qty:-needed, balanceAfter:m.stock, date:today(), ref:batchNumber, createdAt:now() });
   });
@@ -10094,6 +10552,14 @@ function confirmMakeNow() {
   if (product) {
     product.stock = (product.stock||0) + qty;
     db.stockHistory.push({ id:uid(), recordId:product.id, recordName:product.name, type:'production', qty, balanceAfter:product.stock, date:today(), ref:batchNumber, createdAt:now() });
+  }
+  // Ledger: inventory transfer (invisible) — raw materials become finished/trading goods.
+  // Not a sale or expense, so it never touches P&L — just moves value between two asset accounts.
+  if (rawMaterialCost > 0) {
+    postJournalEntry({ date: today(), voucherKind:'Journal', refType:'production', refId: batchNumber, reference: batchNumber, description: `Production — ${bom.name}`, lines: [
+      { accountCode: db.settings.acctMappings.inventoryAccount, debit: rawMaterialCost, credit: 0 },
+      { accountCode: '1040', debit: 0, credit: rawMaterialCost }
+    ]});
   }
   db.productionBatches.push({ id:uid(), orderId:null, batchNumber, productId:bom.productId, qtyProduced:qty, materialsConsumed:consumed, cost:totalCost, date:today(), status:'completed', createdBy:session.username });
   audit('Production','Make Now',bom.id,`${bom.name} — ${qty} units produced`);

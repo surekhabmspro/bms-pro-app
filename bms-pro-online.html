@@ -532,6 +532,8 @@ textarea.form-control{resize:vertical;min-height:80px}
 #settings-wrap{display:grid;grid-template-columns:200px 1fr;gap:16px;height:calc(100vh - var(--topbar-h) - 40px)}
 .settings-nav{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-y:auto}
 .settings-nav-item{padding:10px 14px;cursor:pointer;font-size:17px;font-weight:500;color:var(--text-muted);transition:all var(--transition);display:flex;align-items:center;gap:8px;border-left:3px solid transparent}
+.settings-nav-group{padding:14px 14px 4px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim,#999)}
+.settings-nav-group:first-child{padding-top:6px}
 .settings-nav-item:hover{background:var(--elevated);color:var(--text)}
 .settings-nav-item.active{color:var(--accent);background:var(--accent-dim);border-left-color:var(--accent)}
 .settings-content{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-y:auto;padding:24px}
@@ -612,6 +614,7 @@ textarea.form-control{resize:vertical;min-height:80px}
   #settings-wrap{display:flex!important;flex-direction:column!important}
   .settings-nav{display:flex;flex-wrap:wrap;gap:4px;padding:8px!important;border-right:none!important;border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}
   .settings-nav-item{padding:6px 10px!important;font-size:15px;flex-shrink:0}
+  .settings-nav-group{flex-basis:100%;padding:6px 4px 0!important;font-size:11px}
   /* KPI 2 columns */
   .kpi-grid{grid-template-columns:1fr 1fr!important}
   .kpi-card{padding:12px;gap:8px;min-height:84px}
@@ -1204,12 +1207,18 @@ textarea.form-control{resize:vertical;min-height:80px}
           <select class="form-control" id="acct-cat-filter" onchange="renderAccounting()"><option value="">All Categories</option></select>
           <input class="form-control" id="acct-from" placeholder="From" style="width:120px" onfocus="openCalendar('acct-from','standard')">
           <input class="form-control" id="acct-to" placeholder="To" style="width:120px" onfocus="openCalendar('acct-to','standard')">
-          <button class="btn btn-secondary btn-sm" onclick="exportCSV('accounting')">📤 Export CSV</button>
           <button class="btn btn-secondary btn-sm btn-print" onclick="previewAccountingPrint()">🖨️ Print</button>
           <button class="btn btn-secondary btn-sm" onclick="exportAccountingPDF()">📄 Export PDF</button>
-          <button class="btn btn-secondary btn-sm" onclick="openBankRecon()">🏦 Bank Reconciliation</button>
-          <button class="btn btn-secondary btn-sm" onclick="openMyEquipment()">🏗️ My Equipment</button>
-          <button class="btn btn-secondary btn-sm" onclick="openOwnerTxn()">🤝 Owner/Partner Transaction</button>
+          <div class="dropdown" style="position:relative">
+            <button class="btn btn-secondary btn-sm" onclick="toggleAcctToolsMenu()">⋮ More Tools ▾</button>
+            <div class="dropdown-menu" id="acct-tools-menu">
+              <div class="dropdown-item" onclick="exportCSV('accounting');closeDropdowns()">📤 Export CSV</div>
+              <div class="dropdown-item" onclick="openBankRecon();closeDropdowns()">🏦 Bank Reconciliation</div>
+              <div class="dropdown-item" onclick="openMyEquipment();closeDropdowns()">🏗️ My Equipment</div>
+              <div class="dropdown-item" onclick="openOwnerTxn();closeDropdowns()">🤝 Owner/Partner Transaction</div>
+              <div class="dropdown-item" onclick="openPDCTracker();closeDropdowns()">📝 Post-Dated Cheques</div>
+            </div>
+          </div>
           <button class="btn btn-primary btn-sm" onclick="openAccountingModal()">+ Add Entry</button>
         </div>
         <div class="table-wrap"><table><thead><tr><th onclick="sortTable('acct','date')">Date ↕</th><th>Type</th><th onclick="sortTable('acct','category')">Category ↕</th><th>Description</th><th onclick="sortTable('acct','amount')">Amount ↕</th><th>Reference</th><th>Balance</th><th>Actions</th></tr></thead><tbody id="acct-tbody"></tbody></table></div>
@@ -1270,6 +1279,7 @@ textarea.form-control{resize:vertical;min-height:80px}
             <input class="form-control" id="sh-emp-filter" placeholder="Filter by employee..." oninput="renderSalaryHistory()">
             <input class="form-control" id="sh-month-filter" placeholder="Month (YYYY-MM)" style="width:150px" oninput="renderSalaryHistory()">
           </div>
+          <div id="sh-ssf-summary" style="margin-bottom:12px"></div>
           <div class="table-wrap"><table><thead><tr><th>Month</th><th>Employee</th><th>Basic</th><th>Allowances</th><th>Deductions</th><th>Net Pay</th><th>Status</th><th>Actions</th></tr></thead><tbody id="sh-tbody"></tbody></table></div>
         </div>
         <div id="hr-leave" style="display:none">
@@ -1295,7 +1305,33 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="tab" onclick="setReportTab('saved',this)">💾 Saved Templates</div>
         </div>
         <div id="report-generate">
-          <div id="rpt-category-grid" class="report-cat-grid"></div>
+          <div class="card mb-4" id="rpt-quick-panel">
+            <div class="card-header"><div class="card-title">⚡ Quick Reports</div></div>
+            <div class="form-hint" style="margin-bottom:10px;padding:0 4px">The questions you'll ask most often — pick one, choose your dates, done.</div>
+            <div class="report-cat-grid">
+              <div class="report-cat-card" onclick="quickReport('financial-statements','profit-loss-ledger')"><div class="report-cat-icon">💰</div><div class="report-cat-title">Am I Making Money?</div></div>
+              <div class="report-cat-card" onclick="quickReport('financial-statements','balance-sheet')"><div class="report-cat-icon">🏦</div><div class="report-cat-title">What Do I Own &amp; Owe?</div></div>
+              <div class="report-cat-card" onclick="quickReport('ledger-tools','receivables-aging')"><div class="report-cat-icon">📥</div><div class="report-cat-title">Who Owes Me?</div></div>
+              <div class="report-cat-card" onclick="quickReport('ledger-tools','payables-aging')"><div class="report-cat-icon">📤</div><div class="report-cat-title">Who Do I Owe?</div></div>
+              <div class="report-cat-card" onclick="quickReport('financial-statements','business-summary')"><div class="report-cat-icon">🩺</div><div class="report-cat-title">Business Health Check</div></div>
+            </div>
+          </div>
+          <div class="card mb-4" id="rpt-gov-panel" style="border:2px solid var(--primary,#2563eb)">
+            <div class="card-header"><div class="card-title">🏛️ Government &amp; Tax Filing<span class="help-tip" data-tip="These are the reports the tax office actually asks for. This section always stays here, no matter how the rest of the app changes.">?</span></div></div>
+            <div class="form-hint" style="margin-bottom:10px;padding:0 4px">Always here when you need to file — nothing above or below this ever moves it or hides it.</div>
+            <div class="report-cat-grid">
+              <div class="report-cat-card" onclick="quickReport('tax','vat-sales')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">VAT Sales Register</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','vat-purchase')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">VAT Purchase Register</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','govt-submission')"><div class="report-cat-icon">📋</div><div class="report-cat-title">Net VAT Payable (Monthly Filing)</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','tds-register')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">TDS Register</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','ssf-register')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">SSF Register</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','tax-deduction')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">Payroll Tax Deduction</div></div>
+            </div>
+          </div>
+          <div style="text-align:center;margin-bottom:16px">
+            <button class="btn btn-secondary" onclick="toggleAllReportsGrid()" id="rpt-showall-btn">📚 Show All Reports (everything else — for your accountant or specific lookups)</button>
+          </div>
+          <div id="rpt-category-grid" class="report-cat-grid" style="display:none"></div>
           <div class="card mb-4" id="rpt-params-card" style="display:none">
             <div class="card-header"><div class="card-title" id="rpt-params-title">Report Parameters</div><button class="btn btn-xs btn-secondary" onclick="backToReportCategories()">← Back to Categories</button></div>
             <div class="form-row">
@@ -1369,23 +1405,30 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="module-view" id="view-settings">
         <div id="settings-wrap">
           <div class="settings-nav" id="settings-nav">
+            <div class="settings-nav-group">🏢 Business Setup</div>
             <div class="settings-nav-item active" onclick="setSettingsSection('profile',this)">🏢 Business Profile</div>
             <div class="settings-nav-item" onclick="setSettingsSection('appearance',this)">🎨 Appearance</div>
             <div class="settings-nav-item" onclick="setSettingsSection('modules',this)">📦 Module Manager</div>
             <div class="settings-nav-item" onclick="setSettingsSection('labels',this)">🏷️ Field Labels</div>
             <div class="settings-nav-item" onclick="setSettingsSection('categories',this)">📂 Categories</div>
-            <div class="settings-nav-item" onclick="setSettingsSection('users',this)">👥 User Manager</div>
-            <div class="settings-nav-item" onclick="setSettingsSection('roles',this)">🔐 Roles & Permissions</div>
             <div class="settings-nav-item" onclick="setSettingsSection('pos',this)">🛒 POS Settings</div>
-            <div class="settings-nav-item" onclick="setSettingsSection('currency',this)">💱 Currency & Dates</div>
+            <div class="settings-nav-item" onclick="setSettingsSection('currency',this)">💱 Currency &amp; Dates</div>
+
+            <div class="settings-nav-group">💰 Accounting &amp; Tax</div>
             <div class="settings-nav-item" onclick="setSettingsSection('accounting-sec',this)">🔒 Accounting Security</div>
             <div class="settings-nav-item" onclick="setSettingsSection('advanced-ledger',this)">⚙️ Advanced Ledger</div>
             <div class="settings-nav-item" onclick="setSettingsSection('ownership',this)">🤝 Business Ownership</div>
             <div class="settings-nav-item" onclick="setSettingsSection('salary-comp',this)">💵 Salary Components</div>
-            <div class="settings-nav-item" onclick="setSettingsSection('tax',this)">🧾 Nepal Tax & VAT</div>
-            <div class="settings-nav-item" onclick="setSettingsSection('notifications',this)">🔔 Notifications</div>
-            <div class="settings-nav-item" onclick="setSettingsSection('data',this)">💾 Data & Backup</div>
+            <div class="settings-nav-item" onclick="setSettingsSection('tax',this)">🧾 Nepal Tax &amp; VAT</div>
             <div class="settings-nav-item" onclick="setSettingsSection('reports',this)">📊 Report Settings</div>
+
+            <div class="settings-nav-group">👥 Users &amp; Security</div>
+            <div class="settings-nav-item" onclick="setSettingsSection('users',this)">👥 User Manager</div>
+            <div class="settings-nav-item" onclick="setSettingsSection('roles',this)">🔐 Roles &amp; Permissions</div>
+
+            <div class="settings-nav-group">⚙️ System</div>
+            <div class="settings-nav-item" onclick="setSettingsSection('notifications',this)">🔔 Notifications</div>
+            <div class="settings-nav-item" onclick="setSettingsSection('data',this)">💾 Data &amp; Backup</div>
           </div>
           <div class="settings-content">
             <!-- PROFILE -->
@@ -1657,6 +1700,11 @@ textarea.form-control{resize:vertical;min-height:80px}
                 <div id="partners-total-hint" class="form-hint" style="margin-top:8px;font-weight:600"></div>
               </div>
               <button class="btn btn-primary" style="margin-top:12px" onclick="saveOwnershipSettings()">💾 Save Ownership Settings</button>
+              <div class="form-group" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+                <label class="form-label">Interest Rate on Overdue Receivables (% per year)<span class="help-tip" data-tip="Optional. Set above 0% to see a suggested interest charge on overdue customer balances in the Receivables Aging report. Leave at 0 to disable.">?</span></label>
+                <input class="form-control" type="number" id="overdue-interest-rate" style="max-width:150px" placeholder="0">
+                <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="saveOverdueInterestRate()">Save</button>
+              </div>
             </div>
             <!-- ADVANCED LEDGER (tucked away — not part of normal workflow) -->
             <div class="settings-section" id="sec-advanced-ledger">
@@ -1781,6 +1829,16 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="form-group"><label class="form-label">Wholesale Price<span class="help-tip" data-tip="This price is automatically charged in POS whenever the customer type is switched to Wholesale. Leave blank to always use the retail price.">?</span></label><input class="form-control" type="number" id="rec-wholesale-price" placeholder="0"></div>
         </div>
         <div class="form-hint">Wholesale price is used when customer type is set to Wholesale in POS.</div>
+        <div class="form-group" style="margin-top:12px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="rec-track-expiry" onchange="toggleRecExpiryField()">
+            <span>Track Expiry Date for this item<span class="help-tip" data-tip="Optional — turn on for anything perishable (food, chemicals, medicine). Leave off for items that don't expire (metal parts, hardware, etc.).">?</span></span>
+          </label>
+          <div id="rec-expiry-field" style="display:none;margin-top:8px">
+            <label class="form-label">Expiry Date</label>
+            <input class="form-control" id="rec-expiry-date" onfocus="openCalendar('rec-expiry-date','standard')">
+          </div>
+        </div>
       </div>
       <div id="rec-tab-variants" style="display:none">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -1868,7 +1926,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="form-group"><label class="form-label">Amount *</label><input class="form-control" type="number" id="acct-amount" placeholder="0" min="0" oninput="computeAcctTDSPreview()"></div>
         <div class="form-group"><label class="form-label">Date *</label><input class="form-control" id="acct-date" onfocus="openCalendar('acct-date','standard')"></div>
       </div>
-      <div class="form-group"><label class="form-label">Category</label><div class="input-wrap"><input class="form-control" id="acct-cat" placeholder="e.g. Sales, Salary, Rent, Utilities" oninput="updateAcctTDSVisibility()"><button class="input-clear" onclick="clearInput('acct-cat')">✕</button></div></div>
+      <div class="form-group"><label class="form-label">Category</label><select class="form-control" id="acct-cat" onchange="updateAcctTDSVisibility()"></select></div>
       <div class="form-group"><label class="form-label">Description *</label><input class="form-control" id="acct-desc" placeholder="Brief description of this entry"></div>
       <div class="form-group"><label class="form-label">Reference</label><input class="form-control" id="acct-ref" placeholder="Invoice #, Receipt # (optional)"></div>
       <div class="form-group" id="acct-tds-section" style="display:none;background:var(--bg-alt,#f7f7f9);padding:12px;border-radius:8px">
@@ -2048,6 +2106,10 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="form-group"><label class="form-label">Purchase Date</label><input class="form-control" id="eq-date" onfocus="openCalendar('eq-date','standard')"></div>
         <div class="form-group"><label class="form-label">Useful Life (years)</label><input class="form-control" type="number" id="eq-life" value="10"></div>
       </div>
+      <div class="form-group">
+        <label class="form-label">Paid From</label>
+        <select class="form-control" id="eq-paidfrom"><option value="1010">Cash</option><option value="1020">Bank</option></select>
+      </div>
       <button class="btn btn-primary" onclick="saveFixedAsset()">💾 Add to My Equipment</button>
 
       <h3 style="margin-top:20px;font-size:16px;font-weight:700">Your Equipment</h3>
@@ -2083,6 +2145,28 @@ textarea.form-control{resize:vertical;min-height:80px}
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('owner-txn-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveOwnerTxn()">💾 Save</button></div>
+  </div>
+</div>
+
+<!-- Post-Dated Cheque Tracker -->
+<div class="modal-overlay" id="pdc-overlay" onclick="closeModalOnOverlay(event,'pdc-overlay')">
+  <div class="modal modal-lg">
+    <div class="modal-header"><div class="modal-title">📝 Post-Dated Cheques<span class="help-tip" data-tip="Cheques you've received or issued dated for the future — track them here until they actually clear the bank.">?</span></div><button class="modal-close" onclick="closeModal('pdc-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Type</label><select class="form-control" id="pdc-type"><option value="received">Received from Customer</option><option value="issued">Issued to Supplier</option></select></div>
+        <div class="form-group"><label class="form-label">Party Name</label><input class="form-control" id="pdc-party" placeholder="Customer or supplier name"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Cheque Number</label><input class="form-control" id="pdc-number"></div>
+        <div class="form-group"><label class="form-label">Amount</label><input class="form-control" type="number" id="pdc-amount"></div>
+        <div class="form-group"><label class="form-label">Cheque Date</label><input class="form-control" id="pdc-date" onfocus="openCalendar('pdc-date','standard')"></div>
+      </div>
+      <button class="btn btn-primary" onclick="savePDC()">💾 Add Cheque</button>
+      <h3 style="margin-top:20px;font-size:16px;font-weight:700">Tracked Cheques</h3>
+      <div class="table-wrap"><table><thead><tr><th>Type</th><th>Party</th><th>Cheque #</th><th>Amount</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody id="pdc-tbody"></tbody></table></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('pdc-overlay')">Close</button></div>
   </div>
 </div>
 
@@ -2133,6 +2217,12 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="form-group"><label class="form-label">Payment Mode</label><select class="form-control" id="emp-pay-mode"><option value="monthly">Monthly</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div>
         </div>
         <div class="form-group"><label class="form-label">Salary Remarks</label><input class="form-control" id="emp-salary-note" placeholder="e.g. Includes TA, DA"></div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="emp-ssf" checked>
+            <span>Enrolled in SSF (Social Security Fund)<span class="help-tip" data-tip="Legally mandatory in Nepal for every employer regardless of size — 11% deducted from the employee's basic salary, plus 20% paid by you on top, deposited monthly. Uncheck only if this person is genuinely exempt.">?</span></span>
+          </label>
+        </div>
       </div>
       <div id="emp-tab-notes" style="display:none">
         <div class="form-group"><label class="form-label">Internal Notes</label><textarea class="form-control" id="emp-notes" rows="5" placeholder="Any internal notes about this employee..."></textarea></div>
@@ -2365,10 +2455,10 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- BOM Modal -->
 <div class="modal-overlay" id="bom-modal-overlay" onclick="closeModalOnOverlay(event,'bom-modal-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title" id="bom-modal-title">New Bill of Materials</div><button class="modal-close" onclick="closeModal('bom-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="bom-modal-title">New Recipe</div><button class="modal-close" onclick="closeModal('bom-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group"><label class="form-label">BOM Name *</label><input class="form-control" id="bom-name" placeholder="e.g. Steel Nail 2 inch — Standard Recipe"></div>
+        <div class="form-group"><label class="form-label">Recipe Name *</label><input class="form-control" id="bom-name" placeholder="e.g. Steel Nail 2 inch — Standard Recipe"></div>
         <div class="form-group"><label class="form-label">Finished Product *</label><select class="form-control" id="bom-product"></select></div>
       </div>
       <div class="form-group"><label class="form-label">Output Quantity (per batch)<span class="help-tip" data-tip="How many finished units this recipe produces in one production run. E.g. if 5kg flour makes 100 cookies, set this to 100.">?</span></label><input class="form-control" type="number" id="bom-output-qty" value="1" placeholder="1"></div>
@@ -2377,7 +2467,7 @@ textarea.form-control{resize:vertical;min-height:80px}
       <button class="btn btn-secondary btn-sm" onclick="addBOMItemRow()">+ Add Material</button>
       <div class="form-group" style="margin-top:12px"><label class="form-label">Notes</label><textarea class="form-control" id="bom-notes" rows="2"></textarea></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('bom-modal-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveBOM()">💾 Save BOM</button></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('bom-modal-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveBOM()">💾 Save Recipe</button></div>
   </div>
 </div>
 
@@ -2713,6 +2803,8 @@ function defaultDB() {
     correctionNotes: [],   // NEW: Credit Notes (sales corrections) & Debit Notes (purchase corrections)
     bankReconciliations: [], // NEW: saved monthly bank reconciliations
     fixedAssets: [],       // NEW: "My Equipment" — cost, purchase date, useful life; depreciated automatically
+    costCenters: [],       // NEW: optional profit-by-department/branch tagging
+    postDatedCheques: [],  // NEW: cheques received/issued but not yet due
     employees: [],
     attendance: {},
     payrollHistory: [],
@@ -2764,6 +2856,7 @@ function defaultDB() {
         purchaseAccount: '5010', inventoryAccount: '1042', cogsAccount: '5010',
         salaryExpenseAccount: '5020', tdsPayableAccount: '2060',
         tdsRates: { rentCompany:0.10, contractorVAT:0.015, contractorNoVAT:0.15, consultancy:0.15 },
+        overdueInterestRatePct: 0,
         tdsApplicableCategories: ['Rent','Contractor','Professional Fees']
       },
       salaryComponents: {            // Editable salary components
@@ -2901,6 +2994,8 @@ function loadDB() {
       if (!db.correctionNotes) db.correctionNotes = [];
       if (!db.bankReconciliations) db.bankReconciliations = [];
       if (!db.fixedAssets) db.fixedAssets = [];
+      if (!db.costCenters) db.costCenters = [];
+      if (!db.postDatedCheques) db.postDatedCheques = [];
       if (db.settings.ownershipType === undefined) db.settings.ownershipType = 'single';
       if (!db.settings.partners) db.settings.partners = [];
       if (db.settings.ledgerEnabled === undefined) db.settings.ledgerEnabled = true;
@@ -2917,6 +3012,7 @@ function loadDB() {
           purchaseAccount: '5010', inventoryAccount: '1042', cogsAccount: '5010',
           salaryExpenseAccount: '5020', tdsPayableAccount: '2060',
         tdsRates: { rentCompany:0.10, contractorVAT:0.015, contractorNoVAT:0.15, consultancy:0.15 },
+        overdueInterestRatePct: 0,
         tdsApplicableCategories: ['Rent','Contractor','Professional Fees']
         };
       }
@@ -2976,6 +3072,7 @@ const DEFAULT_CHART_OF_ACCOUNTS = [
   { code:'2010', name:'Accounts Payable (Supplier Dues)', type:'liability', normalBalance:'credit', isControlAccount:true },
   { code:'2020', name:'VAT Payable (Output VAT)', type:'liability', normalBalance:'credit' },
   { code:'2030', name:'Salary Payable', type:'liability', normalBalance:'credit' },
+  { code:'2070', name:'SSF Payable (Social Security Fund)', type:'liability', normalBalance:'credit' },
   { code:'2040', name:'Advance from Customers', type:'liability', normalBalance:'credit' },
   { code:'2050', name:'Short-Term Loans', type:'liability', normalBalance:'credit' },
   { code:'2060', name:'TDS Payable', type:'liability', normalBalance:'credit' },
@@ -2991,6 +3088,7 @@ const DEFAULT_CHART_OF_ACCOUNTS = [
   // ── Expense ──
   { code:'5010', name:'Cost of Goods Sold', type:'expense', normalBalance:'debit' },
   { code:'5020', name:'Salary & Wages', type:'expense', normalBalance:'debit' },
+  { code:'5025', name:'Employer SSF Contribution', type:'expense', normalBalance:'debit' },
   { code:'5030', name:'Rent', type:'expense', normalBalance:'debit' },
   { code:'5040', name:'Utilities', type:'expense', normalBalance:'debit' },
   { code:'5050', name:'Supplies', type:'expense', normalBalance:'debit' },
@@ -3053,7 +3151,7 @@ function nextVoucherNumber(kind) {
 }
 
 /* ── Core posting function — every automatic entry in the app goes through this ── */
-function postJournalEntry({ date, voucherKind='Journal', refType, refId, reference, description, lines, isAutoGenerated=true }) {
+function postJournalEntry({ date, voucherKind='Journal', refType, refId, reference, description, lines, isAutoGenerated=true, costCenterId=null }) {
   if (db.settings.ledgerEnabled === false) return null;
   const cleanLines = (lines||[]).filter(l => (l.debit||0) > 0 || (l.credit||0) > 0);
   const debitTotal = cleanLines.reduce((a,l)=>a+(+(l.debit||0)),0);
@@ -3069,7 +3167,7 @@ function postJournalEntry({ date, voucherKind='Journal', refType, refId, referen
     id: uid(), date: date || today(), voucherNumber: nextVoucherNumber(voucherKind),
     refType, refId, reference: reference||'', description: description||'',
     lines: cleanLines.map(l => ({ accountCode: l.accountCode, debit: +(+(l.debit||0)).toFixed(2), credit: +(+(l.credit||0)).toFixed(2) })),
-    isAutoGenerated, isVoid: false, createdAt: now(), createdBy: (typeof session!=='undefined' && session?.username) || 'system'
+    isAutoGenerated, isVoid: false, costCenterId: costCenterId||null, createdAt: now(), createdBy: (typeof session!=='undefined' && session?.username) || 'system'
   };
   db.journalEntries.push(je);
   return je;
@@ -3163,12 +3261,26 @@ function postManualAccountingJournal(entry) {
       ? [ { accountCode: resolveExpenseAccountCode(entry.category), debit: entry.amount, credit: 0 }, { accountCode: '1010', debit: 0, credit: entry.amount } ]
       : [ { accountCode: '1010', debit: entry.amount, credit: 0 }, { accountCode: resolveIncomeAccountCode(entry.category), debit: 0, credit: entry.amount } ];
   }
-  return postJournalEntry({ date: entry.date, voucherKind: entry.type==='expense'?'Payment':'Receipt', refType:'manual-accounting', refId: entry.id, reference: entry.reference||'', description: entry.description || `${entry.type} — ${entry.category}`, lines });
+  return postJournalEntry({ date: entry.date, voucherKind: entry.type==='expense'?'Payment':'Receipt', refType:'manual-accounting', refId: entry.id, reference: entry.reference||'', description: entry.description || `${entry.type} — ${entry.category}`, lines, costCenterId: entry.costCenterId||null });
 }
 
-function postPayrollJournal(month, totalPay) {
-  const lines = [ { accountCode: db.settings.acctMappings.salaryExpenseAccount, debit: totalPay, credit: 0 }, { accountCode: '1010', debit: 0, credit: totalPay } ];
-  return postJournalEntry({ date: today(), voucherKind:'Payment', refType:'payroll', refId: month, reference: `PAY-${month}`, description: `Payroll ${month}`, lines });
+function postPayrollJournal(month, entries) {
+  const totalGrossWage = entries.reduce((a,e)=>a+e.grossWage,0);
+  const totalEmployerSSF = entries.reduce((a,e)=>a+(e.employerSSF||0),0);
+  const totalNetPayable = entries.reduce((a,e)=>a+e.netPay,0);
+  const totalSSFPayable = entries.reduce((a,e)=>a+(e.employeeSSF||0)+(e.employerSSF||0),0);
+  const lines = [ { accountCode: db.settings.acctMappings.salaryExpenseAccount, debit: totalGrossWage, credit: 0 } ];
+  if (totalEmployerSSF > 0) lines.push({ accountCode: '5025', debit: totalEmployerSSF, credit: 0 });
+  lines.push({ accountCode: '2030', debit: 0, credit: totalNetPayable });
+  if (totalSSFPayable > 0) lines.push({ accountCode: '2070', debit: 0, credit: totalSSFPayable });
+  return postJournalEntry({ date: today(), voucherKind:'Payment', refType:'payroll', refId: month, reference: `PAY-${month}`, description: `Payroll Approved ${month}`, lines });
+}
+
+// Clears one employee's share of Salary Payable when they're actually paid — separate from approval.
+function postPayrollPaymentJournal(month, empId, empName, amount, method) {
+  const cashCode = method === 'Bank Transfer' ? '1020' : '1010';
+  const lines = [ { accountCode: '2030', debit: amount, credit: 0 }, { accountCode: cashCode, debit: 0, credit: amount } ];
+  return postJournalEntry({ date: today(), voucherKind:'Payment', refType:'payroll-payment', refId: `${month}:${empId}`, reference: `PAY-${month}`, description: `Salary Paid — ${empName} (${month})`, lines });
 }
 
 /* ── Manual/Advanced journal entry (edge cases only — never required for normal use) ── */
@@ -3997,6 +4109,7 @@ function openMyEquipment() {
   document.getElementById('eq-cost').value = '';
   document.getElementById('eq-date').value = today();
   document.getElementById('eq-life').value = 10;
+  document.getElementById('eq-paidfrom').value = '1010';
   renderEquipmentList();
   openModal('equipment-overlay');
 }
@@ -4015,10 +4128,11 @@ function saveFixedAsset() {
     status:'active', createdAt: now(), createdBy: session.username
   };
   db.fixedAssets.push(asset);
-  // Ledger: the asset moves onto the books at cost, paid from Cash (adjust in Advanced Ledger if paid from Bank)
+  // Ledger: the asset moves onto the books at cost, paid from whichever account you selected
+  const paidFrom = document.getElementById('eq-paidfrom').value || '1010';
   postJournalEntry({ date: purchaseDate, voucherKind:'Journal', refType:'fixed-asset-purchase', refId: asset.id, reference: name, description: `Equipment purchased — ${name}`, lines: [
     { accountCode: preset.assetCode, debit: cost, credit: 0 },
-    { accountCode: '1010', debit: 0, credit: cost }
+    { accountCode: paidFrom, debit: 0, credit: cost }
   ]});
   audit('Accounting','Equipment Added', asset.id, name);
   saveDB();
@@ -4116,6 +4230,13 @@ function loadOwnershipSettings() {
   document.getElementById('ownership-type').value = db.settings.ownershipType || 'single';
   toggleOwnershipUI();
   renderPartnersRows();
+  document.getElementById('overdue-interest-rate').value = db.settings.acctMappings.overdueInterestRatePct || 0;
+}
+
+function saveOverdueInterestRate() {
+  db.settings.acctMappings.overdueInterestRatePct = parseFloat(document.getElementById('overdue-interest-rate').value) || 0;
+  saveDB();
+  toast('Interest rate saved','success');
 }
 
 function toggleOwnershipUI() {
@@ -4247,6 +4368,93 @@ function computeOwnersEquityStatement(from, to) {
     return { name:p.name, sharePct:p.sharePct, opening, investments, profitShare, drawings, closing };
   });
   return { single:false, rows, totalProfit: netProfit };
+}
+
+function postInterestCharge(customerName, amount) {
+  confirm(`Charge ${fmt(amount)} interest to ${customerName}? This adds to what they owe you — it's not cash received yet.`, ()=>{
+    const a = { id:uid(), type:'income', category:'Interest', description:`Interest charged — ${customerName}`, amount, date:today(), reference:'', createdAt:now() };
+    db.accounting.push(a);
+    // Interest owed increases Accounts Receivable, not Cash — it hasn't been collected yet.
+    postJournalEntry({ date: a.date, voucherKind:'Journal', refType:'manual-accounting', refId: a.id, reference:'', description: a.description, lines: [
+      { accountCode: db.settings.acctMappings.arAccount, debit: amount, credit: 0 },
+      { accountCode: resolveIncomeAccountCode('Interest'), debit: 0, credit: amount }
+    ]});
+    audit('Accounting','Interest Charged', a.id, `${customerName} — ${fmt(amount)}`);
+    saveDB();
+    toast('Interest charge recorded','success');
+  });
+}
+
+function whatsappDueReminder(customerName, amount) {
+  const cust = db.entities.find(e=>e.name===customerName);
+  let phone = cust?.phone || '';
+  if (!phone) {
+    phone = prompt(`No phone number on file for ${customerName}. Enter their number (with country code, e.g. 9779812345678):`, '977');
+    if (!phone) return;
+  }
+  phone = phone.replace(/[^0-9]/g,'');
+  const bizName = db.settings.orgName || 'us';
+  const msg = `Hello ${customerName}, this is a friendly reminder from ${bizName} that you have an outstanding balance of ${fmt(amount)}. Please let us know when we can expect payment. Thank you!`;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+/* ── Post-Dated Cheque Tracker ── */
+function openPDCTracker() {
+  document.getElementById('pdc-type').value = 'received';
+  document.getElementById('pdc-party').value = '';
+  document.getElementById('pdc-number').value = '';
+  document.getElementById('pdc-amount').value = '';
+  document.getElementById('pdc-date').value = '';
+  renderPDCList();
+  openModal('pdc-overlay');
+}
+
+function savePDC() {
+  const type = document.getElementById('pdc-type').value;
+  const partyName = document.getElementById('pdc-party').value.trim();
+  const chequeNumber = document.getElementById('pdc-number').value.trim();
+  const amount = parseFloat(document.getElementById('pdc-amount').value) || 0;
+  const chequeDate = document.getElementById('pdc-date').value;
+  if (!partyName || !chequeNumber || amount<=0 || !chequeDate) { toast('Fill in all fields','error'); return; }
+  db.postDatedCheques.push({ id:uid(), type, partyName, chequeNumber, amount, chequeDate, status:'pending', createdAt:now(), createdBy:session.username });
+  audit('Accounting','PDC Logged', chequeNumber, `${partyName} — ${fmt(amount)}`);
+  saveDB();
+  toast('Cheque added','success');
+  openPDCTracker();
+}
+
+function renderPDCList() {
+  const list = (db.postDatedCheques||[]).slice().sort((a,b)=>a.chequeDate.localeCompare(b.chequeDate));
+  document.getElementById('pdc-tbody').innerHTML = list.length ? list.map(p=>`
+    <tr>
+      <td>${p.type==='received'?'Received':'Issued'}</td><td>${esc(p.partyName)}</td><td class="mono">${esc(p.chequeNumber)}</td>
+      <td class="mono">${fmt(p.amount)}</td><td>${fmtDate(p.chequeDate)}</td>
+      <td><span class="badge ${p.status==='cleared'?'badge-success':p.status==='bounced'?'badge-danger':'badge-warning'}">${p.status}</span></td>
+      <td>${p.status==='pending'?`<button class="btn btn-xs btn-success" onclick="markPDC('${p.id}','cleared')">Cleared</button> <button class="btn btn-xs btn-danger" onclick="markPDC('${p.id}','bounced')">Bounced</button>`:''}</td>
+    </tr>`).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-title">No cheques tracked yet</div></div></td></tr>';
+}
+
+function markPDC(id, status) {
+  const p = (db.postDatedCheques||[]).find(x=>x.id===id);
+  if (!p) return;
+  if (status === 'cleared') {
+    // Received cheque clearing usually settles a customer's due; issued cheque clearing usually
+    // settles what you owe a supplier — the two most common real-world cases.
+    const lines = p.type==='received'
+      ? [ { accountCode:'1020', debit:p.amount, credit:0 }, { accountCode: db.settings.acctMappings.arAccount, debit:0, credit:p.amount } ]
+      : [ { accountCode: db.settings.acctMappings.apAccount, debit:p.amount, credit:0 }, { accountCode:'1020', debit:0, credit:p.amount } ];
+    postJournalEntry({ date: today(), voucherKind:'Journal', refType:'pdc-cleared', refId: p.id, reference: p.chequeNumber, description:`Cheque ${p.chequeNumber} cleared — ${p.partyName}`, lines });
+  }
+  p.status = status;
+  audit('Accounting', `PDC ${status}`, p.chequeNumber, `${p.partyName} — ${fmt(p.amount)}`);
+  saveDB();
+  toast(`Marked ${status}`,'success');
+  renderPDCList();
+}
+
+function toggleRecExpiryField() {
+  const on = document.getElementById('rec-track-expiry').checked;
+  document.getElementById('rec-expiry-field').style.display = on ? '' : 'none';
 }
 
 function hasAnyEditPermission() {
@@ -5927,6 +6135,7 @@ function closeDropdowns() {
 }
 function toggleQuickAdd() { const m=document.getElementById('quick-add-menu'); m.classList.toggle('show'); }
 function toggleUserMenu() { const m=document.getElementById('user-menu'); m.classList.toggle('show'); }
+function toggleAcctToolsMenu() { closeDropdowns(); const m=document.getElementById('acct-tools-menu'); m.classList.toggle('show'); }
 function toggleNotifPanel() { document.getElementById('notif-panel').classList.toggle('show'); }
 document.addEventListener('click', e => {
   if (!e.target.closest('.dropdown') && !e.target.closest('#notif-btn')) closeDropdowns();
@@ -7101,10 +7310,15 @@ function setAcctType(type) {
     expBtn.style.background = 'var(--danger)'; expBtn.style.color = '#fff'; expBtn.style.borderColor = 'var(--danger)';
     incBtn.style.background = 'transparent'; incBtn.style.color = 'var(--text-muted)'; incBtn.style.borderColor = 'var(--border)';
   }
-  // Suggest relevant categories by type
+  // Populate the Category dropdown with the exact list used everywhere else — no free typing,
+  // so an entry can never silently land in "Other" from a typo or a slightly different spelling.
   const incCats = ['Revenue', 'Sales', 'Service', 'Interest', 'Rent Income', 'Other Income'];
-  const expCats = db.settings.categories.accounting||['Salary','Utilities','Rent','Supplies','Tax','VAT','Maintenance','Travel'];
-  attachSuggest('acct-cat', type==='income' ? incCats : expCats);
+  const expCats = db.settings.categories.accounting||['Salary','Utilities','Rent','Supplies','Tax','VAT','Maintenance','Travel','Contractor','Professional Fees','Other'];
+  const catSelect = document.getElementById('acct-cat');
+  const prevValue = catSelect.value;
+  const options = type === 'income' ? incCats : expCats;
+  catSelect.innerHTML = options.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if (options.includes(prevValue)) catSelect.value = prevValue;
   if (type === 'income') {
     document.getElementById('acct-tds-section').style.display = 'none';
     document.getElementById('acct-tds-toggle').checked = false;
@@ -7144,12 +7358,12 @@ function openAccountingModal(id=null) {
   const a = id ? db.accounting.find(x=>x.id===id) : null;
   document.getElementById('acct-modal-title').textContent = id ? 'Edit Entry' : 'Add Entry';
   document.getElementById('acct-amount').value = a?.amount||'';
-  document.getElementById('acct-cat').value = a?.category||'';
   document.getElementById('acct-date').value = a?.date||today();
   document.getElementById('acct-desc').value = a?.description||'';
   document.getElementById('acct-ref').value = a?.reference||'';
   openModal('acct-modal-overlay');
   setAcctType(a?.type||'income');
+  if (a?.category) document.getElementById('acct-cat').value = a.category; // set after options are populated
   if (a?.tdsAmount > 0) {
     document.getElementById('acct-tds-toggle').checked = true;
     document.getElementById('acct-tds-rate').value = a.tdsRateKey || 'rentCompany';
@@ -7260,6 +7474,7 @@ function openEmployeeModal(id=null) {
   document.getElementById('emp-salary').value = e?.salary||'';
   document.getElementById('emp-pay-mode').value = e?.payMode||'monthly';
   document.getElementById('emp-salary-note').value = e?.salaryNote||'';
+  document.getElementById('emp-ssf').checked = e?.ssfEnrolled !== false;
   document.getElementById('emp-notes').value = e?.notes||'';
   document.getElementById('emp-emergency').value = e?.emergencyContact||'';
   setEmpTab('personal', document.querySelector('#emp-modal-overlay .tabs .tab'));
@@ -7282,6 +7497,7 @@ function saveEmployee() {
     contractType: document.getElementById('emp-contract').value, status: document.getElementById('emp-status').value,
     bankAccount: document.getElementById('emp-bank').value.trim(), salary: parseFloat(document.getElementById('emp-salary').value)||0,
     payMode: document.getElementById('emp-pay-mode').value, salaryNote: document.getElementById('emp-salary-note').value.trim(),
+    ssfEnrolled: document.getElementById('emp-ssf').checked,
     notes: document.getElementById('emp-notes').value.trim(), emergencyContact: document.getElementById('emp-emergency').value.trim()
   };
   if (empEditId) {
@@ -7345,24 +7561,56 @@ function processPayroll() {
     sc.deductions.forEach(ded => { deductions[ded] = parseFloat(document.getElementById(`ded-${e.id}-${ded.replace(/\s/g,'_')}`)?.value)||0; });
     const totalEarnings = Object.values(earnings).reduce((a,b)=>a+b,0);
     const totalDeductions = Object.values(deductions).reduce((a,b)=>a+b,0);
-    const netPay = Math.max(0, (e.salary||0) + totalEarnings - totalDeductions);
-    return { empId:e.id, empName:e.name, role:e.role, salary:e.salary||0, earnings, deductions, totalEarnings, totalDeductions, netPay };
+    const grossWage = (e.salary||0) + totalEarnings - totalDeductions;
+    const ssfEnrolled = e.ssfEnrolled !== false;
+    const employeeSSF = ssfEnrolled ? +((e.salary||0) * 0.11).toFixed(2) : 0;
+    const employerSSF = ssfEnrolled ? +((e.salary||0) * 0.20).toFixed(2) : 0;
+    const netPay = Math.max(0, grossWage - employeeSSF);
+    return { empId:e.id, empName:e.name, role:e.role, salary:e.salary||0, earnings, deductions, totalEarnings, totalDeductions, grossWage, ssfEnrolled, employeeSSF, employerSSF, netPay, paid:false, paidDate:null, paidMethod:null };
   });
   const totalPay = entries.reduce((a,x)=>a+x.netPay,0);
-  confirm(`Process payroll for ${month}?\nTotal: ${fmt(totalPay)}`, ()=>{
+  const totalSSF = entries.reduce((a,x)=>a+x.employeeSSF+x.employerSSF,0);
+  confirm(`Approve payroll for ${month}?\nNet to employees: ${fmt(totalPay)}\nSSF (employee+employer): ${fmt(totalSSF)}\n\nThis records what's owed — you'll mark each employee's salary (and the SSF deposit) as paid separately, whenever you actually pay them.`, ()=>{
+    // Preserve any "already paid" status if this month is being reprocessed (e.g. correcting an amount)
+    const prevPh = db.payrollHistory.find(ph=>ph.month===month);
+    if (prevPh) {
+      entries.forEach(e => {
+        const prevEntry = prevPh.entries?.find(p=>p.empId===e.empId);
+        if (prevEntry?.paid) { e.paid = true; e.paidDate = prevEntry.paidDate; e.paidMethod = prevEntry.paidMethod; }
+      });
+    }
     entries.forEach(e=>{ db.accounting.push({ id:uid(), type:'expense', category:'Salary', description:`Salary ${e.empName} - ${month}`, amount:e.netPay, date:today(), reference:`PAY-${month}`, createdAt:now() }); });
 
-    // Ledger: automatic double-entry (invisible) — one entry for the whole payroll run
-    // Dr Salary & Wages Expense, Cr Cash/Bank, for the total net pay
-    postPayrollJournal(month, totalPay);
+    // Ledger: automatic double-entry (invisible) — Dr Salary Expense + Employer SSF Contribution,
+    // Cr Salary Payable (net, after employee SSF withheld) + SSF Payable (employee + employer share)
+    postPayrollJournal(month, entries);
 
     db.payrollHistory = db.payrollHistory.filter(ph=>ph.month!==month);
-    db.payrollHistory.push({ id:uid(), month, entries, totalPay, processedBy:session.username, processedAt:now() });
-    audit('HR','Payroll',month,`${entries.length} employees, ${fmt(totalPay)}`);
+    db.payrollHistory.push({ id:uid(), month, entries, totalPay, totalSSF, ssfPaid:false, processedBy:session.username, processedAt:now() });
+    audit('HR','Payroll',month,`${entries.length} employees, ${fmt(totalPay)} net, ${fmt(totalSSF)} SSF`);
     saveDB(); toast(`Payroll processed: ${fmt(totalPay)}`,'success'); renderSalaryHistory();
   });
 }
 
+// Marks the month's total SSF liability (employee + employer share) as deposited with the Fund.
+function openMarkSSFDeposited(month) {
+  const ph = db.payrollHistory.find(p=>p.month===month);
+  if (!ph) { toast('No payroll found for that month','error'); return; }
+  if (ph.ssfPaid) { toast('Already marked as deposited','warning'); return; }
+  const method = prompt(`Deposit SSF for ${month}? Total: ${fmt(ph.totalSSF||0)}\nPaid via? Type "Cash" or "Bank"`, 'Bank');
+  if (!method) return;
+  const normalizedMethod = method.trim().toLowerCase().startsWith('b') ? 'Bank Transfer' : 'Cash';
+  const cashCode = normalizedMethod === 'Bank Transfer' ? '1020' : '1010';
+  postJournalEntry({ date: today(), voucherKind:'Payment', refType:'ssf-deposit', refId: month, reference:`SSF-${month}`, description:`SSF Deposit — ${month}`, lines: [
+    { accountCode:'2070', debit: ph.totalSSF||0, credit:0 },
+    { accountCode: cashCode, debit:0, credit: ph.totalSSF||0 }
+  ]});
+  ph.ssfPaid = true; ph.ssfPaidDate = today(); ph.ssfPaidMethod = normalizedMethod;
+  audit('HR','SSF Deposit', month, `${fmt(ph.totalSSF||0)} (${normalizedMethod})`);
+  saveDB();
+  toast('SSF marked as deposited','success');
+  renderSalaryHistory();
+}
 function renderSalaryHistory() {
   const empF = document.getElementById('sh-emp-filter')?.value?.toLowerCase()||'';
   const monF = document.getElementById('sh-month-filter')?.value||'';
@@ -7374,16 +7622,49 @@ function renderSalaryHistory() {
   all.sort((a,b)=>b.month.localeCompare(a.month));
   const tbody = document.getElementById('sh-tbody');
   if (!tbody) return;
+  // SSF summary — one row per month with a pending deposit
+  const monthsWithSSF = [...new Set(db.payrollHistory.filter(ph=>(ph.totalSSF||0)>0).map(ph=>ph.month))].sort().reverse();
+  const ssfPanel = document.getElementById('sh-ssf-summary');
+  if (ssfPanel) {
+    ssfPanel.innerHTML = monthsWithSSF.length ? monthsWithSSF.map(m=>{
+      const ph = db.payrollHistory.find(p=>p.month===m);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-alt,#f7f7f9);border-radius:6px;margin-bottom:6px">
+        <span>SSF for ${esc(m)}: <strong>${fmt(ph.totalSSF||0)}</strong> ${ph.ssfPaid?`<span class="badge badge-success">Deposited ${fmtDate(ph.ssfPaidDate)}</span>`:`<span class="badge badge-warning">Pending</span>`}</span>
+        ${ph.ssfPaid?'':`<button class="btn btn-xs btn-primary" onclick="openMarkSSFDeposited('${m}')">Mark Deposited</button>`}
+      </div>`;
+    }).join('') : '';
+  }
   tbody.innerHTML = all.length ? all.map(e=>`
     <tr>
       <td class="mono">${esc(e.month)}</td><td>${esc(e.empName)}</td>
       <td class="mono amt-neutral">${fmt(e.salary)}</td>
       <td class="mono text-success">+${fmt(e.totalEarnings||0)}</td>
-      <td class="mono text-danger">-${fmt(e.totalDeductions||0)}</td>
+      <td class="mono text-danger">-${fmt(e.totalDeductions||0)}${e.employeeSSF?` <span style="font-size:11px;color:#999">(incl. SSF ${fmt(e.employeeSSF)})</span>`:''}</td>
       <td class="mono font-bold">${fmt(e.netPay)}</td>
-      <td><span class="badge badge-success">Paid</span></td>
-      <td><button class="btn btn-xs btn-secondary btn-view" onclick="showPaySlip(${JSON.stringify(e).replace(/"/g,'\'')})">📄 Slip</button></td>
+      <td>${e.paid ? `<span class="badge badge-success">Paid ${fmtDate(e.paidDate)}</span>` : `<span class="badge badge-warning">Unpaid</span>`}</td>
+      <td style="display:flex;gap:6px">
+        ${e.paid ? '' : `<button class="btn btn-xs btn-success" onclick="openMarkPayrollPaid('${e.month}','${e.empId}')">💰 Mark Paid</button>`}
+        <button class="btn btn-xs btn-secondary btn-view" onclick="showPaySlip(${JSON.stringify(e).replace(/"/g,'\'')})">📄 Slip</button>
+      </td>
     </tr>`).join('') : '<tr><td colspan="8"><div class="empty"><div class="empty-icon">💵</div><div class="empty-title">No salary records</div></div></td></tr>';
+}
+
+// Mark one employee's payroll as actually paid — clears their share of Salary Payable.
+function openMarkPayrollPaid(month, empId) {
+  const ph = db.payrollHistory.find(p=>p.month===month);
+  const entry = ph?.entries?.find(e=>e.empId===empId);
+  if (!entry) return;
+  const method = prompt(`Paid via? Type "Cash" or "Bank" — Amount: ${fmt(entry.netPay)}`, 'Cash');
+  if (!method) return;
+  const normalizedMethod = method.trim().toLowerCase().startsWith('b') ? 'Bank Transfer' : 'Cash';
+  postPayrollPaymentJournal(month, empId, entry.empName, entry.netPay, normalizedMethod);
+  entry.paid = true;
+  entry.paidDate = today();
+  entry.paidMethod = normalizedMethod;
+  audit('HR','Payroll Payment', `${month}:${empId}`, `${entry.empName} — ${fmt(entry.netPay)} (${normalizedMethod})`);
+  saveDB();
+  toast(`Marked ${entry.empName} as paid`,'success');
+  renderSalaryHistory();
 }
 
 function showPaySlip(entry) {
@@ -8392,8 +8673,7 @@ function deleteRecord(type, id) {
 /* ══ REPORT CATEGORIES ══ */
 const REPORT_CATEGORIES = [
   { id:'sales', group:'business', icon:'🧾', title:'Sales Reports', desc:'Transactions, revenue, top products', types:[
-    {v:'sales', label:'Sales / Transaction Report'},
-    {v:'sales-register', label:'Sales Register (Retail vs Wholesale)'}
+    {v:'sales', label:'Sales / Transaction Report'}
   ]},
   { id:'purchase', group:'business', icon:'🛍️', title:'Purchase Reports', desc:'Purchase orders, GRN, supplier spend', types:[
     {v:'purchase-orders', label:'Purchase Order Summary'},
@@ -8401,19 +8681,17 @@ const REPORT_CATEGORIES = [
   ]},
   { id:'inventory', group:'business', icon:'📦', title:'Inventory Reports', desc:'Stock levels, valuation, movement', types:[
     {v:'stock', label:'Stock / Inventory Report'},
-    {v:'material-stock', label:'Raw Material Stock Report'},
     {v:'reorder', label:'Reorder Alert Report'},
-    {v:'stock-movement', label:'Stock Movement / Adjustment History'}
+    {v:'expiring-soon', label:'Expiring Soon'},
+    {v:'non-moving-stock', label:'Non-Moving Stock'}
   ]},
   { id:'production', group:'business', icon:'⚙️', title:'Production Reports', desc:'BOM usage, batches, cost', types:[
-    {v:'production-batches', label:'Production Batch Report'},
-    {v:'production-cost', label:'Production Cost Analysis'}
+    {v:'production-batches', label:'Production Batch Report'}
   ]},
   { id:'supplier', group:'business', icon:'🏭', title:'Supplier Reports', desc:'Outstanding balances, payment history', types:[
     {v:'supplier-ledger', label:'Supplier Ledger'}
   ]},
   { id:'customer', group:'business', icon:'👥', title:'Customer Reports', desc:'Customer value, due balances', types:[
-    {v:'entity', label:'Customer / Contact Report'},
     {v:'due-ledger', label:'Customer Due Ledger'}
   ]},
   { id:'hr', group:'business', icon:'👥', title:'HR Reports', desc:'Strength, attendance, payroll', types:[
@@ -8422,12 +8700,12 @@ const REPORT_CATEGORIES = [
     {v:'payroll-report', label:'Payroll Summary'}
   ]},
   { id:'financial-statements', group:'official', icon:'💰', title:'Financial Statements', desc:'Trial Balance, P&L, Balance Sheet, Cash Flow — for your tax office, bank, or auditor', types:[
-    {v:'executive', label:'Executive Summary / SITREP'},
     {v:'trial-balance', label:'Trial Balance'},
     {v:'profit-loss-ledger', label:'Profit & Loss Statement'},
     {v:'balance-sheet', label:'Balance Sheet'},
     {v:'cash-flow', label:'Cash Flow Statement'},
     {v:'owners-equity', label:"Owner's Equity / Partners' Capital"},
+    {v:'business-summary', label:'Business Health Check (One-Page Summary)'},
     {v:'audit', label:'Audit & Compliance (Admin)'}
   ]},
   { id:'ledger-tools', group:'business', icon:'🗂️', title:'Ledger & Management Tools', desc:'Day Book, Account Ledger, Aging, Equipment — for your own day-to-day tracking', types:[
@@ -8435,13 +8713,13 @@ const REPORT_CATEGORIES = [
     {v:'account-ledger', label:'Account Ledger (Cash, Bank, any account)'},
     {v:'receivables-aging', label:'Receivables Aging'},
     {v:'payables-aging', label:'Payables Aging'},
-    {v:'fixed-asset-register', label:'Fixed Asset Register'},
-    {v:'depreciation-schedule', label:'Depreciation Schedule'}
+    {v:'fixed-asset-register', label:'Fixed Asset Register'}
   ]},
   { id:'tax', group:'official', icon:'🧮', title:'Compliance & Regulatory Reports', desc:'Nepal VAT, PAN, government submission, annual & audit reports', types:[
     {v:'vat-sales', label:'VAT Sales Register'},
     {v:'vat-purchase', label:'VAT Purchase Register'},
     {v:'tds-register', label:'TDS Register (Rent/Contractor/Professional)'},
+    {v:'ssf-register', label:'SSF Register (Employee Deposits)'},
     {v:'correction-notes', label:'Credit & Debit Notes (Corrections)'},
     {v:'tax-deduction', label:'Tax Deduction Report (Payroll)'},
     {v:'govt-submission', label:'Government Submission Summary (Net VAT Payable)'}
@@ -8459,8 +8737,18 @@ function getEnabledComplianceTypes() {
 function initReportsView() {
   renderReportCategoryGrid();
   document.getElementById('rpt-params-card').style.display = 'none';
-  document.getElementById('rpt-category-grid').style.display = '';
+  document.getElementById('rpt-category-grid').style.display = 'none';
+  document.getElementById('rpt-quick-panel').style.display = '';
+  document.getElementById('rpt-gov-panel').style.display = '';
+  document.getElementById('rpt-showall-btn').style.display = '';
   document.getElementById('report-output').innerHTML = '';
+}
+
+function toggleAllReportsGrid() {
+  const grid = document.getElementById('rpt-category-grid');
+  const isHidden = grid.style.display === 'none';
+  grid.style.display = isHidden ? '' : 'none';
+  document.getElementById('rpt-showall-btn').textContent = isHidden ? '📚 Hide Advanced Reports' : '📚 Show All Reports (everything else — for your accountant or specific lookups)';
 }
 
 function renderReportCategoryGrid() {
@@ -8483,6 +8771,9 @@ function selectReportCategory(catId) {
   const cat = REPORT_CATEGORIES.find(c=>c.id===catId);
   if (!cat) return;
   window._currentReportCat = catId;
+  document.getElementById('rpt-quick-panel').style.display = 'none';
+  document.getElementById('rpt-gov-panel').style.display = 'none';
+  document.getElementById('rpt-showall-btn').style.display = 'none';
   document.getElementById('rpt-category-grid').style.display = 'none';
   document.getElementById('rpt-params-card').style.display = '';
   document.getElementById('rpt-params-title').textContent = cat.icon + ' ' + cat.title;
@@ -8495,8 +8786,15 @@ function selectReportCategory(catId) {
   onReportTypeChange();
 }
 
+// One-tap shortcut for the 5 most common questions — jumps straight to a category
+// with the right report pre-selected, still lets you pick dates before generating.
+function quickReport(catId, typeValue) {
+  selectReportCategory(catId);
+  const sel = document.getElementById('rpt-type');
+  if (sel) { sel.value = typeValue; onReportTypeChange(); }
+}
+
 const REPORT_TYPE_HELP = {
-  'executive': 'A plain narrative summary of how the business did this period, with key numbers.',
   'trial-balance': 'A health-check page — lists every account with its balance. If bookkeeping is correct, Debit and Credit totals always match exactly.',
   'profit-loss-ledger': 'Did the business make money this period? Income minus Expenses.',
   'balance-sheet': 'A snapshot as of one date: what the business owns, owes, and what\'s left for you.',
@@ -8512,9 +8810,12 @@ const REPORT_TYPE_HELP = {
   'receivables-aging': 'How overdue each customer\'s balance is — 0-30, 31-60, 61-90, 90+ days — so you know who to chase first.',
   'payables-aging': 'How overdue each amount you owe a supplier is — so you know who to pay first.',
   'fixed-asset-register': 'Everything the business owns long-term (equipment, vehicles) and what it\'s worth today.',
-  'depreciation-schedule': 'The month-by-month plan for how each asset\'s value reduces over time.',
   'cash-flow': 'Where actual cash came from and went — different from profit, which can look fine on paper while cash is tight.',
-  'owners-equity': 'Shows the owner\'s (or each partner\'s) stake in the business — opening capital, their share of profit, and what they\'ve taken out.'
+  'owners-equity': 'Shows the owner\'s (or each partner\'s) stake in the business — opening capital, their share of profit, and what they\'ve taken out.',
+  'business-summary': 'Everything you\'d want to glance at before talking to a bank or auditor — profit, assets, cash, who owes what — on one page.',
+  'expiring-soon': 'Anything you\'ve marked for expiry tracking, soonest first.',
+  'non-moving-stock': 'Items sitting in stock that haven\'t sold in over 60 days.',
+  'ssf-register': 'What you owe the Social Security Fund this period — 11% from each employee, 20% from you.'
 };
 
 function onReportTypeChange() {
@@ -8548,7 +8849,11 @@ function onReportTypeChange() {
 
 function backToReportCategories() {
   document.getElementById('rpt-params-card').style.display = 'none';
-  document.getElementById('rpt-category-grid').style.display = '';
+  document.getElementById('rpt-quick-panel').style.display = '';
+  document.getElementById('rpt-gov-panel').style.display = '';
+  document.getElementById('rpt-showall-btn').style.display = '';
+  document.getElementById('rpt-category-grid').style.display = 'none';
+  document.getElementById('rpt-showall-btn').textContent = '📚 Show All Reports (everything else — for your accountant or specific lookups)';
   document.getElementById('report-output').innerHTML = '';
 }
 
@@ -8593,18 +8898,7 @@ function generateReport() {
   const footer = reportDocFooter();
   let bodyHtml = '';
 
-  if (type==='executive') {
-    bodyHtml = `<h2>Executive Summary / Situation Report</h2>
-    <p style="font-size:17px;margin-bottom:16px;line-height:1.7">During the period ${periodLabel}, total income recorded was <strong>${fmt(totalIncome)}</strong>. Total expenditure stood at <strong>${fmt(totalExp)}</strong>, resulting in a net ${netBalance>=0?'surplus':'deficit'} of <strong>${fmt(Math.abs(netBalance))}</strong>. A total of <strong>${periodSales.length}</strong> sales transactions were processed during this period, generating revenue of <strong>${fmt(totalRevenue)}</strong>.</p>
-    <h2>Key Performance Indicators</h2>
-    <table><thead><tr><th>Metric</th><th>Value</th><th>Period</th></tr></thead><tbody>
-      <tr><td>Total Income</td><td>${fmt(totalIncome)}</td><td>${periodLabel}</td></tr>
-      <tr><td>Total Expenses</td><td>${fmt(totalExp)}</td><td>${periodLabel}</td></tr>
-      <tr><td>Net Balance</td><td style="${netBalance>=0?'color:green':'color:red'}">${fmt(netBalance)}</td><td>${periodLabel}</td></tr>
-      <tr><td>Sales Revenue</td><td>${fmt(totalRevenue)}</td><td>${periodLabel}</td></tr>
-      <tr><td>Transactions</td><td>${periodSales.length}</td><td>${periodLabel}</td></tr>
-    </tbody></table>`;
-  } else if (type==='trial-balance') {
+  if (type==='trial-balance') {
     const tb = computeTrialBalance(from, to);
     bodyHtml = `<h2>Trial Balance</h2>
     <p style="font-size:15px;color:#555">A health-check page — if your bookkeeping is correct, the Debit and Credit totals below always add up to the exact same number.</p>
@@ -8680,12 +8974,15 @@ function generateReport() {
   } else if (type==='receivables-aging') {
     const aging = computeReceivablesAging(to || today());
     const bucketCell = (v) => `<td style="text-align:right" class="mono">${v?fmt(v):'0'}</td>`;
+    const rate = db.settings.acctMappings.overdueInterestRatePct || 0;
+    const interestFor = p => rate>0 ? +((p.d30*15 + p.d60*45 + p.d90*75 + p.d90plus*105) * (rate/100) / 365).toFixed(2) : 0;
     bodyHtml = `<h2>Receivables Aging<span class="help-tip" data-tip="How overdue each customer's balance is — helps you see who to chase first.">?</span></h2>
     <p style="font-size:15px;color:#555">As of ${fmtDate(to||today())}</p>
-    <table><thead><tr><th>Customer</th><th style="text-align:right">Total Due</th><th style="text-align:right">Not Yet Due</th><th style="text-align:right">0-30 days</th><th style="text-align:right">31-60 days</th><th style="text-align:right">61-90 days</th><th style="text-align:right">90+ days</th></tr></thead><tbody>
-      ${aging.parties.length?aging.parties.map(p=>`<tr><td>${esc(p.name)}</td>${bucketCell(p.total)}${bucketCell(p.notDue)}${bucketCell(p.d30)}${bucketCell(p.d60)}${bucketCell(p.d90)}${bucketCell(p.d90plus)}</tr>`).join(''):'<tr><td colspan="7">No outstanding receivables</td></tr>'}
-      <tr style="background:#f0f0f0"><td><strong>TOTAL</strong></td>${bucketCell(aging.totals.total)}${bucketCell(aging.totals.notDue)}${bucketCell(aging.totals.d30)}${bucketCell(aging.totals.d60)}${bucketCell(aging.totals.d90)}${bucketCell(aging.totals.d90plus)}</tr>
-    </tbody></table>`;
+    <table><thead><tr><th>Customer</th><th style="text-align:right">Total Due</th><th style="text-align:right">Not Yet Due</th><th style="text-align:right">0-30 days</th><th style="text-align:right">31-60 days</th><th style="text-align:right">61-90 days</th><th style="text-align:right">90+ days</th>${rate>0?'<th style="text-align:right">Suggested Interest</th>':''}<th class="no-print-audit">Remind</th></tr></thead><tbody>
+      ${aging.parties.length?aging.parties.map(p=>{const interest=interestFor(p); return `<tr><td>${esc(p.name)}</td>${bucketCell(p.total)}${bucketCell(p.notDue)}${bucketCell(p.d30)}${bucketCell(p.d60)}${bucketCell(p.d90)}${bucketCell(p.d90plus)}${rate>0?`<td style="text-align:right" class="mono">${fmt(interest)}${interest>0?` <button class="btn btn-xs btn-secondary no-print-audit" onclick="postInterestCharge('${esc(p.name).replace(/'/g,"\\'")}',${interest})">Charge</button>`:''}</td>`:''}<td class="no-print-audit"><button class="btn btn-xs btn-secondary" onclick="whatsappDueReminder('${esc(p.name).replace(/'/g,"\\'")}',${p.total})">💬 WhatsApp</button></td></tr>`;}).join(''):'<tr><td colspan="9">No outstanding receivables</td></tr>'}
+      <tr style="background:#f0f0f0"><td><strong>TOTAL</strong></td>${bucketCell(aging.totals.total)}${bucketCell(aging.totals.notDue)}${bucketCell(aging.totals.d30)}${bucketCell(aging.totals.d60)}${bucketCell(aging.totals.d90)}${bucketCell(aging.totals.d90plus)}${rate>0?'<td></td>':''}<td class="no-print-audit"></td></tr>
+    </tbody></table>
+    ${rate>0?`<p style="font-size:13px;color:#777;margin-top:8px">Interest estimated at ${rate}% per year, using each aging bucket's midpoint days overdue — a reasonable estimate, not an exact day-by-day calculation.</p>`:''}`;
   } else if (type==='payables-aging') {
     const aging = computePayablesAging(to || today());
     const bucketCell = (v) => `<td style="text-align:right" class="mono">${v?fmt(v):'0'}</td>`;
@@ -8699,17 +8996,10 @@ function generateReport() {
     const assets = (db.fixedAssets||[]).filter(a=>a.status==='active');
     const totalCost = assets.reduce((a,x)=>a+x.cost,0), totalDep = assets.reduce((a,x)=>a+x.accumulatedDepreciation,0);
     bodyHtml = `<h2>Fixed Asset Register</h2>
-    <p style="font-size:15px;color:#555">Everything the business owns long-term, and what it's worth today.</p>
-    <table><thead><tr><th>Asset</th><th>Type</th><th>Purchase Date</th><th style="text-align:right">Cost</th><th style="text-align:right">Accumulated Depreciation</th><th style="text-align:right">Book Value</th></tr></thead><tbody>
-      ${assets.length?assets.map(a=>`<tr><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td>${fmtDate(a.purchaseDate)}</td><td style="text-align:right" class="mono">${fmt(a.cost)}</td><td style="text-align:right" class="mono">${fmt(a.accumulatedDepreciation)}</td><td style="text-align:right" class="mono"><strong>${fmt(a.cost-a.accumulatedDepreciation)}</strong></td></tr>`).join(''):'<tr><td colspan="6">No equipment recorded yet</td></tr>'}
-      <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL</strong></td><td style="text-align:right"><strong>${fmt(totalCost)}</strong></td><td style="text-align:right"><strong>${fmt(totalDep)}</strong></td><td style="text-align:right"><strong>${fmt(totalCost-totalDep)}</strong></td></tr>
-    </tbody></table>`;
-  } else if (type==='depreciation-schedule') {
-    const assets = (db.fixedAssets||[]).filter(a=>a.status==='active');
-    bodyHtml = `<h2>Depreciation Schedule</h2>
-    <p style="font-size:15px;color:#555">Straight-line method — equal amount every month until the asset's cost is fully written off.</p>
-    <table><thead><tr><th>Asset</th><th style="text-align:right">Cost</th><th style="text-align:right">Useful Life</th><th style="text-align:right">Monthly Depreciation</th><th style="text-align:right">Remaining Months</th></tr></thead><tbody>
-      ${assets.length?assets.map(a=>{const monthly=a.cost/(a.usefulLifeYears*12); const remaining=monthly?Math.ceil((a.cost-a.accumulatedDepreciation)/monthly):0; return `<tr><td>${esc(a.name)}</td><td style="text-align:right" class="mono">${fmt(a.cost)}</td><td style="text-align:right">${a.usefulLifeYears} years</td><td style="text-align:right" class="mono">${fmt(monthly)}</td><td style="text-align:right">${remaining}</td></tr>`;}).join(''):'<tr><td colspan="5">No equipment recorded yet</td></tr>'}
+    <p style="font-size:15px;color:#555">Everything the business owns long-term, and what it's worth today. Depreciation runs automatically, straight-line, every month.</p>
+    <table><thead><tr><th>Asset</th><th>Type</th><th>Purchase Date</th><th style="text-align:right">Cost</th><th style="text-align:right">Monthly Depreciation</th><th style="text-align:right">Accumulated</th><th style="text-align:right">Book Value</th></tr></thead><tbody>
+      ${assets.length?assets.map(a=>`<tr><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td>${fmtDate(a.purchaseDate)}</td><td style="text-align:right" class="mono">${fmt(a.cost)}</td><td style="text-align:right" class="mono">${fmt(a.cost/(a.usefulLifeYears*12))}</td><td style="text-align:right" class="mono">${fmt(a.accumulatedDepreciation)}</td><td style="text-align:right" class="mono"><strong>${fmt(a.cost-a.accumulatedDepreciation)}</strong></td></tr>`).join(''):'<tr><td colspan="7">No equipment recorded yet</td></tr>'}
+      <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL</strong></td><td style="text-align:right"><strong>${fmt(totalCost)}</strong></td><td></td><td style="text-align:right"><strong>${fmt(totalDep)}</strong></td><td style="text-align:right"><strong>${fmt(totalCost-totalDep)}</strong></td></tr>
     </tbody></table>`;
   } else if (type==='cash-flow') {
     const cf = computeCashFlow(from, to);
@@ -8765,34 +9055,55 @@ function generateReport() {
         <tr style="background:#f0f0f0"><td colspan="2"><strong>TOTAL NET PROFIT DISTRIBUTED</strong></td><td style="text-align:right"><strong>${fmt(oe.totalProfit)}</strong></td></tr>
       </tbody></table>`;
     }
+  } else if (type==='business-summary') {
+    const toDate = to || today();
+    const fromDate = from || toDate.slice(0,4)+'-01-01';
+    const pl = computePLPeriod(fromDate, toDate);
+    const bs = computeBalanceSheet(toDate);
+    const tb = computeTrialBalance(fromDate, toDate);
+    const cf = computeCashFlow(fromDate, toDate);
+    const recv = computeReceivablesAging(toDate);
+    const pay = computePayablesAging(toDate);
+    bodyHtml = `<h2>Business Health Check — One-Page Summary</h2>
+    <p style="font-size:15px;color:#555">${periodLabel} — everything you'd want to glance at before talking to a bank, auditor, or just yourself.</p>
+    <table style="margin-top:12px"><tbody>
+      <tr><td>Total Income</td><td style="text-align:right" class="mono">${fmt(pl.totalIncome)}</td></tr>
+      <tr><td>Total Expenses</td><td style="text-align:right" class="mono">${fmt(pl.totalExpense)}</td></tr>
+      <tr style="background:#f0f0f0"><td><strong>Net ${pl.netProfit>=0?'Profit':'Loss'}</strong></td><td style="text-align:right"><strong style="color:${pl.netProfit>=0?'green':'red'}">${fmt(Math.abs(pl.netProfit))}</strong></td></tr>
+    </tbody></table>
+    <table style="margin-top:14px"><tbody>
+      <tr><td>Total Assets</td><td style="text-align:right" class="mono">${fmt(bs.totalAssets)}</td></tr>
+      <tr><td>Total Liabilities</td><td style="text-align:right" class="mono">${fmt(bs.totalLiabilities)}</td></tr>
+      <tr><td>Total Equity</td><td style="text-align:right" class="mono">${fmt(bs.totalEquity)}</td></tr>
+    </tbody></table>
+    <table style="margin-top:14px"><tbody>
+      <tr><td>Cash &amp; Bank — Opening</td><td style="text-align:right" class="mono">${fmt(cf.openingCash)}</td></tr>
+      <tr><td>Cash &amp; Bank — Closing</td><td style="text-align:right" class="mono">${fmt(cf.closingCash)}</td></tr>
+      <tr><td>Who Owes You (Receivables)</td><td style="text-align:right" class="mono">${fmt(recv.totals.total||0)}</td></tr>
+      <tr><td>Who You Owe (Payables)</td><td style="text-align:right" class="mono">${fmt(pay.totals.total||0)}</td></tr>
+    </tbody></table>
+    <h3 style="margin-top:18px">Self-Check</h3>
+    <table><tbody>
+      <tr><td>Trial Balance (Debit = Credit)</td><td style="text-align:right">${tb.balanced?'<span style="color:green">✓ Balanced</span>':'<span style="color:red">⚠ Out of balance</span>'}</td></tr>
+      <tr><td>Balance Sheet (Assets = Liabilities + Equity)</td><td style="text-align:right">${bs.balanced?'<span style="color:green">✓ Balanced</span>':'<span style="color:red">⚠ Out of balance</span>'}</td></tr>
+    </tbody></table>`;
   } else if (type==='sales') {
+    const retail = periodSales.filter(x=>x.customerType!=='Wholesale');
+    const wholesale = periodSales.filter(x=>x.customerType==='Wholesale');
     bodyHtml = `<h2>Sales / Transaction Report</h2>
     <table><thead><tr><th>Date</th><th>Receipt</th><th>Customer</th><th>Items</th><th>Subtotal</th><th>Total</th><th>Payment</th></tr></thead><tbody>
       ${periodSales.length?periodSales.map(s=>`<tr><td>${fmtDate(s.date)}</td><td>${esc(s.receiptNumber||'—')}</td><td>${esc(s.customerName||'Walk-in')}</td><td>${s.items?.length||0}</td><td>${fmt(s.subtotal||0)}</td><td><strong>${fmt(s.total)}</strong></td><td>${esc(s.paymentMethod||'—')}</td></tr>`).join(''):'<tr><td colspan="7">No sales in period</td></tr>'}
       <tr style="background:#f0f0f0"><td colspan="4"><strong>TOTAL</strong></td><td></td><td><strong>${fmt(totalRevenue)}</strong></td><td></td></tr>
-    </tbody></table>`;
+    </tbody></table>
+    <p style="font-size:13px;color:#777;margin-top:6px">Retail: ${fmt(retail.reduce((a,s)=>a+s.total,0))} (${retail.length} sales) &nbsp;|&nbsp; Wholesale: ${fmt(wholesale.reduce((a,s)=>a+s.total,0))} (${wholesale.length} sales)</p>`;
     const itemTotals = {}; periodSales.forEach(s=>s.items?.forEach(i=>{ itemTotals[i.name]=(itemTotals[i.name]||0)+(i.price*i.qty); }));
     const top10 = Object.entries(itemTotals).sort((a,b)=>b[1]-a[1]).slice(0,10);
     if (top10.length) bodyHtml += `<!-- LAST_SECTION --><h2>Top Products by Revenue</h2><table><thead><tr><th>Rank</th><th>Product</th><th>Revenue</th></tr></thead><tbody>${top10.map(([n,v],i)=>`<tr><td>${i+1}</td><td>${esc(n)}</td><td>${fmt(v)}</td></tr>`).join('')}</tbody></table>`;
-  } else if (type==='sales-register') {
-    const retail = periodSales.filter(x=>x.customerType!=='Wholesale');
-    const wholesale = periodSales.filter(x=>x.customerType==='Wholesale');
-    bodyHtml = `<h2>Sales Register</h2><h3>Retail Sales</h3>
-    <table><thead><tr><th>Date</th><th>Invoice</th><th>Customer</th><th>Total</th></tr></thead><tbody>${retail.length?retail.map(s=>`<tr><td>${fmtDate(s.date)}</td><td>${esc(s.receiptNumber)}</td><td>${esc(s.customerName||'Walk-in')}</td><td>${fmt(s.total)}</td></tr>`).join(''):'<tr><td colspan="4">No retail sales</td></tr>'}<tr style="background:#f0f0f0"><td colspan="3"><strong>Retail Total</strong></td><td><strong>${fmt(retail.reduce((a,s)=>a+s.total,0))}</strong></td></tr></tbody></table>
-    <!-- LAST_SECTION --><h3>Wholesale Sales</h3>
-    <table><thead><tr><th>Date</th><th>Invoice</th><th>Customer</th><th>Total</th></tr></thead><tbody>${wholesale.length?wholesale.map(s=>`<tr><td>${fmtDate(s.date)}</td><td>${esc(s.receiptNumber)}</td><td>${esc(s.customerName||'Walk-in')}</td><td>${fmt(s.total)}</td></tr>`).join(''):'<tr><td colspan="4">No wholesale sales</td></tr>'}<tr style="background:#f0f0f0"><td colspan="3"><strong>Wholesale Total</strong></td><td><strong>${fmt(wholesale.reduce((a,s)=>a+s.total,0))}</strong></td></tr></tbody></table>`;
   } else if (type==='purchase-orders') {
     const pos2 = db.purchaseOrders.filter(p=>(!from||p.date>=from)&&(!to||p.date<=to));
     bodyHtml = `<h2>Purchase Order Summary</h2>
     <table><thead><tr><th>PO #</th><th>Supplier</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr></thead><tbody>
       ${pos2.length?pos2.map(p=>{const sp=db.secondary.find(s=>s.id===p.supplierId); const tot=(p.items||[]).reduce((a,i)=>a+i.qty*i.rate,0); return `<tr><td>${esc(p.poNumber)}</td><td>${esc(sp?.name||'—')}</td><td>${(p.items||[]).length}</td><td>${fmt(tot)}</td><td>${esc(p.status)}</td><td>${fmtDate(p.date)}</td></tr>`;}).join(''):'<tr><td colspan="6">No purchase orders in period</td></tr>'}
-    </tbody></table>`;
-  } else if (type==='purchase-register') {
-    const purchases = db.accounting.filter(a=>a.type==='expense'&&(a.category==='Purchase'||a.category==='Supplies')&&(!from||a.date>=from)&&(!to||a.date<=to));
-    bodyHtml = `<h2>Purchase Register</h2>
-    <table><thead><tr><th>Date</th><th>Description</th><th>Reference</th><th>Amount</th></tr></thead><tbody>
-      ${purchases.length?purchases.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${esc(p.description)}</td><td>${esc(p.reference||'—')}</td><td>${fmt(p.amount)}</td></tr>`).join(''):'<tr><td colspan="4">No purchases in period</td></tr>'}
-      <tr style="background:#f0f0f0"><td colspan="3"><strong>Total</strong></td><td><strong>${fmt(purchases.reduce((a,p)=>a+p.amount,0))}</strong></td></tr>
     </tbody></table>`;
   } else if (type==='grn-report') {
     const grns = db.goodsReceived.filter(g=>(!from||g.date>=from)&&(!to||g.date<=to));
@@ -8802,16 +9113,16 @@ function generateReport() {
     </tbody></table>`;
   } else if (type==='stock') {
     bodyHtml = `<h2>Stock / Inventory Report</h2>
+    <h3>Products</h3>
     <table><thead><tr><th>Name</th><th>SKU</th><th>Category</th><th>Stock</th><th>Unit</th><th>Cost</th><th>Price</th><th>Stock Value</th></tr></thead><tbody>
-      ${db.records.map(r=>`<tr style="${r.stock<=(r.lowStockThreshold||10)?'background:#fff3cd':''}"><td>${esc(r.name)}</td><td>${esc(r.sku||'—')}</td><td>${esc(r.category||'—')}</td><td><strong>${r.stock}</strong></td><td>${esc(r.unit||'pcs')}</td><td>${fmt(r.costPrice||0)}</td><td>${fmt(r.salePrice||0)}</td><td>${fmt((r.salePrice||0)*r.stock)}</td></tr>`).join('')}
+      ${db.records.map(r=>`<tr style="${r.stock<=(r.lowStockThreshold||10)?'background:#fff3cd':''}"><td>${esc(r.name)}</td><td>${esc(r.sku||'—')}</td><td>${esc(r.category||'—')}</td><td><strong>${r.stock}</strong></td><td>${esc(r.unit||'pcs')}</td><td>${fmt(r.costPrice||0)}</td><td>${fmt(r.salePrice||0)}</td><td>${fmt((r.salePrice||0)*r.stock)}</td></tr>`).join('') || '<tr><td colspan="8">No products</td></tr>'}
     </tbody></table>
-    <div style="margin-top:12px;font-weight:700">Total Stock Value: ${fmt(db.records.reduce((a,r)=>a+(r.salePrice||0)*r.stock,0))}</div>`;
-  } else if (type==='material-stock') {
-    bodyHtml = `<h2>Raw Material Stock Report</h2>
+    <div style="margin-top:8px;font-weight:700">Total Product Value: ${fmt(db.records.reduce((a,r)=>a+(r.salePrice||0)*r.stock,0))}</div>
+    ${db.rawMaterials.length ? `<h3 style="margin-top:18px">Raw Materials</h3>
     <table><thead><tr><th>Code</th><th>Name</th><th>Stock</th><th>Unit</th><th>Cost</th><th>Value</th></tr></thead><tbody>
       ${db.rawMaterials.map(m=>`<tr style="${m.stock<=(m.reorderLevel||0)?'background:#fff3cd':''}"><td>${esc(m.code)}</td><td>${esc(m.name)}</td><td><strong>${m.stock}</strong></td><td>${esc(m.unit)}</td><td>${fmt(m.cost||0)}</td><td>${fmt((m.cost||0)*m.stock)}</td></tr>`).join('')}
     </tbody></table>
-    <div style="margin-top:12px;font-weight:700">Total Material Value: ${fmt(db.rawMaterials.reduce((a,m)=>a+(m.cost||0)*m.stock,0))}</div>`;
+    <div style="margin-top:8px;font-weight:700">Total Material Value: ${fmt(db.rawMaterials.reduce((a,m)=>a+(m.cost||0)*m.stock,0))}</div>` : ''}`;
   } else if (type==='reorder') {
     const lowP = db.records.filter(r=>r.status==='active'&&r.stock<=(r.lowStockThreshold||10));
     const lowM = db.rawMaterials.filter(m=>m.status!=='archived'&&m.stock<=(m.reorderLevel||0));
@@ -8819,27 +9130,34 @@ function generateReport() {
     <table><thead><tr><th>Item</th><th>Type</th><th>Stock</th><th>Reorder Level</th></tr></thead><tbody>
       ${[...lowP.map(r=>({name:r.name,type:'Product',stock:r.stock,reorder:r.lowStockThreshold||10})),...lowM.map(m=>({name:m.name,type:'Raw Material',stock:m.stock,reorder:m.reorderLevel}))].map(i=>`<tr><td>${esc(i.name)}</td><td>${esc(i.type)}</td><td style="color:red"><strong>${i.stock}</strong></td><td>${i.reorder}</td></tr>`).join('')||'<tr><td colspan="4">All stock levels healthy</td></tr>'}
     </tbody></table>`;
-  } else if (type==='stock-movement') {
-    const moves = db.stockHistory.filter(h=>(!from||h.date>=from)&&(!to||h.date<=to)).slice(-300).reverse();
-    bodyHtml = `<h2>Stock Movement History</h2>
-    <table><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Qty</th><th>Balance</th><th>Ref</th></tr></thead><tbody>
-      ${moves.length?moves.map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${esc(h.recordName)}</td><td>${esc(h.type)}</td><td>${h.qty>0?'+':''}${h.qty}</td><td>${h.balanceAfter}</td><td>${esc(h.ref||'—')}</td></tr>`).join(''):'<tr><td colspan="6">No stock movements in period</td></tr>'}
+  } else if (type==='expiring-soon') {
+    const cutoff = shiftDate(today(), 30);
+    const items = db.records.filter(r=>r.trackExpiry && r.expiryDate && r.stock>0).sort((a,b)=>a.expiryDate.localeCompare(b.expiryDate));
+    bodyHtml = `<h2>Expiring Soon<span class="help-tip" data-tip="Anything you've marked for expiry tracking, sorted by soonest first — so you can discount or use it before it's wasted.">?</span></h2>
+    <table><thead><tr><th>Item</th><th>Stock on Hand</th><th>Expiry Date</th><th>Status</th></tr></thead><tbody>
+      ${items.length?items.map(r=>{const isPast=r.expiryDate<today(); const isSoon=!isPast&&r.expiryDate<=cutoff; return `<tr><td>${esc(r.name)}</td><td>${r.stock} ${esc(r.unit||'')}</td><td>${fmtDate(r.expiryDate)}</td><td>${isPast?'<span style="color:red;font-weight:700">⚠ EXPIRED</span>':isSoon?'<span style="color:#c77700;font-weight:700">Expiring within 30 days</span>':'OK'}</td></tr>`;}).join(''):'<tr><td colspan="4">No items with expiry tracking, or nothing currently in stock</td></tr>'}
+    </tbody></table>`;
+  } else if (type==='non-moving-stock') {
+    const cutoffDays = 60;
+    const cutoffDate = shiftDate(today(), -cutoffDays);
+    const items = db.records.filter(r=>r.stock>0).map(r=>{
+      const lastSale = db.stockHistory.filter(h=>h.recordId===r.id && h.type==='sale').sort((a,b)=>b.date.localeCompare(a.date))[0];
+      return { r, lastSaleDate: lastSale?.date || null };
+    }).filter(x => !x.lastSaleDate || x.lastSaleDate < cutoffDate);
+    bodyHtml = `<h2>Non-Moving Stock<span class="help-tip" data-tip="Items that haven't sold in over 60 days but are still sitting in stock — candidates for a discount, bundle, or write-off before they become dead weight.">?</span></h2>
+    <table><thead><tr><th>Item</th><th>Stock on Hand</th><th>Value</th><th>Last Sold</th></tr></thead><tbody>
+      ${items.length?items.map(x=>`<tr><td>${esc(x.r.name)}</td><td>${x.r.stock} ${esc(x.r.unit||'')}</td><td>${fmt((x.r.costPrice||0)*x.r.stock)}</td><td>${x.lastSaleDate?fmtDate(x.lastSaleDate):'Never sold'}</td></tr>`).join(''):'<tr><td colspan="4">Everything in stock has sold within the last 60 days</td></tr>'}
+      <tr style="background:#f0f0f0"><td colspan="2"><strong>Total Tied-Up Value</strong></td><td><strong>${fmt(items.reduce((a,x)=>a+(x.r.costPrice||0)*x.r.stock,0))}</strong></td><td></td></tr>
     </tbody></table>`;
   } else if (type==='production-batches') {
     const batches = db.productionBatches.filter(b=>(!from||b.date>=from)&&(!to||b.date<=to));
-    bodyHtml = `<h2>Production Batch Report</h2>
-    <table><thead><tr><th>Batch #</th><th>Product</th><th>Qty Produced</th><th>Cost</th><th>Date</th></tr></thead><tbody>
-      ${batches.length?batches.map(b=>{const p=db.records.find(r=>r.id===b.productId); return `<tr><td>${esc(b.batchNumber)}</td><td>${esc(p?.name||'—')}</td><td>${b.qtyProduced}</td><td>${fmt(b.cost||0)}</td><td>${fmtDate(b.date)}</td></tr>`;}).join(''):'<tr><td colspan="5">No production batches in period</td></tr>'}
-      <tr style="background:#f0f0f0"><td colspan="3"><strong>Total Production Cost</strong></td><td><strong>${fmt(batches.reduce((a,b)=>a+(b.cost||0),0))}</strong></td><td></td></tr>
-    </tbody></table>`;
-  } else if (type==='production-cost') {
-    const batches = db.productionBatches.filter(b=>(!from||b.date>=from)&&(!to||b.date<=to));
     const totalCost = batches.reduce((a,b)=>a+(b.cost||0),0);
     const totalUnits = batches.reduce((a,b)=>a+b.qtyProduced,0);
-    bodyHtml = `<h2>Production Cost Analysis</h2>
-    <p style="font-size:17px;margin-bottom:16px">Total of <strong>${batches.length}</strong> production batches in the selected period, producing <strong>${totalUnits}</strong> units at a total material cost of <strong>${fmt(totalCost)}</strong> (average cost per unit: <strong>${fmt(totalUnits?totalCost/totalUnits:0)}</strong>).</p>
-    <table><thead><tr><th>Batch #</th><th>Product</th><th>Units</th><th>Total Cost</th><th>Cost/Unit</th></tr></thead><tbody>
-      ${batches.length?batches.map(b=>{const p=db.records.find(r=>r.id===b.productId); return `<tr><td>${esc(b.batchNumber)}</td><td>${esc(p?.name||'—')}</td><td>${b.qtyProduced}</td><td>${fmt(b.cost||0)}</td><td>${fmt(b.qtyProduced?b.cost/b.qtyProduced:0)}</td></tr>`;}).join(''):'<tr><td colspan="5">No data</td></tr>'}
+    bodyHtml = `<h2>Production Batch Report</h2>
+    <p style="font-size:15px;color:#555">${batches.length} batches, ${totalUnits} units, average cost per unit: ${fmt(totalUnits?totalCost/totalUnits:0)}</p>
+    <table><thead><tr><th>Batch #</th><th>Product</th><th>Qty Produced</th><th>Total Cost</th><th>Cost/Unit</th><th>Date</th></tr></thead><tbody>
+      ${batches.length?batches.map(b=>{const p=db.records.find(r=>r.id===b.productId); return `<tr><td>${esc(b.batchNumber)}</td><td>${esc(p?.name||'—')}</td><td>${b.qtyProduced}</td><td>${fmt(b.cost||0)}</td><td>${fmt(b.qtyProduced?b.cost/b.qtyProduced:0)}</td><td>${fmtDate(b.date)}</td></tr>`;}).join(''):'<tr><td colspan="6">No production batches in period</td></tr>'}
+      <tr style="background:#f0f0f0"><td colspan="3"><strong>Total Production Cost</strong></td><td><strong>${fmt(totalCost)}</strong></td><td colspan="2"></td></tr>
     </tbody></table>`;
   } else if (type==='supplier-ledger') {
     const supplierId = document.getElementById('rpt-ledger-target')?.value;
@@ -8855,12 +9173,6 @@ function generateReport() {
       <p style="font-size:15px;color:#555">Pick a supplier above for their detailed statement with running balance.</p>
       <p style="font-size:14px;color:#777">For an overview of everyone you owe — with how overdue each balance is — use <strong>Payables Aging</strong> instead.</p>`;
     }
-  } else if (type==='entity') {
-    const entSorted = [...db.entities].sort((a,b)=>(b.totalValue||0)-(a.totalValue||0));
-    bodyHtml = `<h2>Entity / Contact Report</h2>
-    <table><thead><tr><th>Name</th><th>Category</th><th>Phone</th><th>Email</th><th>Total Value</th></tr></thead><tbody>
-      ${entSorted.map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.category||'—')}</td><td>${esc(e.phone||'—')}</td><td>${esc(e.email||'—')}</td><td class="mono"><strong>${fmt(e.totalValue||0)}</strong></td></tr>`).join('')}
-    </tbody></table>`;
   } else if (type==='due-ledger') {
     const customerName = document.getElementById('rpt-ledger-target')?.value;
     if (customerName) {
@@ -8927,6 +9239,17 @@ function generateReport() {
     <table><thead><tr><th>Date</th><th>Voucher #</th><th>Description</th><th style="text-align:right">TDS Withheld</th></tr></thead><tbody>
       ${tds.rows.length?tds.rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td class="mono">${esc(r.voucherNumber)}</td><td>${esc(r.description)}</td><td style="text-align:right" class="mono">${fmt(r.tdsAmount)}</td></tr>`).join(''):'<tr><td colspan="4">No TDS withheld in this period</td></tr>'}
       <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL DUE TO IRD</strong></td><td style="text-align:right"><strong>${fmt(tds.total)}</strong></td></tr>
+    </tbody></table>`;
+  } else if (type==='ssf-register') {
+    const payrolls = (db.payrollHistory||[]).filter(ph=>(ph.totalSSF||0)>0 && (!from||ph.month>=from.slice(0,7)) && (!to||ph.month<=to.slice(0,7)));
+    let rows = [];
+    payrolls.forEach(ph => (ph.entries||[]).filter(e=>e.employeeSSF>0).forEach(e => rows.push({ month:ph.month, empName:e.empName, basic:e.salary, employeeSSF:e.employeeSSF, employerSSF:e.employerSSF, total:e.employeeSSF+e.employerSSF })));
+    const totalDue = rows.reduce((a,r)=>a+r.total,0);
+    bodyHtml = `<h2>SSF Register — Social Security Fund</h2>
+    <p style="font-size:15px;color:#555;margin-bottom:12px">11% employee + 20% employer of basic salary, deposited monthly — this is what your SSF filing needs.</p>
+    <table><thead><tr><th>Month</th><th>Employee</th><th style="text-align:right">Basic Salary</th><th style="text-align:right">Employee (11%)</th><th style="text-align:right">Employer (20%)</th><th style="text-align:right">Total</th></tr></thead><tbody>
+      ${rows.length?rows.map(r=>`<tr><td>${esc(r.month)}</td><td>${esc(r.empName)}</td><td style="text-align:right" class="mono">${fmt(r.basic)}</td><td style="text-align:right" class="mono">${fmt(r.employeeSSF)}</td><td style="text-align:right" class="mono">${fmt(r.employerSSF)}</td><td style="text-align:right" class="mono"><strong>${fmt(r.total)}</strong></td></tr>`).join(''):'<tr><td colspan="6">No SSF-enrolled payroll in this period</td></tr>'}
+      <tr style="background:#f0f0f0"><td colspan="5"><strong>TOTAL SSF DUE</strong></td><td style="text-align:right"><strong>${fmt(totalDue)}</strong></td></tr>
     </tbody></table>`;
   } else if (type==='correction-notes') {
     const notes = (db.correctionNotes||[]).filter(n=>(!from||n.date>=from)&&(!to||n.date<=to)).sort((a,b)=>a.date.localeCompare(b.date));
@@ -9099,29 +9422,18 @@ function copyReportText() {
     toast('Report copied as plain text','success');
   }
 }
-  const type = document.getElementById('rpt-type').value;
-  const from = document.getElementById('rpt-from').value;
-  const to = document.getElementById('rpt-to').value;
-  let data = [];
-  if (type==='sales'||type==='sales-register') data = db.sales.filter(s=>(!from||s.date>=from)&&(!to||s.date<=to));
-  else if (type==='stock') data = db.records;
-  else if (type==='material-stock') data = db.rawMaterials;
-  else if (type==='hr') data = db.employees;
-  else if (type==='entity') data = db.entities;
 function exportReportCSV() {
   const type = document.getElementById('rpt-type').value;
   const from = document.getElementById('rpt-from').value;
   const to = document.getElementById('rpt-to').value;
   let data = [];
-  if (type==='sales'||type==='sales-register') data = db.sales.filter(s=>(!from||s.date>=from)&&(!to||s.date<=to));
+  if (type==='sales') data = db.sales.filter(s=>(!from||s.date>=from)&&(!to||s.date<=to));
   else if (type==='stock') data = db.records;
-  else if (type==='material-stock') data = db.rawMaterials;
   else if (type==='hr') data = db.employees;
-  else if (type==='entity') data = db.entities;
   else if (type==='supplier-ledger') data = db.secondary;
   else if (type==='purchase-orders') data = db.purchaseOrders;
-  else if (type==='production-batches'||type==='production-cost') data = db.productionBatches;
-  else if (type==='credit-sales'||type==='due-ledger') data = db.creditSales;
+  else if (type==='production-batches') data = db.productionBatches;
+  else if (type==='due-ledger') data = db.creditSales;
   else data = db.accounting.filter(a=>(!from||a.date>=from)&&(!to||a.date<=to));
   downloadCSV(data, type+'-report');
 }
@@ -10066,6 +10378,9 @@ function openRecordModal(id=null) {
   document.getElementById('rec-supplier').value = r?.supplier||'';
   document.getElementById('rec-barcode').value = r?.barcode||'';
   document.getElementById('rec-cost').value = r?.costPrice||'';
+  document.getElementById('rec-track-expiry').checked = !!r?.trackExpiry;
+  document.getElementById('rec-expiry-date').value = r?.expiryDate||'';
+  toggleRecExpiryField();
   document.getElementById('rec-price').value = r?.salePrice||'';
   document.getElementById('rec-wholesale-price').value = r?.wholesalePrice||'';
   document.getElementById('rec-stock').value = r?.stock||'0';
@@ -10125,6 +10440,8 @@ function saveRecord() {
     supplier: document.getElementById('rec-supplier').value.trim(),
     barcode: document.getElementById('rec-barcode').value.trim(),
     costPrice: parseFloat(document.getElementById('rec-cost').value)||0,
+    trackExpiry: document.getElementById('rec-track-expiry').checked,
+    expiryDate: document.getElementById('rec-track-expiry').checked ? document.getElementById('rec-expiry-date').value : null,
     salePrice: parseFloat(document.getElementById('rec-price').value)||0,
     wholesalePrice: parseFloat(document.getElementById('rec-wholesale-price').value)||0,
     stock: parseInt(document.getElementById('rec-stock').value)||0,
@@ -10550,7 +10867,13 @@ function confirmMakeNow() {
   });
   const product = db.records.find(r=>r.id===bom.productId);
   if (product) {
-    product.stock = (product.stock||0) + qty;
+    // Keep the product's cost price accurate (weighted average) so COGS at time of sale
+    // reflects what this batch actually cost, not a stale or default number.
+    const existingValue = (product.stock||0) * (product.costPrice||0);
+    const newValue = existingValue + totalCost;
+    const newTotalQty = (product.stock||0) + qty;
+    product.costPrice = newTotalQty > 0 ? +(newValue / newTotalQty).toFixed(2) : product.costPrice;
+    product.stock = newTotalQty;
     db.stockHistory.push({ id:uid(), recordId:product.id, recordName:product.name, type:'production', qty, balanceAfter:product.stock, date:today(), ref:batchNumber, createdAt:now() });
   }
   // Ledger: inventory transfer (invisible) — raw materials become finished/trading goods.
@@ -11372,12 +11695,12 @@ function generateVATReport() {
 
 function generateSalesRegister() {
   openModule('reports');
-  setTimeout(()=>{ selectReportCategory('sales'); document.getElementById('rpt-type').value='sales-register'; generateReport(); }, 50);
+  setTimeout(()=>{ selectReportCategory('sales'); document.getElementById('rpt-type').value='sales'; generateReport(); }, 50);
 }
 
 function generatePurchaseRegister() {
   openModule('reports');
-  setTimeout(()=>{ selectReportCategory('purchase'); document.getElementById('rpt-type').value='purchase-register'; generateReport(); }, 50);
+  setTimeout(()=>{ selectReportCategory('tax'); document.getElementById('rpt-type').value='vat-purchase'; generateReport(); }, 50);
 }
 
 function generateTaxInvoiceList() {

@@ -1051,7 +1051,7 @@ textarea.form-control{resize:vertical;min-height:80px}
           <button class="btn btn-secondary btn-sm" onclick="importCSV('records')">📥 Import CSV</button>
           <button class="btn btn-primary btn-sm" onclick="openRecordModal()">+ Add Product</button>
         </div>
-        <div class="table-wrap"><table id="records-table"><thead><tr><th onclick="sortTable('records','name')">Name ↕</th><th onclick="sortTable('records','sku')">SKU ↕</th><th>Category</th><th>Supplier</th><th>Stock</th><th>Retail Price</th><th>Wholesale Price</th><th>Variants</th><th>Status</th><th>Actions</th></tr></thead><tbody id="records-tbody"></tbody></table></div>
+        <div class="table-wrap"><table id="records-table"><thead><tr><th onclick="sortTable('records','name')">Name ↕</th><th onclick="sortTable('records','sku')">SKU ↕</th><th>Category</th><th>Stock</th><th>Retail Price</th><th>Wholesale Price</th><th>Status</th><th>Actions</th></tr></thead><tbody id="records-tbody"></tbody></table></div>
         <div class="pagination" id="records-pagination"></div>
       </div>
       <!-- RAW MATERIALS -->
@@ -1270,6 +1270,7 @@ textarea.form-control{resize:vertical;min-height:80px}
             <input class="form-control" id="pay-month" placeholder="Month (YYYY-MM)" onfocus="openCalendar('pay-month','monthyear')" style="width:160px">
             <button class="btn btn-primary btn-sm" onclick="renderPayrollTable()">📋 Load</button>
             <button class="btn btn-success btn-sm" onclick="processPayroll()">💵 Process Payroll</button>
+            <button class="btn btn-secondary btn-sm" onclick="openPayrollDuplicateCheck()">🔍 Check for Duplicates</button>
             <button class="btn btn-secondary btn-sm" onclick="exportCSV('payroll')">📤 Export</button>
           </div>
           <div id="payroll-table-wrap"></div>
@@ -1797,7 +1798,6 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="tabs" style="margin-bottom:16px">
         <div class="tab active" onclick="setRecTab('basic',this)">📦 Basic Info</div>
         <div class="tab" onclick="setRecTab('pricing',this)">💰 Pricing</div>
-        <div class="tab" onclick="setRecTab('variants',this)">🔀 Variants</div>
       </div>
       <div id="rec-tab-basic">
         <div class="form-row">
@@ -1809,22 +1809,19 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="form-group"><label class="form-label">Unit</label><input class="form-control" id="rec-unit" placeholder="pcs, kg, ltr, box..."></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Supplier</label><input class="form-control" id="rec-supplier" placeholder="Select supplier..."></div>
           <div class="form-group"><label class="form-label">Barcode</label><input class="form-control" id="rec-barcode" placeholder="Optional barcode"></div>
+          <div class="form-group"><label class="form-label">Weight / Size</label><input class="form-control" id="rec-weight" placeholder="e.g. 500g, 1L, 3 inch"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label class="form-label">Opening Stock</label><input class="form-control" type="number" id="rec-stock" placeholder="0"></div>
           <div class="form-group"><label class="form-label">Low Stock Alert</label><input class="form-control" type="number" id="rec-low-stock" placeholder="10"></div>
         </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Status</label><select class="form-control" id="rec-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
-          <div class="form-group"><label class="form-label">Weight / Size</label><input class="form-control" id="rec-weight" placeholder="e.g. 500g, 1L, 3 inch"></div>
-        </div>
+        <div class="form-group"><label class="form-label">Status</label><select class="form-control" id="rec-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
         <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="rec-desc" rows="2"></textarea></div>
       </div>
       <div id="rec-tab-pricing" style="display:none">
         <div class="form-row-3">
-          <div class="form-group"><label class="form-label">Cost / Purchase Price</label><input class="form-control" type="number" id="rec-cost" placeholder="0"></div>
+          <div class="form-group"><label class="form-label" id="rec-cost-label">Cost / Purchase Price</label><input class="form-control" type="number" id="rec-cost" placeholder="0"><div class="form-hint" id="rec-cost-hint" style="display:none">This product has been produced before. Cost now updates automatically (weighted average) from completed Production runs — it can't be hand-edited here anymore.</div></div>
           <div class="form-group"><label class="form-label">Retail Sale Price</label><input class="form-control" type="number" id="rec-price" placeholder="0"></div>
           <div class="form-group"><label class="form-label">Wholesale Price<span class="help-tip" data-tip="This price is automatically charged in POS whenever the customer type is switched to Wholesale. Leave blank to always use the retail price.">?</span></label><input class="form-control" type="number" id="rec-wholesale-price" placeholder="0"></div>
         </div>
@@ -1840,13 +1837,6 @@ textarea.form-control{resize:vertical;min-height:80px}
           </div>
         </div>
       </div>
-      <div id="rec-tab-variants" style="display:none">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div style="font-size:17px;color:var(--text-muted)">Add variants like sizes, colors, or pack sizes. Each variant has its own SKU and price.</div>
-          <button class="btn btn-secondary btn-sm" onclick="addVariantRow()">+ Add Variant</button>
-        </div>
-        <div id="variants-list"></div>
-      </div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('record-modal-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveRecord()">💾 Save Product</button></div>
   </div>
@@ -1858,8 +1848,15 @@ textarea.form-control{resize:vertical;min-height:80px}
     <div class="modal-header"><div class="modal-title">Stock Adjustment</div><button class="modal-close" onclick="closeModal('stock-adj-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Current Stock: <span id="adj-current"></span></label></div>
-      <div class="form-group"><label class="form-label">Adjustment (+/-)</label><input class="form-control" type="number" id="adj-amount" placeholder="e.g. +50 or -10"></div>
-      <div class="form-group"><label class="form-label">Reason</label><input class="form-control" id="adj-reason" placeholder="Purchase, Damage, Count correction..."></div>
+      <div class="form-group">
+        <label class="form-label">Add or Deduct?</label>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" id="adj-dir-add" style="flex:1" onclick="setAdjDirection('add')">➕ Add Stock</button>
+          <button class="btn btn-secondary" id="adj-dir-deduct" style="flex:1" onclick="setAdjDirection('deduct')">➖ Deduct Stock</button>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Quantity</label><input class="form-control" type="number" id="adj-amount" placeholder="0" min="0"></div>
+      <div class="form-group"><label class="form-label">Reason</label><input class="form-control" id="adj-reason" placeholder="e.g. Damage, Theft, Count correction, Found extra stock"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('stock-adj-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveStockAdj()">✅ Apply</button></div>
   </div>
@@ -2108,7 +2105,16 @@ textarea.form-control{resize:vertical;min-height:80px}
       </div>
       <div class="form-group">
         <label class="form-label">Paid From</label>
-        <select class="form-control" id="eq-paidfrom"><option value="1010">Cash</option><option value="1020">Bank</option></select>
+        <select class="form-control" id="eq-paidfrom" onchange="onEqPaidFromChange()">
+          <option value="1010">Cash</option>
+          <option value="1020">Bank</option>
+          <option value="credit">On Credit — owed to a supplier</option>
+        </select>
+      </div>
+      <div class="form-group" id="eq-credit-fields" style="display:none">
+        <label class="form-label">Supplier</label>
+        <select class="form-control" id="eq-supplier"></select>
+        <div class="form-hint">This is recorded as a payable, the same as a raw-material supplier invoice — it'll show up in Payables Aging and the Supplier Ledger, and you can pay it off (in full or installments) from Purchases → Supplier Invoices whenever you actually pay.</div>
       </div>
       <button class="btn btn-primary" onclick="saveFixedAsset()">💾 Add to My Equipment</button>
 
@@ -2404,7 +2410,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="form-group"><label class="form-label">Unit *</label><input class="form-control" id="mat-unit" placeholder="kg, ltr, pcs, m..."></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Cost per Unit</label><input class="form-control" type="number" id="mat-cost" placeholder="0"></div>
+        <div class="form-group"><label class="form-label" id="mat-cost-label">Cost / Unit (opening estimate, until first purchase)</label><input class="form-control" type="number" id="mat-cost" placeholder="0"><div class="form-hint" id="mat-cost-hint" style="display:none">This material has purchase history. Cost now updates automatically (weighted average) whenever goods are received — record a new Purchase Order + GRN to change it, not this field.</div></div>
         <div class="form-group"><label class="form-label">Current Stock</label><input class="form-control" type="number" id="mat-stock" placeholder="0"></div>
       </div>
       <div class="form-row">
@@ -2781,7 +2787,7 @@ function defaultDB() {
     users: [],
     records: [],        // products/inventory
     rawMaterials: [],   // raw material master
-    materialSuppliers: [], // many-to-many: material <-> supplier links {id, materialId, supplierId, cost, leadTimeDays, isPrimary}
+    materialSuppliers: [], // many-to-many: material <-> supplier links {id, materialId, supplierId, isPrimary}. No cost here — cost always comes live from Purchase Order/GRN history (see lastPurchaseRate()).
     boms: [],            // bill of materials: {id, productId, name, items:[{materialId, qty, unit}], outputQty, notes}
     productionOrders: [], // {id, bomId, productId, qtyPlanned, status, scheduledDate}
     productionBatches: [], // {id, orderId, batchNumber, qtyProduced, materialsConsumed:[], cost, date, status}
@@ -3028,6 +3034,35 @@ function loadDB() {
         db.settings.categories.accounting.push('VAT', 'Tax');
       if (!db.settings.categories.accounting.includes('Contractor'))
         db.settings.categories.accounting.push('Contractor', 'Professional Fees');
+      // ── Redesign: Products no longer have a Supplier field at all — suppliers link only to
+      // Raw Materials now (a product is something you make, not something you buy). Strip any
+      // leftover supplier fields from existing product records so old data doesn't show stale
+      // info anywhere, or confuse the now-removed cost-lock logic that used to check them.
+      (db.records||[]).forEach(r=>{ delete r.supplierId; delete r.supplier; delete r.variants; });
+      // ── Data-model cleanup: material-supplier links used to carry their own manually-typed
+      // "cost" that duplicated (and could contradict) the rate on Purchase Orders/GRNs. Drop it —
+      // cost is now looked up live from purchase history (see lastPurchaseRate()).
+      (db.materialSuppliers||[]).forEach(ms=>{ delete ms.cost; });
+      // ── Data-model cleanup: sales/credit-sales/payments used to store only a typed customer
+      // name with nothing linking them back to the Customers (Entities) list. Backfill
+      // customerId by matching name where possible so profiles, dues, and statements work
+      // reliably going forward instead of depending on exact string matches forever.
+      const entityByName = new Map((db.entities||[]).map(e=>[((e.name||'').trim().toLowerCase()), e.id]));
+      [db.sales, db.creditSales, db.payments].forEach(list=>{
+        (list||[]).forEach(r=>{
+          if (!r.customerId && r.customerName) {
+            const match = entityByName.get(r.customerName.trim().toLowerCase());
+            if (match) r.customerId = match;
+          }
+        });
+      });
+      // Same cleanup for the standalone Transactions log's "Customer / Party" field.
+      (db.transactions||[]).forEach(t=>{
+        if (!t.entityId && t.entityName) {
+          const match = entityByName.get(t.entityName.trim().toLowerCase());
+          if (match) t.entityId = match;
+        }
+      });
     } else {
       db = defaultDB();
     }
@@ -3096,7 +3131,8 @@ const DEFAULT_CHART_OF_ACCOUNTS = [
   { code:'5070', name:'Maintenance', type:'expense', normalBalance:'debit' },
   { code:'5080', name:'Travel', type:'expense', normalBalance:'debit' },
   { code:'5090', name:'Depreciation Expense', type:'expense', normalBalance:'debit' },
-  { code:'5100', name:'Other Expense', type:'expense', normalBalance:'debit' }
+  { code:'5100', name:'Other Expense', type:'expense', normalBalance:'debit' },
+  { code:'5095', name:'Inventory Adjustment (Shrinkage/Correction)', type:'expense', normalBalance:'debit' }
 ];
 
 function seedChartOfAccounts() {
@@ -3599,9 +3635,15 @@ function computeGLLedger(code, from, to) {
 }
 
 // ── 5. Ledger Report — Mode B: one customer (subsidiary of Accounts Receivable) ──
-function computeCustomerLedger(customerName, from, to) {
-  const sales = (db.creditSales||[]).filter(c=>c.customerName===customerName);
-  const payments = (db.payments||[]).filter(p=>p.customerName===customerName);
+// key is "id:<entityId>" for a real linked customer, or "name:<text>" for legacy/orphaned
+// records that predate customerId — see rpt-ledger-target population below.
+function computeCustomerLedger(key, from, to) {
+  let customerId = null, customerName = null;
+  if (key.startsWith('id:')) { customerId = key.slice(3); customerName = db.entities.find(e=>e.id===customerId)?.name || 'Unknown Customer'; }
+  else if (key.startsWith('name:')) { customerName = key.slice(5); }
+  const matches = (r) => customerId ? (r.customerId===customerId || (!r.customerId && r.customerName===customerName)) : r.customerName===customerName;
+  const sales = (db.creditSales||[]).filter(matches);
+  const payments = (db.payments||[]).filter(matches);
   const rows = [];
   sales.forEach(c => rows.push({ date:c.date, voucherNumber: findVoucherFor('credit-sale', c.saleId)||findVoucherFor('opening-balance', c.id)||'—', description:`Credit Sale — ${c.receiptNumber}`, debit:c.totalAmount, credit:0 }));
   payments.forEach(p => rows.push({ date:p.date, voucherNumber: findVoucherFor('due-settlement', p.creditId)||'—', description:`Payment received — ${p.receiptNumber}`, debit:0, credit:p.amount }));
@@ -3637,6 +3679,10 @@ function openCorrectInvoice(refType, refId) {
     original = sale?.total || 0;
   } else {
     const inv = db.supplierInvoices.find(i=>i.id===refId);
+    // Correcting this would also need to adjust the linked fixed asset's cost, and re-check any
+    // depreciation already posted against the old amount — real logic this pass doesn't attempt.
+    // Safer to block it cleanly than silently leave the Asset Register out of sync with the books.
+    if (inv?.category === 'fixed-asset') { toast('Equipment invoices can\'t be corrected here — remove the equipment and re-add it with the right amount instead','error'); return; }
     original = inv?.amount || 0;
   }
   window._correctOriginal = original;
@@ -3716,15 +3762,19 @@ function postCreditNoteJournal(cn, sale) {
   return postJournalEntry({ date: cn.date, voucherKind:'Journal', refType:'credit-note', refId: cn.id, reference: cn.noteNumber, description: `Credit Note ${cn.noteNumber} — ${cn.reason}`, lines });
 }
 
-// Purchase correction: reduces what you owe the supplier and reduces the recorded Inventory
-// asset and VAT input proportionally to the original invoice's own net/VAT split.
+// Purchase correction: reduces what you owe the supplier and reduces whichever asset account
+// the original invoice actually posted to — Inventory for a normal raw-material/goods invoice,
+// or the specific Fixed Asset account for an equipment invoice recorded on credit. Getting this
+// wrong would silently corrupt whichever account it should have hit instead.
 function postDebitNoteJournal(dn, invoice) {
   const original = invoice.amount || 0;
   const vatAmount = invoice.vatAmount || 0;
   const vatPortion = original > 0 ? +(dn.adjustmentAmount * (vatAmount/original)).toFixed(2) : 0;
   const netPortion = +(dn.adjustmentAmount - vatPortion).toFixed(2);
+  const isFixedAsset = invoice.category === 'fixed-asset';
+  const assetAccountCode = isFixedAsset ? (db.fixedAssets.find(a=>a.id===invoice.assetId)?.assetCode || db.settings.acctMappings.inventoryAccount) : db.settings.acctMappings.inventoryAccount;
   const lines = [ { accountCode: db.settings.acctMappings.apAccount, debit: dn.adjustmentAmount, credit: 0 } ];
-  lines.push({ accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: netPortion });
+  lines.push({ accountCode: assetAccountCode, debit: 0, credit: netPortion });
   if (vatPortion > 0) lines.push({ accountCode: db.settings.acctMappings.vatInputAccount, debit: 0, credit: vatPortion });
   return postJournalEntry({ date: dn.date, voucherKind:'Journal', refType:'debit-note', refId: dn.id, reference: dn.noteNumber, description: `Debit Note ${dn.noteNumber} — ${dn.reason}`, lines });
 }
@@ -4060,7 +4110,9 @@ function computeReceivablesAging(asOf) {
     const refDate = c.dueDate || c.date;
     const daysOverdue = Math.floor((new Date(date) - new Date(refDate)) / 86400000);
     const bucket = agingBucket(daysOverdue);
-    return { name:c.customerName, amount:c.dueAmount, bucket };
+    // Group by customerId when we have it, so a renamed or inconsistently-typed customer
+    // still aggregates into one row instead of splitting their balance across several.
+    return { key: c.customerId || ('name:'+c.customerName), name:c.customerName, amount:c.dueAmount, bucket };
   });
   return aggregateAging(rows);
 }
@@ -4073,18 +4125,18 @@ function computePayablesAging(asOf) {
     const refDate = inv.dueDate || inv.date;
     const daysOverdue = Math.floor((new Date(date) - new Date(refDate)) / 86400000);
     const supplier = db.secondary.find(s=>s.id===inv.supplierId);
-    return { name: supplier?.name||'Unknown Supplier', amount:due, bucket: agingBucket(daysOverdue) };
+    return { key: inv.supplierId, name: supplier?.name||'Unknown Supplier', amount:due, bucket: agingBucket(daysOverdue) };
   }).filter(Boolean);
   return aggregateAging(rows);
 }
 function aggregateAging(rows) {
-  const byName = {};
+  const byKey = {};
   rows.forEach(r => {
-    if (!byName[r.name]) byName[r.name] = { name:r.name, notDue:0, d30:0, d60:0, d90:0, d90plus:0, total:0 };
-    byName[r.name][r.bucket] += r.amount;
-    byName[r.name].total += r.amount;
+    if (!byKey[r.key]) byKey[r.key] = { name:r.name, notDue:0, d30:0, d60:0, d90:0, d90plus:0, total:0 };
+    byKey[r.key][r.bucket] += r.amount;
+    byKey[r.key].total += r.amount;
   });
-  const parties = Object.values(byName).sort((a,b)=>b.total-a.total);
+  const parties = Object.values(byKey).sort((a,b)=>b.total-a.total);
   const totals = parties.reduce((acc,p)=>{ ['notDue','d30','d60','d90','d90plus','total'].forEach(k=>acc[k]=(acc[k]||0)+p[k]); return acc; }, {});
   return { parties, totals };
 }
@@ -4110,8 +4162,16 @@ function openMyEquipment() {
   document.getElementById('eq-date').value = today();
   document.getElementById('eq-life').value = 10;
   document.getElementById('eq-paidfrom').value = '1010';
+  document.getElementById('eq-credit-fields').style.display = 'none';
+  const eqSupSel = document.getElementById('eq-supplier');
+  if (eqSupSel) eqSupSel.innerHTML = db.secondary.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('') || '<option value="">No suppliers — add one first</option>';
   renderEquipmentList();
   openModal('equipment-overlay');
+}
+
+function onEqPaidFromChange() {
+  const isCredit = document.getElementById('eq-paidfrom').value === 'credit';
+  document.getElementById('eq-credit-fields').style.display = isCredit ? '' : 'none';
 }
 
 function saveFixedAsset() {
@@ -4121,6 +4181,13 @@ function saveFixedAsset() {
   const purchaseDate = document.getElementById('eq-date').value || today();
   const usefulLifeYears = parseFloat(document.getElementById('eq-life').value) || 10;
   if (!name || cost <= 0) { toast('Enter a name and cost','error'); return; }
+  const paidFrom = document.getElementById('eq-paidfrom').value || '1010';
+  const isCredit = paidFrom === 'credit';
+  let supplierId = '';
+  if (isCredit) {
+    supplierId = document.getElementById('eq-supplier').value;
+    if (!supplierId) { toast('Select which supplier this is owed to','error'); return; }
+  }
   const preset = EQUIPMENT_PRESETS[type] || EQUIPMENT_PRESETS.other;
   const asset = {
     id: uid(), name, type, assetCode: preset.assetCode, depCode: preset.depCode,
@@ -4128,8 +4195,25 @@ function saveFixedAsset() {
     status:'active', createdAt: now(), createdBy: session.username
   };
   db.fixedAssets.push(asset);
+  if (isCredit) {
+    // Bought on credit — this isn't paid yet, so it can't hit Cash/Bank. Record it the same way
+    // a raw-material purchase on credit is: a payable against the supplier (reusing
+    // db.supplierInvoices/Payments so it shows up correctly in Payables Aging and the Supplier
+    // Ledger, and can be paid off — in full or by installment — from the existing Supplier
+    // Payment flow later, without a second parallel system to maintain).
+    const invoice = { id:uid(), poId:null, grnId:null, invoiceNumber:'EQ-'+Date.now().toString(36).toUpperCase(), supplierId, amount:cost, vatAmount:0, dueDate:'', status:'unpaid', date:purchaseDate, createdAt:now(), category:'fixed-asset', assetId:asset.id };
+    db.supplierInvoices.push(invoice);
+    postJournalEntry({ date: purchaseDate, voucherKind:'Journal', refType:'fixed-asset-purchase', refId: asset.id, reference: name, description: `Equipment purchased on credit — ${name}`, lines: [
+      { accountCode: preset.assetCode, debit: cost, credit: 0 },
+      { accountCode: db.settings.acctMappings.apAccount, debit: 0, credit: cost }
+    ]});
+    audit('Accounting','Equipment Added (On Credit)', asset.id, name);
+    saveDB();
+    toast('Added to My Equipment — recorded as owed to supplier, pay it off from Supplier Invoices whenever ready','success');
+    openMyEquipment();
+    return;
+  }
   // Ledger: the asset moves onto the books at cost, paid from whichever account you selected
-  const paidFrom = document.getElementById('eq-paidfrom').value || '1010';
   postJournalEntry({ date: purchaseDate, voucherKind:'Journal', refType:'fixed-asset-purchase', refId: asset.id, reference: name, description: `Equipment purchased — ${name}`, lines: [
     { accountCode: preset.assetCode, debit: cost, credit: 0 },
     { accountCode: paidFrom, debit: 0, credit: cost }
@@ -4143,6 +4227,33 @@ function saveFixedAsset() {
 function removeFixedAsset(id) {
   const asset = db.fixedAssets.find(a=>a.id===id);
   if (!asset) return;
+  // If this was bought on credit, removing it must also deal with the payable — otherwise
+  // "remove and re-add" (which is what correcting an equipment invoice tells you to do) would
+  // leave the old amount still owed to the supplier while a second invoice gets created for the
+  // re-added equipment, silently doubling what you appear to owe them.
+  const linkedInvoice = db.supplierInvoices.find(i=>i.assetId===id);
+  if (linkedInvoice) {
+    const paid = db.supplierPayments.filter(p=>p.invoiceId===linkedInvoice.id).reduce((a,p)=>a+p.amount,0);
+    if (paid > 0) {
+      toast(`Can't remove — ${fmt(paid)} has already been paid toward this equipment's supplier invoice. Settle or correct that separately first.`,'error');
+      return;
+    }
+    confirm(`Remove "${asset.name}"? It was bought on credit and nothing has been paid yet — this will also cancel the ${fmt(linkedInvoice.amount)} owed to the supplier for it.`, ()=>{
+      asset.status = 'removed';
+      // Nothing has been paid toward it, so it's safe to remove outright rather than mark it
+      // cancelled — the Supplier Invoices list recomputes "Paid/Unpaid/Partial" live from actual
+      // payments and doesn't check a status field, so a cancelled-but-still-present invoice
+      // would keep showing up there as Unpaid with an active Pay button. Deleting is what
+      // actually keeps it out of the list.
+      db.supplierInvoices = db.supplierInvoices.filter(i=>i.id!==linkedInvoice.id);
+      voidJournalEntriesForRef('fixed-asset-purchase', asset.id, 'Equipment removed');
+      audit('Accounting','Equipment Removed (On Credit)', asset.id, asset.name);
+      saveDB();
+      renderEquipmentList();
+      if (typeof renderSupplierInvoices === 'function') renderSupplierInvoices();
+    });
+    return;
+  }
   confirm(`Remove "${asset.name}"? This won't undo its depreciation history.`, ()=>{
     asset.status = 'removed';
     audit('Accounting','Equipment Removed', asset.id, asset.name);
@@ -5689,7 +5800,51 @@ async function lgSaveNewPw(un) {
 }
 
 // ── SETUP WIZARD RESET ──
+// "First-time Setup" has to stay reachable with zero friction for a genuinely empty install
+// (db.users is empty — nothing to protect). But once real users/data exist, this same button
+// is really an "erase everything on this device" action, and it must never be one tap away
+// from the public login screen with no credential check — that's exactly the blunder being
+// fixed here. It now requires the Master Recovery Key generated for the admin during the
+// original wizard run (the same key the app tells them is "the only way to recover your
+// account" — reusing it here means there's no new secret to manage).
 function lgShowSetup() {
+  const hasUsers = (db.users||[]).length > 0;
+  if (!hasUsers) { lgShowSetupConfirm(); return; }
+  lgEl().innerHTML = `
+    <div style="text-align:center;padding:8px 0">
+      <div style="font-size:43px;margin-bottom:12px">⚠️</div>
+      <div style="font-weight:700;margin-bottom:8px">Verify Master Recovery Key</div>
+      <div style="font-size:15px;color:var(--text-muted);margin-bottom:16px">
+        This device already has data on it. Running Setup Wizard again <strong style="color:var(--danger)">erases everything</strong>,
+        so it requires the Master Recovery Key shown when the admin account was first created.
+      </div>
+    </div>
+    <div id="lg-serr" class="lg-err"></div>
+    <div style="margin-bottom:16px">
+      <div class="lg-label">Master Recovery Key</div>
+      <input class="lg-input" id="su-key" placeholder="e.g. ABCD1234-WXYZ" style="font-family:monospace" autocomplete="off">
+    </div>
+    <button class="lg-btn" style="background:var(--danger)" onclick="lgVerifySetupKey()">Verify & Continue</button>
+    <button class="lg-ghost" onclick="lgShowMain()">Cancel</button>
+    <div style="font-size:13px;color:var(--text-muted);margin-top:14px;text-align:center">Lost the key too? This device's data can't be wiped from here — restore access via a backup, or clear app storage from your browser/phone settings instead.</div>
+  `;
+  document.getElementById('su-key').focus();
+}
+
+function lgVerifySetupKey() {
+  const key = (document.getElementById('su-key')?.value || '').trim();
+  const err = document.getElementById('lg-serr');
+  if (!key) { err.textContent = 'Enter the Master Recovery Key.'; err.classList.add('on'); return; }
+  const match = (db.users||[]).find(u => u.masterRecoveryKey && u.masterRecoveryKey === key);
+  if (!match) { err.textContent = 'Incorrect recovery key.'; err.classList.add('on'); return; }
+  // audit() no-ops with no session, and there's no session yet at the login screen — log this
+  // security-relevant event directly so a wipe is always traceable in the audit trail.
+  db.auditLog.push({ id:uid(), timestamp:now(), username:match.username, role:match.role, module:'Auth', action:'Setup Wizard — Recovery Key Verified', recordId:match.id, recordName:match.username, oldVal:'', newVal:'', ip: window.location.hostname });
+  saveDB();
+  lgShowSetupConfirm();
+}
+
+function lgShowSetupConfirm() {
   lgEl().innerHTML = `
     <div style="text-align:center;padding:8px 0">
       <div style="font-size:43px;margin-bottom:12px">⚙️</div>
@@ -5940,7 +6095,7 @@ function startViewOnlyWatcher() {
 const VIEW_ONLY_HIDE_FUNCTIONS = new Set([
   // Add / Create entry points
   'addBOMItemRow','addCat','addMaterialSupplierRow','addPOItemRow','addPaymentMethod',
-  'addSalaryComponent','addTransferItemRow','addVariantRow','showAddAccounting',
+  'addSalaryComponent','addTransferItemRow','showAddAccounting',
   'showAddEmployee','showAddEntity','showAddRecord','showAddSecondary','showAddTransaction',
   'toggleQuickAdd',
   // Edit / Adjust modal openers
@@ -5963,7 +6118,7 @@ const VIEW_ONLY_HIDE_FUNCTIONS = new Set([
   'deleteBOM','deleteCat','deleteCurrentProfile','deletePM','deleteQR','deleteRecord',
   'deleteRole','deleteTemplate','deleteUser','deleteWarehouse','removeBOMItem',
   'removeFromCart','removeHistorySearch','removeLogo','removeMatSupplierRow','removePOItem',
-  'removeSalaryComponent','removeTransferItem','removeVariant','archiveCurrentProfile',
+  'removeSalaryComponent','removeTransferItem','archiveCurrentProfile',
   'quickArchive','restoreDeleted','restoreBackup','unarchiveFromList','confirmPermanentDelete',
   // Print / export / import
   'previewAccountingPrint','printArchivedProfile','printCurrentProfile','printPaySlip',
@@ -6648,10 +6803,11 @@ function completeCreditSale() {
   // Fiscal-year sequential invoice numbering (IRD-compliant format), replaces the old timestamp-based number
   const receiptNum = nextFiscalInvoiceNumber('sales');
   const customerType = document.getElementById('pos-customer-type')?.value || 'Retail';
+  const customerId = resolveOrCreateCustomerId(customerName);
 
   const sale = {
     id: uid(), receiptNumber: receiptNum, date: today(), createdAt: now(),
-    items: cart.map(c=>({...c})), customerName, customerType, subtotal, discount,
+    items: cart.map(c=>({...c})), customerName, customerId, customerType, subtotal, discount,
     tax: taxPct, taxAmount: tax, total, paymentMethod: 'Credit',
     paidAmount: paidNow, dueAmount, dueDate, status: dueAmount > 0 ? 'partial' : 'completed',
     notes, createdBy: session.username, saleType: 'credit'
@@ -6662,7 +6818,7 @@ function completeCreditSale() {
   if (dueAmount > 0) {
     db.creditSales.push({
       id: uid(), saleId: sale.id, receiptNumber: receiptNum,
-      customerName, date: today(), dueDate, totalAmount: total,
+      customerName, customerId, date: today(), dueDate, totalAmount: total,
       paidAmount: paidNow, dueAmount, status: 'outstanding',
       notes, createdAt: now()
     });
@@ -6670,7 +6826,7 @@ function completeCreditSale() {
 
   // Partial payment entry
   if (paidNow > 0) {
-    db.payments.push({ id: uid(), saleId: sale.id, receiptNumber: receiptNum, customerName, amount: paidNow, date: today(), method: 'Cash', notes: 'Initial payment', createdAt: now() });
+    db.payments.push({ id: uid(), saleId: sale.id, receiptNumber: receiptNum, customerName, customerId, amount: paidNow, date: today(), method: 'Cash', notes: 'Initial payment', createdAt: now() });
     db.accounting.push({ id: uid(), type: 'income', category: 'Sales', description: `Partial Payment ${receiptNum}`, amount: paidNow, date: today(), reference: receiptNum, createdAt: now() });
   }
 
@@ -6678,11 +6834,27 @@ function completeCreditSale() {
   postCreditSaleJournal(sale, paidNow, dueAmount);
   postCOGSJournal(sale);
 
-  // Stock deduction
+  // Stock deduction — re-check against current stock at the moment of checkout, not just what
+  // was true when items were first added to the cart. On a device that syncs with others, stock
+  // can have moved in between (another till sold the last few units) — better to flag that to
+  // the cashier than silently oversell and floor at zero with no record of what happened.
   cart.forEach(item => {
     const rec = db.records.find(r=>r.id===item.id);
-    if (rec) { rec.stock = Math.max(0, (rec.stock||0) - item.qty); }
+    if (rec) {
+      if (item.qty > rec.stock) toast(`${rec.name}: only ${rec.stock} were actually in stock at checkout — sold anyway, but please recount`,'warning');
+      rec.stock = Math.max(0, (rec.stock||0) - item.qty);
+      db.stockHistory.push({ id:uid(), recordId:rec.id, recordName:rec.name, type:'sale', qty:-item.qty, balanceAfter:rec.stock, date:today(), ref:receiptNum, createdAt:now() });
+    }
   });
+
+  // Update customer lifetime value by the real link (customerId), not by re-matching the typed
+  // name — this used to only run for cash sales, and only by name, so a customer who mostly buys
+  // on credit had an understated "Total Value" on their profile, and a renamed entity would
+  // silently stop accumulating altogether.
+  if (customerId) {
+    const ent = db.entities.find(e=>e.id===customerId);
+    if (ent) ent.totalValue = (ent.totalValue||0) + total;
+  }
 
   audit('POS','Credit Sale',sale.id,receiptNum);
   saveDB();
@@ -6703,19 +6875,22 @@ function completeSale(method) {
   // Fiscal-year sequential invoice numbering (IRD-compliant format), replaces the old timestamp-based number
   const receiptNum = nextFiscalInvoiceNumber('sales');
   
+  const customerId = resolveOrCreateCustomerId(customerName);
   const sale = {
     id: uid(), receiptNumber: receiptNum, date: today(), createdAt: now(),
-    items: cart.map(c=>({...c})), customerName, customerType, subtotal, discount,
+    items: cart.map(c=>({...c})), customerName, customerId, customerType, subtotal, discount,
     tax: taxPct, taxAmount: tax, total, paymentMethod: method,
     qrId: (method||'').toLowerCase().includes('qr') ? currentQRPayment.qrId : null,
     status: 'completed', saleType: 'cash', createdBy: session.username
   };
   db.sales.push(sale);
   
-  // Deduct stock
+  // Deduct stock — re-check against current stock at the moment of checkout, not just what was
+  // true when items were first added to the cart (see completeCreditSale for why).
   cart.forEach(item => {
     const rec = db.records.find(r=>r.id===item.id);
     if (rec) {
+      if (item.qty > rec.stock) toast(`${rec.name}: only ${rec.stock} were actually in stock at checkout — sold anyway, but please recount`,'warning');
       rec.stock = Math.max(0, (rec.stock||0) - item.qty);
       db.stockHistory.push({ id:uid(), recordId:rec.id, recordName:rec.name, type:'sale', qty:-item.qty, balanceAfter:rec.stock, date:today(), ref:receiptNum, createdAt:now() });
     }
@@ -6728,10 +6903,11 @@ function completeSale(method) {
   postSaleJournal(sale);
   postCOGSJournal(sale);
   
-  // Update entity total
-  if (customerName) {
-    const ent = db.entities.find(e=>e.name===customerName);
-    if (ent) { ent.totalValue = (ent.totalValue||0) + total; }
+  // Update entity total by the real link (customerId) — matching by typed name meant a renamed
+  // customer, or a name that wasn't an exact match, silently stopped accumulating lifetime value.
+  if (customerId) {
+    const ent = db.entities.find(e=>e.id===customerId);
+    if (ent) ent.totalValue = (ent.totalValue||0) + total;
   }
   
   audit('POS','Create',sale.id,receiptNum);
@@ -6995,26 +7171,56 @@ function buildA4InvoiceHtml(sale) {
 /* ══ RECORDS ══ */
 let recEditId = null;
 
+let adjRecordType = 'product';
 function openStockAdj(id) {
-  adjRecordId = id;
+  adjRecordId = id; adjRecordType = 'product';
   const rec = db.records.find(r=>r.id===id);
   if (!rec) return;
   document.getElementById('adj-current').textContent = `${rec.stock} ${rec.unit||'pcs'}`;
   document.getElementById('adj-amount').value = '';
   document.getElementById('adj-reason').value = '';
+  setAdjDirection('add');
   openModal('stock-adj-overlay');
 }
 
+function setAdjDirection(dir) {
+  window._adjDirection = dir;
+  document.getElementById('adj-dir-add').classList.toggle('btn-primary', dir==='add');
+  document.getElementById('adj-dir-add').classList.toggle('btn-secondary', dir!=='add');
+  document.getElementById('adj-dir-deduct').classList.toggle('btn-primary', dir==='deduct');
+  document.getElementById('adj-dir-deduct').classList.toggle('btn-secondary', dir!=='deduct');
+}
+
 function saveStockAdj() {
-  const rec = db.records.find(r=>r.id===adjRecordId);
-  const adj = parseInt(document.getElementById('adj-amount').value)||0;
+  const store = adjRecordType === 'product' ? db.records : db.rawMaterials;
+  const rec = store.find(r=>r.id===adjRecordId);
+  if (!rec) return;
+  const qty = parseFloat(document.getElementById('adj-amount').value) || 0;
   const reason = document.getElementById('adj-reason').value.trim();
-  if (!adj) { toast('Enter adjustment amount','warning'); return; }
+  if (!qty || qty <= 0) { toast('Enter a quantity greater than 0','warning'); return; }
+  const dir = window._adjDirection || 'add';
+  const delta = dir === 'add' ? qty : -qty;
   const old = rec.stock;
-  rec.stock = Math.max(0, rec.stock + adj);
-  db.stockHistory.push({ id:uid(), recordId:rec.id, recordName:rec.name, type:'adjustment', qty:adj, balanceAfter:rec.stock, date:today(), reason, createdAt:now() });
-  audit('Records','Edit',rec.id,rec.name,`Stock: ${old}`,`Stock: ${rec.stock}`);
-  saveDB(); closeModal('stock-adj-overlay'); renderRecords(); toast(`Stock adjusted to ${rec.stock}`, 'success');
+  rec.stock = Math.max(0, rec.stock + delta);
+  const actualDelta = rec.stock - old; // in case a deduction was capped at 0
+  db.stockHistory.push({ id:uid(), recordId:rec.id, recordName:rec.name, type:'adjustment', qty:actualDelta, balanceAfter:rec.stock, date:today(), reason, createdAt:now() });
+  audit(adjRecordType==='product'?'Records':'Inventory','Adjustment',rec.id,rec.name,`Stock: ${old}`,`Stock: ${rec.stock}${reason?' — '+reason:''}`);
+
+  // Ledger: keeps the Inventory asset account and your books in sync with what physically happened —
+  // a deduction (damage, theft, count correction) is a real loss; an addition increases inventory value.
+  const unitCost = adjRecordType === 'product' ? (rec.costPrice||0) : (rec.cost||0);
+  const value = Math.abs(actualDelta) * unitCost;
+  if (value > 0.004) {
+    const inventoryCode = adjRecordType === 'product' ? db.settings.acctMappings.inventoryAccount : '1040';
+    const lines = actualDelta < 0
+      ? [ { accountCode:'5095', debit:value, credit:0 }, { accountCode:inventoryCode, debit:0, credit:value } ]
+      : [ { accountCode:inventoryCode, debit:value, credit:0 }, { accountCode:'5095', debit:0, credit:value } ];
+    postJournalEntry({ date: today(), voucherKind:'Journal', refType:'stock-adjustment', refId: rec.id+':'+now(), reference: rec.name, description: `Stock Adjustment — ${rec.name}${reason?' — '+reason:''}`, lines });
+  }
+
+  saveDB(); closeModal('stock-adj-overlay');
+  if (adjRecordType==='product') renderRecords(); else renderInvMaterials();
+  toast(`Stock adjusted to ${rec.stock}`, 'success');
 }
 
 function showAddRecord() { openModule('records'); setTimeout(()=>openRecordModal(),100); }
@@ -7096,8 +7302,9 @@ function openTransactionModal(id=null) {
 function saveTransaction() {
   const amount = parseFloat(document.getElementById('txn-amount').value);
   if (!amount) { toast('Amount is required','error'); return; }
+  const entityName = document.getElementById('txn-entity').value.trim();
   const data = {
-    entityName: document.getElementById('txn-entity').value.trim(),
+    entityName, entityId: resolveOrCreateCustomerId(entityName),
     amount, category: document.getElementById('txn-cat').value.trim(),
     status: document.getElementById('txn-status-sel').value,
     date: document.getElementById('txn-date').value||today(),
@@ -7140,6 +7347,20 @@ function isDuplicateName(arr, name, excludeId=null, field='name') {
   const norm = (name||'').trim().toLowerCase();
   if (!norm) return false;
   return arr.some(x => x.id !== excludeId && (x[field]||'').trim().toLowerCase() === norm);
+}
+
+// Every sale/credit-sale/payment needs a real customerId, not just a typed name — otherwise a
+// customer's profile, dues, and statement all depend on matching a string exactly forever.
+// POS still lets you just type a name for speed; this resolves it to an existing Entity by
+// case-insensitive match, or silently creates a new Entity so it's linked from this sale on.
+function resolveOrCreateCustomerId(name) {
+  const clean = (name||'').trim();
+  if (!clean) return '';
+  const existing = db.entities.find(e=>e.name && e.name.trim().toLowerCase()===clean.toLowerCase());
+  if (existing) return existing.id;
+  const e = { id:uid(), name:clean, category:'Retail', phone:'', email:'', address:'', notes:'', totalValue:0, createdAt:now() };
+  db.entities.push(e);
+  return e.id;
 }
 
 function saveEntity() {
@@ -7510,6 +7731,41 @@ function saveEmployee() {
 
 function showAddEmployee() { openModule('hr'); setTimeout(()=>openEmployeeModal(),100); }
 
+// Attendance and Leave have never actually affected payroll before this — processPayroll()
+// only ever looked at the employee's fixed salary, so an employee got full pay regardless of
+// how many days they were marked Absent, or how much Unpaid Leave they took. This computes
+// how many days should actually be deducted for a given employee/month:
+//   - 'A' (Absent) — full day deduction
+//   - 'HD' (Half Day) — half day deduction
+//   - 'L' (Leave) — only deducted if it traces back to an *approved, Unpaid* leave request.
+//     Leave type is lost once synced into the attendance grid (it's just a single letter there),
+//     so this cross-references db.leaveRecords directly rather than trusting the 'L' mark alone
+//     — otherwise Sick/Annual/Casual leave would incorrectly dock pay too.
+//   - 'P' (Present) and 'H' (Holiday) — never deducted.
+function computeAttendanceDeductionDays(empId, month) {
+  const empAtt = (db.attendance[month] || {})[empId] || {};
+  const unpaidLeaveDates = new Set();
+  (db.leaveRecords||[]).filter(l=>l.empId===empId && l.status==='approved' && l.type==='Unpaid Leave').forEach(l=>{
+    if (!l.fromDate || !l.toDate) return;
+    let d = new Date(l.fromDate); const end = new Date(l.toDate);
+    while (d <= end) { unpaidLeaveDates.add(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+  });
+  let days = 0;
+  Object.entries(empAtt).forEach(([dateStr, status]) => {
+    if (!dateStr.startsWith(month)) return;
+    if (status === 'A') days += 1;
+    else if (status === 'HD') days += 0.5;
+    else if (status === 'L' && unpaidLeaveDates.has(dateStr)) days += 1;
+  });
+  return days;
+}
+
+function computeAttendanceDeductionAmount(emp, month) {
+  const days = computeAttendanceDeductionDays(emp.id, month);
+  const dailyRate = (emp.salary||0) / daysInMonth(month);
+  return { days, amount: +(dailyRate * days).toFixed(2) };
+}
+
 function renderPayrollTable() {
   const month = document.getElementById('pay-month')?.value || today().slice(0,7);
   const employees = db.employees.filter(e=>e.status==='active');
@@ -7518,22 +7774,26 @@ function renderPayrollTable() {
   const extraEarnings = sc.earnings.slice(1);
   const deductions = sc.deductions;
   document.getElementById('payroll-table-wrap').innerHTML = `
+    <div class="form-hint" style="margin-bottom:8px">"Attendance Deduction" is calculated automatically from the Attendance tab (Absent + Half Day + approved Unpaid Leave) — it isn't typed in here. Check Attendance first if a number looks off.</div>
     <div class="table-wrap"><table>
       <thead><tr>
         <th>Employee</th><th>Basic</th>
         ${extraEarnings.map(e=>`<th style="font-size:14px;color:var(--success)">${esc(e)}</th>`).join('')}
         ${deductions.map(d=>`<th style="font-size:14px;color:var(--danger)">${esc(d)}</th>`).join('')}
+        <th style="font-size:14px;color:var(--danger)">Attendance Deduction 🔒</th>
         <th>Net Pay</th>
       </tr></thead>
       <tbody>${employees.map(e=>{
         const ph = db.payrollHistory.find(p=>p.month===month&&p.entries?.find(x=>x.empId===e.id));
         const entry = ph?.entries?.find(x=>x.empId===e.id);
+        const att = computeAttendanceDeductionAmount(e, month);
         return `<tr>
           <td style="font-weight:500">${esc(e.name)}<div style="font-size:14px;color:var(--text-muted)">${esc(e.role||'')}</div></td>
           <td class="mono amt-neutral">${fmt(e.salary||0)}</td>
           ${extraEarnings.map(earn=>`<td><input type="number" value="${entry?.earnings?.[earn]||0}" id="earn-${e.id}-${earn.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
           ${deductions.map(ded=>`<td><input type="number" value="${entry?.deductions?.[ded]||0}" id="ded-${e.id}-${ded.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
-          <td class="mono font-bold" id="net-${e.id}">${fmt(e.salary||0)}</td>
+          <td class="mono text-danger" title="${att.days} day(s) unpaid this month">${fmt(att.amount)}</td>
+          <td class="mono font-bold" id="net-${e.id}">${fmt(Math.max(0,e.salary||0)-att.amount)}</td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>`;
@@ -7542,14 +7802,20 @@ function renderPayrollTable() {
 function updateNetPayRow(empId) {
   const emp = db.employees.find(e=>e.id===empId);
   const sc = db.settings.salaryComponents || { earnings:['Basic Salary'], deductions:[] };
+  const month = document.getElementById('pay-month')?.value || today().slice(0,7);
   let extra = 0, deduct = 0;
   sc.earnings.slice(1).forEach(earn => { extra += parseFloat(document.getElementById(`earn-${empId}-${earn.replace(/\s/g,'_')}`)?.value)||0; });
   sc.deductions.forEach(ded => { deduct += parseFloat(document.getElementById(`ded-${empId}-${ded.replace(/\s/g,'_')}`)?.value)||0; });
+  const attDeduction = computeAttendanceDeductionAmount(emp, month).amount;
   const el = document.getElementById('net-'+empId);
-  if (el) el.textContent = fmt(Math.max(0, (emp.salary||0) + extra - deduct));
+  if (el) el.textContent = fmt(Math.max(0, (emp.salary||0) + extra - deduct - attDeduction));
 }
 
 function processPayroll() {
+  // "Process Payroll" has existed as a definable permission since roles were introduced, but
+  // nothing ever actually checked it — anyone who could see the HR module (just "View HR") could
+  // click this button and create real salary obligations and ledger postings. Enforce it here.
+  if (!hasPermission('Process Payroll')) { toast('You don\'t have permission to process payroll','error'); return; }
   const month = document.getElementById('pay-month')?.value || today().slice(0,7);
   if (!month) { toast('Select a month','warning'); return; }
   const employees = db.employees.filter(e=>e.status==='active');
@@ -7560,13 +7826,18 @@ function processPayroll() {
     const deductions = {};
     sc.deductions.forEach(ded => { deductions[ded] = parseFloat(document.getElementById(`ded-${e.id}-${ded.replace(/\s/g,'_')}`)?.value)||0; });
     const totalEarnings = Object.values(earnings).reduce((a,b)=>a+b,0);
-    const totalDeductions = Object.values(deductions).reduce((a,b)=>a+b,0);
+    // Attendance/Leave data has never fed into payroll before this — an employee's fixed
+    // salary was paid in full no matter how many days they were marked Absent, or took Unpaid
+    // Leave. This pulls the actual attendance record for the month and docks pay accordingly,
+    // the same figure shown (and checkable) on the payroll screen before approving.
+    const att = computeAttendanceDeductionAmount(e, month);
+    const totalDeductions = Object.values(deductions).reduce((a,b)=>a+b,0) + att.amount;
     const grossWage = (e.salary||0) + totalEarnings - totalDeductions;
     const ssfEnrolled = e.ssfEnrolled !== false;
     const employeeSSF = ssfEnrolled ? +((e.salary||0) * 0.11).toFixed(2) : 0;
     const employerSSF = ssfEnrolled ? +((e.salary||0) * 0.20).toFixed(2) : 0;
     const netPay = Math.max(0, grossWage - employeeSSF);
-    return { empId:e.id, empName:e.name, role:e.role, salary:e.salary||0, earnings, deductions, totalEarnings, totalDeductions, grossWage, ssfEnrolled, employeeSSF, employerSSF, netPay, paid:false, paidDate:null, paidMethod:null };
+    return { empId:e.id, empName:e.name, role:e.role, salary:e.salary||0, earnings, deductions, attendanceDeductionDays:att.days, attendanceDeduction:att.amount, totalEarnings, totalDeductions, grossWage, ssfEnrolled, employeeSSF, employerSSF, netPay, paid:false, paidDate:null, paidMethod:null };
   });
   const totalPay = entries.reduce((a,x)=>a+x.netPay,0);
   const totalSSF = entries.reduce((a,x)=>a+x.employeeSSF+x.employerSSF,0);
@@ -7579,6 +7850,12 @@ function processPayroll() {
         if (prevEntry?.paid) { e.paid = true; e.paidDate = prevEntry.paidDate; e.paidMethod = prevEntry.paidMethod; }
       });
     }
+    // Reprocessing a month (e.g. correcting an amount) previously just added a second set of
+    // expense/ledger entries on top of the first, silently double-counting that month's salary
+    // cost in every report and journal from then on. Clear out the prior run's entries for this
+    // exact month before recording the corrected one, so a reprocess replaces rather than adds.
+    db.accounting = (db.accounting||[]).filter(a => !(a.category==='Salary' && a.reference===`PAY-${month}`));
+    voidJournalEntriesForRef('payroll', month, 'Superseded by payroll reprocess for '+month);
     entries.forEach(e=>{ db.accounting.push({ id:uid(), type:'expense', category:'Salary', description:`Salary ${e.empName} - ${month}`, amount:e.netPay, date:today(), reference:`PAY-${month}`, createdAt:now() }); });
 
     // Ledger: automatic double-entry (invisible) — Dr Salary Expense + Employer SSF Contribution,
@@ -7592,7 +7869,67 @@ function processPayroll() {
   });
 }
 
-// Marks the month's total SSF liability (employee + employer share) as deposited with the Fund.
+// ── One-time diagnostic for the payroll-reprocess double-counting bug fixed above. Finds any
+// month where Accounting/Journal still hold leftover entries from a reprocess that happened
+// before the fix, and lets an admin collapse them back down to the single correct entry that
+// db.payrollHistory already stores as the source of truth for that month.
+function findPayrollDuplicates() {
+  const months = new Set([
+    ...((db.accounting||[]).filter(a=>a.category==='Salary'&&(a.reference||'').startsWith('PAY-')).map(a=>a.reference.slice(4))),
+    ...((db.journalEntries||[]).filter(j=>j.refType==='payroll').map(j=>j.refId))
+  ]);
+  const results = [];
+  months.forEach(month=>{
+    const ph = db.payrollHistory.find(p=>p.month===month);
+    const acctEntries = (db.accounting||[]).filter(a=>a.category==='Salary'&&a.reference===`PAY-${month}`);
+    const acctSum = acctEntries.reduce((a,x)=>a+x.amount,0);
+    const jeEntries = (db.journalEntries||[]).filter(j=>j.refType==='payroll'&&j.refId===month&&!j.isVoid);
+    const expectedAcctCount = ph ? ph.entries.length : 0;
+    const isDupe = acctEntries.length > expectedAcctCount || jeEntries.length > 1;
+    if (isDupe) results.push({ month, ph, acctCount:acctEntries.length, expectedAcctCount, acctSum, expectedSum: ph?.totalPay||0, jeCount:jeEntries.length });
+  });
+  return results.sort((a,b)=>a.month.localeCompare(b.month));
+}
+
+function openPayrollDuplicateCheck() {
+  const dupes = findPayrollDuplicates();
+  const isAdmin = session?.role === 'admin';
+  const html = dupes.length ? `
+    <p style="color:var(--text-muted);margin-bottom:14px">These months have more salary expense entries or payroll journal vouchers than they should — almost always from reprocessing the same month more than once before this was fixed. "Correct" figures come from the saved Payroll History for that month.</p>
+    <div class="table-wrap"><table><thead><tr><th>Month</th><th>Expense Entries Found</th><th>Amount Recorded</th><th>Correct Amount</th><th>Journal Vouchers</th><th></th></tr></thead><tbody>
+    ${dupes.map(d=>`<tr>
+      <td>${esc(d.month)}</td>
+      <td>${d.acctCount} <span class="text-muted text-sm">(expected ${d.expectedAcctCount})</span></td>
+      <td class="mono text-danger">${fmt(d.acctSum)}</td>
+      <td class="mono">${d.ph?fmt(d.expectedSum):"no history — can't auto-fix"}</td>
+      <td>${d.jeCount} <span class="text-muted text-sm">(expected ${d.ph?1:0})</span></td>
+      <td>${isAdmin&&d.ph?`<button class="btn btn-xs btn-danger" onclick="cleanupPayrollDuplicates('${d.month}')">Clean Up</button>`:(isAdmin?'<span class="text-muted text-sm">Manual review needed</span>':'')}</td>
+    </tr>`).join('')}
+    </tbody></table></div>
+    ${!isAdmin?'<p class="text-muted text-sm" style="margin-top:10px">Only an Admin can run cleanup.</p>':''}
+  ` : `<div class="empty"><div class="empty-title">✅ No duplicate payroll entries found</div><div class="empty-sub">Every month's Accounting and Journal entries match what's recorded in Payroll History.</div></div>`;
+  document.getElementById('profile-view-title').textContent = 'Payroll Duplicate Check';
+  document.getElementById('profile-view-body').innerHTML = html;
+  currentProfile = { type:'print', id:'' };
+  document.getElementById('profile-print-btn').style.display = 'none';
+  document.getElementById('profile-archive-btn').style.display = 'none';
+  document.getElementById('profile-delete-btn').style.display = 'none';
+  openModal('profile-view-overlay');
+}
+
+function cleanupPayrollDuplicates(month) {
+  if (session?.role !== 'admin') { toast('Only an Admin can run this cleanup','error'); return; }
+  const ph = db.payrollHistory.find(p=>p.month===month);
+  if (!ph) { toast('No Payroll History for this month — nothing to rebuild from','error'); return; }
+  confirm(`Rebuild ${month}'s salary expense and journal entries from Payroll History? This removes the extra entries and reposts exactly one correct set.`, ()=>{
+    db.accounting = (db.accounting||[]).filter(a=>!(a.category==='Salary'&&a.reference===`PAY-${month}`));
+    voidJournalEntriesForRef('payroll', month, 'Cleaned up duplicate payroll entries');
+    ph.entries.forEach(e=>{ db.accounting.push({ id:uid(), type:'expense', category:'Salary', description:`Salary ${e.empName} - ${month}`, amount:e.netPay, date:today(), reference:`PAY-${month}`, createdAt:now() }); });
+    postPayrollJournal(month, ph.entries);
+    audit('HR','Payroll Duplicate Cleanup',month,`Rebuilt from Payroll History`);
+    saveDB(); toast(`${month} cleaned up`,'success'); openPayrollDuplicateCheck();
+  });
+}
 function openMarkSSFDeposited(month) {
   const ph = db.payrollHistory.find(p=>p.month===month);
   if (!ph) { toast('No payroll found for that month','error'); return; }
@@ -8065,14 +8402,12 @@ function viewProfile(type, id) {
       <div class="info-item"><label>Stock</label><p class="font-mono">${r.stock} ${esc(r.unit||'pcs')}</p></div>
       <div class="info-item"><label>Retail Price</label><p class="font-mono amt-revenue">${fmt(r.salePrice||0)}</p></div>
       <div class="info-item"><label>Wholesale Price</label><p class="font-mono">${fmt(r.wholesalePrice||0)||'—'}</p></div>
-      <div class="info-item"><label>Cost Price</label><p class="font-mono amt-purchase">${fmt(r.costPrice||0)}</p></div>
-      <div class="info-item"><label>Supplier</label><p>${esc(r.supplier||'—')}</p></div>
+      <div class="info-item"><label>Cost Price${productHasProductionHistory(r.id)?' (weighted avg)':''}</label><p class="font-mono amt-purchase">${fmt(r.costPrice||0)}</p></div>
       <div class="info-item"><label>Revenue Generated</label><p class="font-mono amt-revenue">${fmt(revenue)}</p></div>
       <div class="info-item"><label>Status</label><p><span class="badge ${r.status==='active'?'badge-success':'badge-muted'}">${esc(r.status)}</span></p></div>
       <div class="info-item"><label>Created</label><p>${fmtDate(r.createdAt)}</p></div>
     </div>
     ${r.description?`<div class="form-group"><label class="form-label">Description</label><p>${esc(r.description)}</p></div>`:''}
-    ${(r.variants&&r.variants.length)?`<h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Variants</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>SKU</th><th>Retail</th><th>Wholesale</th><th>Stock</th></tr></thead><tbody>${r.variants.map(v=>`<tr><td>${esc(v.name)}</td><td class="mono">${esc(v.sku||'—')}</td><td class="mono amt-revenue">${fmt(v.price||0)}</td><td class="mono amt-revenue">${fmt(v.wholesalePrice||0)}</td><td class="mono">${v.stock||0}</td></tr>`).join('')}</tbody></table></div>`:''}
     <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Stock History</h3>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Qty</th><th>Balance</th><th>Ref</th></tr></thead><tbody>${sh.length?sh.map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${esc(h.type)}</td><td class="mono ${h.qty>=0?'text-success':'text-danger'}">${h.qty>0?'+':''}${h.qty}</td><td class="mono">${h.balanceAfter}</td><td class="mono">${esc(h.ref||'—')}</td></tr>`).join(''):'<tr><td colspan="5" class="text-center text-muted">No history</td></tr>'}</tbody></table></div>
     ${profileAuditHtml(type,id)}`;
@@ -8080,10 +8415,17 @@ function viewProfile(type, id) {
     const e = db.entities.find(x=>x.id===id);
     if (!e) return;
     archived = e.archived === true;
-    const txns = db.sales.filter(s=>s.customerName===e.name).slice(-15).reverse();
-    const credits = db.creditSales.filter(c=>c.customerName===e.name);
-    const payments = db.payments.filter(p=>p.customerName===e.name).slice(-10).reverse();
+    // Match by customerId first (the real link); fall back to name only for records created
+    // before this field existed, so no history is lost for existing data.
+    const matchesEntity = (rec) => rec.customerId ? rec.customerId===e.id : rec.customerName===e.name;
+    const txns = db.sales.filter(matchesEntity).slice(-15).reverse();
+    const credits = db.creditSales.filter(matchesEntity);
+    const payments = db.payments.filter(matchesEntity).slice(-10).reverse();
     const outstanding = credits.filter(c=>c.status==='outstanding').reduce((a,c)=>a+c.dueAmount,0);
+    // The standalone Transactions log (Pending/Processing/etc. orders/jobs) previously had no
+    // visible connection to a customer's profile at all — surface it here now that entityId
+    // gives a real link, so this page becomes the one place to see everything tied to them.
+    const relatedTxns = db.transactions.filter(t=>t.entityId ? t.entityId===e.id : t.entityName===e.name).slice(-10).reverse();
     title = e.name;
     body = `<div class="profile-header"><div class="profile-avatar" style="background:var(--accent)">👥</div><div><div class="profile-name">${esc(e.name)}</div><div class="profile-sub">${esc(e.category||'Customer')}</div></div>${archived?'<span class="badge badge-muted" style="margin-left:auto">🗄️ Archived</span>':''}</div>
     <div class="info-grid">
@@ -8101,6 +8443,10 @@ function viewProfile(type, id) {
     <div style="page-break-inside:avoid;break-inside:avoid">
       <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Payment History</h3>
       <div class="table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Amount</th><th>Method</th></tr></thead><tbody>${payments.length?payments.map(p=>`<tr><td>${fmtDate(p.date)}</td><td class="mono">${esc(p.receiptNumber||'—')}</td><td class="mono text-success">${fmt(p.amount)}</td><td>${esc(p.method||'—')}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No payments recorded</td></tr>'}</tbody></table></div>
+    </div>
+    <div style="page-break-inside:avoid;break-inside:avoid">
+      <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Related Transactions (Orders/Jobs)</h3>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Status</th></tr></thead><tbody>${relatedTxns.length?relatedTxns.map(t=>`<tr><td>${fmtDate(t.date)}</td><td>${esc(t.category||'—')}</td><td class="mono">${fmt(t.amount)}</td><td><span class="badge ${statusBadge(t.status)}">${esc(t.status||'—')}</span></td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No related transactions</td></tr>'}</tbody></table></div>
     </div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='employee') {
@@ -8835,8 +9181,15 @@ function onReportTypeChange() {
         .map(a=>`<option value="${a.code}">${a.code} — ${esc(a.name)}</option>`).join('');
     } else if (type === 'due-ledger') {
       targetGroup.style.display = '';
-      const names = Array.from(new Set((db.creditSales||[]).map(c=>c.customerName))).sort();
-      targetSelect.innerHTML = `<option value="">— All Customers (Summary) —</option>` + names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      // Real customers first (id-linked); then any legacy customer names that were typed
+      // before customerId existed and don't match an entity, so their history isn't stranded.
+      const customers = (db.entities||[]).filter(e=>!e.archived).slice().sort((a,b)=>a.name.localeCompare(b.name));
+      const linkedNames = new Set(customers.map(e=>e.name.trim().toLowerCase()));
+      const orphanNames = Array.from(new Set((db.creditSales||[]).filter(c=>!c.customerId).map(c=>c.customerName)))
+        .filter(n=>n && !linkedNames.has(n.trim().toLowerCase())).sort();
+      targetSelect.innerHTML = `<option value="">— All Customers (Summary) —</option>`
+        + customers.map(e=>`<option value="id:${e.id}">${esc(e.name)}</option>`).join('')
+        + orphanNames.map(n=>`<option value="name:${esc(n)}">${esc(n)} (unlinked)</option>`).join('');
     } else if (type === 'supplier-ledger') {
       targetGroup.style.display = '';
       targetSelect.innerHTML = `<option value="">— All Suppliers (Summary) —</option>` + (db.secondary||[]).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
@@ -9284,8 +9637,12 @@ function generateReport() {
     const yearFrom = from || `${today().slice(0,4)}-01-01`;
     const yearTo = to || `${today().slice(0,4)}-12-31`;
     const yrSales = db.sales.filter(x=>x.date>=yearFrom&&x.date<=yearTo);
-    const yrIncome = db.accounting.filter(a=>a.type==='income'&&a.date>=yearFrom&&a.date<=yearTo).reduce((a,x)=>a+x.amount,0);
-    const yrExpense = db.accounting.filter(a=>a.type==='expense'&&a.date>=yearFrom&&a.date<=yearTo).reduce((a,x)=>a+x.amount,0);
+    // Was computing Net Profit as a straight sum of db.accounting (cash-basis — credit-sale
+    // income only lands here as it's actually collected, not when the sale happened), while
+    // the official Profit & Loss Statement report uses the real double-entry ledger
+    // (accrual-basis — revenue recognized at time of sale). Two reports, two different
+    // "Net Profit" numbers for the same period. Now both pull from the same source.
+    const yrPL = computePLPeriod(yearFrom, yearTo);
     const yrPurchaseTotal = (db.purchaseOrders||[]).filter(p=>p.date>=yearFrom&&p.date<=yearTo).reduce((a,p)=>a+(p.total||0),0);
     bodyHtml = `<h2>Annual Business Report</h2>
     <p style="font-size:17px;margin-bottom:12px">Period: ${fmtDate(yearFrom)} to ${fmtDate(yearTo)}</p>
@@ -9293,22 +9650,26 @@ function generateReport() {
       <tr><td>Total Sales Revenue</td><td class="mono amt-revenue">${fmt(yrSales.reduce((a,x)=>a+x.total,0))}</td></tr>
       <tr><td>Number of Sales Transactions</td><td class="mono">${yrSales.length}</td></tr>
       <tr><td>Total Purchases</td><td class="mono amt-purchase">${fmt(yrPurchaseTotal)}</td></tr>
-      <tr><td>Total Recorded Income</td><td class="mono amt-revenue">${fmt(yrIncome)}</td></tr>
-      <tr><td>Total Recorded Expense</td><td class="mono amt-expense">${fmt(yrExpense)}</td></tr>
-      <tr style="background:#f0f0f0"><td><strong>Net Profit / (Loss)</strong></td><td class="mono"><strong>${fmt(yrIncome-yrExpense)}</strong></td></tr>
+      <tr><td>Total Recorded Income</td><td class="mono amt-revenue">${fmt(yrPL.totalIncome)}</td></tr>
+      <tr><td>Total Recorded Expense</td><td class="mono amt-expense">${fmt(yrPL.totalExpense)}</td></tr>
+      <tr style="background:#f0f0f0"><td><strong>Net Profit / (Loss)</strong></td><td class="mono"><strong>${fmt(yrPL.netProfit)}</strong></td></tr>
       <tr><td>Active Employees (current)</td><td class="mono">${db.employees.filter(e=>e.status==='active').length}</td></tr>
       <tr><td>Active Customers</td><td class="mono">${db.entities.filter(e=>!e.archived).length}</td></tr>
       <tr><td>Active Suppliers</td><td class="mono">${db.secondary.filter(sp=>!sp.archived).length}</td></tr>
     </tbody></table>`;
   } else if (type==='audit-support') {
+    // Same fix as Annual Business Report, and arguably more important here — this report is
+    // explicitly for a tax authority audit. It must not be able to show a different income/
+    // expense total than the official P&L for the same period.
+    const asPL = computePLPeriod(from, to);
     bodyHtml = `<h2>Audit Support Report</h2>
     <p style="font-size:17px;margin-bottom:12px">Consolidated summary suitable for tax authority audit support, covering sales, purchases, and VAT for the selected period.</p>
     <table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>
       <tr><td>Total Sales Revenue</td><td>${fmt(totalRevenue)}</td></tr>
       <tr><td>Total VAT Collected</td><td>${fmt(periodSales.reduce((a,x)=>a+(x.taxAmount||0),0))}</td></tr>
       <tr><td>Total Purchases</td><td>${fmt(db.accounting.filter(a=>a.type==='expense'&&(a.category==='Purchase'||a.category==='Supplies')&&(!from||a.date>=from)&&(!to||a.date<=to)).reduce((a,p)=>a+p.amount,0))}</td></tr>
-      <tr><td>Total Income (All)</td><td>${fmt(totalIncome)}</td></tr>
-      <tr><td>Total Expense (All)</td><td>${fmt(totalExp)}</td></tr>
+      <tr><td>Total Income (All) — from ledger, matches P&amp;L Statement</td><td>${fmt(asPL.totalIncome)}</td></tr>
+      <tr><td>Total Expense (All) — from ledger, matches P&amp;L Statement</td><td>${fmt(asPL.totalExpense)}</td></tr>
     </tbody></table>`;
   } else {
     bodyHtml = `<h2>Report</h2><p>Select report parameters above and click Generate Report.</p>`;
@@ -9787,7 +10148,9 @@ function populateRoleDropdown(currentRoleId) {
   const sel = document.getElementById('usr-role');
   if (!sel) return;
   const roles = db.settings.roles || [];
-  let opts = '<option value="admin">Admin (Built-in — full access)</option>';
+  // Only a real admin can grant the Admin role (see saveUser) — don't even offer it as an
+  // option to anyone else, so the form matches what saving will actually allow.
+  let opts = session?.role === 'admin' ? '<option value="admin">Admin (Built-in — full access)</option>' : '';
   opts += roles.filter(r=>r.active!==false).map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
   // If the user being edited has a role that's now inactive or deleted, keep it selectable
   // so saving the form doesn't silently strip their role out from under them.
@@ -9795,14 +10158,22 @@ function populateRoleDropdown(currentRoleId) {
     const stale = roles.find(r=>r.id===currentRoleId);
     opts += `<option value="${esc(currentRoleId)}">${esc(stale?stale.name:currentRoleId)} (inactive)</option>`;
   }
+  if (currentRoleId === 'admin' && session?.role !== 'admin') {
+    opts += `<option value="admin" selected>Admin (Built-in — full access)</option>`;
+  }
   sel.innerHTML = opts;
-  sel.value = currentRoleId || (roles.find(r=>r.active!==false)?.id || 'admin');
+  sel.value = currentRoleId || (roles.find(r=>r.active!==false)?.id || (session?.role==='admin'?'admin':''));
 }
 
 function renderUsersTable() {
   const tbody = document.getElementById('users-tbody');
   if (!tbody) return;
-  tbody.innerHTML = db.users.map(u=>`
+  tbody.innerHTML = db.users.map(u=>{
+    // A non-admin (even with "Manage Users" permission) can no longer act on an Admin account
+    // at all — see saveUser/resetUserPw/deactivateUser/deleteUser. Reflect that here so the
+    // buttons don't invite a click that'll just be refused.
+    const canTouch = session?.role==='admin' || u.role!=='admin';
+    return `
     <tr>
       <td><div style="display:flex;align-items:center;gap:8px"><div class="user-avatar" style="width:28px;height:28px;font-size:14px;background:${esc(u.avatarColor||'#6366F1')}">${(u.fullName||'?')[0].toUpperCase()}</div>${esc(u.fullName)}</div></td>
       <td class="mono">${esc(u.username)}</td>
@@ -9811,12 +10182,13 @@ function renderUsersTable() {
       <td><span class="badge ${u.status==='active'?'badge-success':'badge-muted'}">${esc(u.status)}</span></td>
       <td>${fmtDate(u.lastLogin)||'Never'}</td>
       <td>
-        <button class="btn btn-xs btn-secondary btn-edit" onclick="openUserModal('${u.id}')">Edit</button>
+        ${canTouch?`<button class="btn btn-xs btn-secondary btn-edit" onclick="openUserModal('${u.id}')">Edit</button>
         <button class="btn btn-xs btn-secondary btn-adjust" onclick="resetUserPw('${u.id}')">Reset PW</button>
-        <button class="btn btn-xs btn-secondary" onclick="${u.status==='active'?`deactivateUser('${u.id}')`:`activateUser('${u.id}')`}">${u.status==='active'?'Deactivate':'Activate'}</button>
+        <button class="btn btn-xs btn-secondary" onclick="${u.status==='active'?`deactivateUser('${u.id}')`:`activateUser('${u.id}')`}">${u.status==='active'?'Deactivate':'Activate'}</button>`:'<span class="text-muted text-sm">Admin only</span>'}
         ${session?.role==='admin'&&u.id!==session?.id?`<button class="btn btn-xs btn-danger" onclick="deleteUser('${u.id}')">Del</button>`:''}
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function openUserModal(id=null) {
@@ -9853,6 +10225,19 @@ async function saveUser() {
   if (!userEditId && !pw) { toast('Password required for new user','error'); return; }
   if (pw && pw!==pw2) { toast('Passwords do not match','error'); return; }
   if (pw && pw.length < 4) { toast('Password must be at least 4 chars','error'); return; }
+  // Privilege-escalation guard: the Users tab is reachable by any custom role that's been
+  // granted just the "Manage Users" permission — a reasonable thing to hand an office manager
+  // for day-to-day staff accounts. Without this check, that same person could grant themselves
+  // (or anyone) the built-in Admin role from this form, which is always in the dropdown. Only
+  // someone already logged in as a real admin may create or promote another admin.
+  if (role === 'admin' && session?.role !== 'admin') { toast('Only an Admin can assign the Admin role','error'); return; }
+  // Same guard from the other side: a non-admin editing an existing Admin account here could
+  // otherwise change the real admin's password, security question, or demote them — effectively
+  // locking the owner out — without ever holding admin access themselves.
+  if (userEditId) {
+    const existingUser = db.users.find(x=>x.id===userEditId);
+    if (existingUser?.role === 'admin' && session?.role !== 'admin') { toast('Only an Admin can edit an Admin account','error'); return; }
+  }
   // Check username unique (case-insensitive)
   const existing = db.users.find(u=>u.username.toLowerCase()===uname.toLowerCase()&&u.id!==userEditId);
   if (existing) { toast('Username already exists','error'); return; }
@@ -9879,6 +10264,9 @@ async function saveUser() {
 async function resetUserPw(id) {
   const u = db.users.find(x=>x.id===id);
   if (!u) return;
+  // Same protection as saveUser(): a non-admin with "Manage Users" permission must not be able
+  // to seize control of the real admin account by resetting its password.
+  if (u.role === 'admin' && session?.role !== 'admin') { toast('Only an Admin can reset an Admin account\'s password','error'); return; }
   const pw = prompt(`New password for ${u.username}:`);
   if (!pw || pw.length < 4) { toast('Password too short','error'); return; }
   const s=salt(); u.passwordSalt=s; u.passwordHash=await hashPw(pw,s);
@@ -9888,7 +10276,10 @@ async function resetUserPw(id) {
 
 function deactivateUser(id) {
   const u = db.users.find(x=>x.id===id);
-  if (u) { u.status='inactive'; saveDB(); renderUsersTable(); toast('User deactivated','info'); }
+  if (!u) return;
+  // A non-admin must not be able to lock the real admin out by deactivating their account.
+  if (u.role === 'admin' && session?.role !== 'admin') { toast('Only an Admin can deactivate an Admin account','error'); return; }
+  u.status='inactive'; saveDB(); renderUsersTable(); toast('User deactivated','info');
 }
 
 function activateUser(id) {
@@ -9899,12 +10290,16 @@ function activateUser(id) {
 function deleteUser(id) {
   const u = db.users.find(x=>x.id===id);
   if (!u) return;
+  // Defense-in-depth: the Delete button is already hidden for non-admins in the UI, but the
+  // action itself must refuse it too, in case that ever changes or is reached another way.
+  if (session?.role !== 'admin') { toast('Only an Admin can delete a user','error'); return; }
   confirm(`Delete user "${u.username}"? Their audit log entries will be retained.`, ()=>{
     db.users = db.users.filter(x=>x.id!==id);
     audit('UserManager','Delete',id,u.username);
     saveDB(); renderUsersTable(); toast('User deleted','success');
   });
 }
+
 
 /* ══ USER PROFILE ACTIONS ══ */
 function openMyProfile() {
@@ -10128,19 +10523,29 @@ function restoreBackup() { document.getElementById('restore-file-input').click()
 function handleRestoreFile(e) {
   const file = e.target.files?.[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const parsed = JSON.parse(ev.target.result);
-      if (!parsed.users || !parsed.settings) { toast('Invalid backup file','error'); return; }
-      confirm('Restore this backup? Current data will be overwritten. Type "RESTORE" to confirm.', ()=>{
-        db = parsed; saveDB(); toast('Backup restored! Refreshing...','success');
-        setTimeout(()=>location.reload(), 1500);
-      }, 'RESTORE');
-    } catch { toast('Invalid JSON file','error'); }
-  };
-  reader.readAsText(file);
-  e.target.value='';
+  // Restoring silently replaces the entire database — just as destructive as System Reset, but
+  // it previously only asked the person to type a word. It needs the same protection: admin
+  // role plus re-entering the admin password, so reaching the Settings page with a lesser
+  // "System Settings" permission isn't enough on its own to overwrite everyone's data.
+  if (session?.role !== 'admin') { toast('Admin only','error'); e.target.value=''; return; }
+  const pw = prompt('Enter admin password to confirm restore:');
+  const u = db.users.find(x=>x.id===session.id);
+  hashPw(pw||'', u?.passwordSalt||'').then(hash=>{
+    if (!u || hash !== u.passwordHash) { toast('Incorrect password','error'); e.target.value=''; return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if (!parsed.users || !parsed.settings) { toast('Invalid backup file','error'); return; }
+        confirm('Restore this backup? Current data will be overwritten. Type "RESTORE" to confirm.', ()=>{
+          db = parsed; saveDB(); toast('Backup restored! Refreshing...','success');
+          setTimeout(()=>location.reload(), 1500);
+        }, 'RESTORE');
+      } catch { toast('Invalid JSON file','error'); }
+    };
+    reader.readAsText(file);
+    e.target.value='';
+  });
 }
 
 async function systemReset() {
@@ -10208,7 +10613,7 @@ function renderEntities() {
   const page = pageState.ent||1, perPage = 50;
   const paged = items.slice((page-1)*perPage, page*perPage);
   document.getElementById('ent-tbody').innerHTML = paged.length ? paged.map(e => {
-    const due = db.creditSales.filter(c=>c.customerName===e.name&&c.status==='outstanding').reduce((a,c)=>a+c.dueAmount,0);
+    const due = db.creditSales.filter(c=>(c.customerId?c.customerId===e.id:c.customerName===e.name)&&c.status==='outstanding').reduce((a,c)=>a+c.dueAmount,0);
     return `<tr>
       <td><a href="#" onclick="viewProfile('entity','${e.id}');return false" style="font-weight:500">${esc(e.name)}</a></td>
       <td>${esc(e.phone||'—')}</td>
@@ -10287,7 +10692,7 @@ function saveDuePayment() {
   c.paidAmount += amount;
   c.dueAmount -= amount;
   c.status = c.dueAmount <= 0 ? 'settled' : 'outstanding';
-  db.payments.push({ id:uid(), saleId:c.saleId, creditId:c.id, receiptNumber:c.receiptNumber, customerName:c.customerName, amount, method, notes, date:today(), createdAt:now(), createdBy:session.username });
+  db.payments.push({ id:uid(), saleId:c.saleId, creditId:c.id, receiptNumber:c.receiptNumber, customerName:c.customerName, customerId:c.customerId||'', amount, method, notes, date:today(), createdAt:now(), createdBy:session.username });
   db.accounting.push({ id:uid(), type:'income', category:'Sales', description:`Due Collection ${c.receiptNumber} — ${c.customerName}`, amount, date:today(), reference:c.receiptNumber, createdAt:now() });
 
   // Ledger: automatic double-entry (invisible) — Dr Cash/Bank, Cr Accounts Receivable (no revenue re-recognized)
@@ -10323,13 +10728,12 @@ function viewCreditDetail(creditId) {
 
 /* ══ RECORDS / PRODUCT ENHANCED ══ */
 function setRecTab(t, el) {
-  ['basic','pricing','variants'].forEach(s => {
+  ['basic','pricing'].forEach(s => {
     const el2 = document.getElementById('rec-tab-'+s);
     if (el2) el2.style.display = s===t ? '' : 'none';
   });
   document.querySelectorAll('#record-modal-overlay .tabs .tab').forEach(x=>x.classList.remove('active'));
   el.classList.add('active');
-  if (t==='variants') renderVariantsList();
 }
 
 function renderRecords() {
@@ -10350,11 +10754,9 @@ function renderRecords() {
       <td><a href="#" onclick="viewProfile('record','${r.id}');return false" style="font-weight:500">${esc(r.name)}</a></td>
       <td class="mono">${esc(r.sku||'—')}</td>
       <td>${esc(r.category||'—')}</td>
-      <td>${esc(r.supplier||'—')}</td>
       <td class="mono ${r.stock<=(r.lowStockThreshold||10)?'text-danger':''}">${r.stock} ${esc(r.unit||'pcs')} ${r.stock<=(r.lowStockThreshold||10)?'⚠️':''}</td>
       <td class="mono amt-revenue">${fmt(r.salePrice||0)}</td>
       <td class="mono amt-revenue">${fmt(r.wholesalePrice||0)||'—'}</td>
-      <td>${(r.variants||[]).length ? `<span class="badge badge-info">${r.variants.length} variants</span>` : '—'}</td>
       <td><span class="badge ${r.status==='active'?'badge-success':'badge-muted'}">${esc(r.status||'active')}</span></td>
       <td>
         <button class="btn btn-xs btn-secondary btn-edit" onclick="openRecordModal('${r.id}')">✏️ Edit</button>
@@ -10362,9 +10764,18 @@ function renderRecords() {
         <button class="btn btn-xs btn-secondary btn-archive" onclick="quickArchive('record','${r.id}')">${r.status==='archived'?'↩️ Unarchive':'🗄️ Archive'}</button>
         
       </td>
-    </tr>`).join('') : '<tr><td colspan="10"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">No products yet</div><button class="btn btn-primary btn-sm" onclick="openRecordModal()">+ Add Product</button></div></td></tr>';
+    </tr>`).join('') : '<tr><td colspan="8"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">No products yet</div><button class="btn btn-primary btn-sm" onclick="openRecordModal()">+ Add Product</button></div></td></tr>';
   renderPagination('records', items.length, perPage, page);
   updateNavBadges();
+}
+
+// A product has "production history" once at least one production batch has been completed
+// for it. Before that its cost is a manual opening estimate; after that, completeProductionOrder()
+// owns cost via weighted average and the form field locks. Products are made from raw materials
+// via Production/BOM only — they are never purchased directly, so there's no separate
+// purchase-history check the way raw materials have (see the redesign note there for why).
+function productHasProductionHistory(productId) {
+  return db.productionBatches.some(b=>b.productId===productId && b.status!=='cancelled');
 }
 
 function openRecordModal(id=null) {
@@ -10375,9 +10786,21 @@ function openRecordModal(id=null) {
   document.getElementById('rec-sku').value = r?.sku||'';
   document.getElementById('rec-category').value = r?.category||'';
   document.getElementById('rec-unit').value = r?.unit||'pcs';
-  document.getElementById('rec-supplier').value = r?.supplier||'';
   document.getElementById('rec-barcode').value = r?.barcode||'';
-  document.getElementById('rec-cost').value = r?.costPrice||'';
+  // Cost is only manually editable here before this product has ever actually been produced.
+  // Once a Production run has completed for it, its cost is a real weighted average from what
+  // that run's ingredients actually cost (see completeProductionOrder) and hand-editing it here
+  // would corrupt that number. Products are made from raw materials, not bought directly — see
+  // the redesign note by Raw Materials for why suppliers link there and not here.
+  const locked = id && productHasProductionHistory(id);
+  const costInput = document.getElementById('rec-cost');
+  costInput.value = r?.costPrice||'';
+  costInput.readOnly = !!locked;
+  costInput.style.background = locked ? 'var(--elevated)' : '';
+  const costLabel = document.getElementById('rec-cost-label');
+  if (costLabel) costLabel.textContent = locked ? 'Cost / Purchase Price (auto — weighted avg from production)' : 'Cost / Purchase Price';
+  const costHint = document.getElementById('rec-cost-hint');
+  if (costHint) costHint.style.display = locked ? 'block' : 'none';
   document.getElementById('rec-track-expiry').checked = !!r?.trackExpiry;
   document.getElementById('rec-expiry-date').value = r?.expiryDate||'';
   toggleRecExpiryField();
@@ -10388,43 +10811,11 @@ function openRecordModal(id=null) {
   document.getElementById('rec-status').value = r?.status||'active';
   document.getElementById('rec-weight').value = r?.weight||'';
   document.getElementById('rec-desc').value = r?.description||'';
-  window._editVariants = r?.variants ? JSON.parse(JSON.stringify(r.variants)) : [];
   setRecTab('basic', document.querySelector('#record-modal-overlay .tabs .tab'));
   openModal('record-modal-overlay');
   attachSuggest('rec-category', db.settings.categories.records||[]);
-  attachSuggest('rec-supplier', db.secondary.map(s=>s.name).filter(Boolean));
   attachSuggest('rec-unit', ['pcs','kg','g','ltr','ml','box','dozen','set','inch','cm','m','hr','day']);
   setTimeout(()=>document.getElementById('rec-name')?.focus(), 50);
-}
-
-function renderVariantsList() {
-  const list = document.getElementById('variants-list');
-  const variants = window._editVariants || [];
-  list.innerHTML = variants.length ? variants.map((v,i)=>`
-    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:6px;align-items:center;margin-bottom:6px;padding:8px;background:var(--elevated);border-radius:8px">
-      <input class="form-control" placeholder="Variant name (e.g. 1 inch, 250ml)" value="${esc(v.name||'')}" oninput="updateVariant(${i},'name',this.value)">
-      <input class="form-control" placeholder="SKU" value="${esc(v.sku||'')}" oninput="updateVariant(${i},'sku',this.value)">
-      <input class="form-control" type="number" placeholder="Retail price" value="${v.price||''}" oninput="updateVariant(${i},'price',this.value)">
-      <input class="form-control" type="number" placeholder="Wholesale" value="${v.wholesalePrice||''}" oninput="updateVariant(${i},'wholesalePrice',this.value)">
-      <input class="form-control" type="number" placeholder="Stock" value="${v.stock||0}" oninput="updateVariant(${i},'stock',this.value)">
-      <button class="btn btn-xs btn-danger" onclick="removeVariant(${i})">✕</button>
-    </div>`).join('') : '<div style="color:var(--text-muted);font-size:17px;padding:12px 0">No variants added. Click "+ Add Variant" to add sizes, colors, or pack sizes.</div>';
-}
-
-function addVariantRow() {
-  if (!window._editVariants) window._editVariants = [];
-  window._editVariants.push({ name:'', sku:'', price:0, wholesalePrice:0, stock:0 });
-  renderVariantsList();
-}
-
-function updateVariant(i, key, val) {
-  if (!window._editVariants) return;
-  window._editVariants[i][key] = key==='price'||key==='wholesalePrice'||key==='stock' ? parseFloat(val)||0 : val;
-}
-
-function removeVariant(i) {
-  window._editVariants.splice(i,1);
-  renderVariantsList();
 }
 
 function saveRecord() {
@@ -10433,13 +10824,15 @@ function saveRecord() {
   if (isDuplicateName(db.records, name, recEditId)) { toast(`A product named "${name}" already exists`,'error'); return; }
   const sku = document.getElementById('rec-sku').value.trim();
   if (sku && isDuplicateName(db.records, sku, recEditId, 'sku')) { toast(`SKU "${sku}" is already used by another product`,'error'); return; }
+  // Products no longer carry a Supplier field — they're made from raw materials via
+  // Production/BOM, and suppliers link only to those raw materials, not to what's produced
+  // from them. Cost stays manually editable only until real production history exists.
+  const costLocked = recEditId && productHasProductionHistory(recEditId);
   const data = {
     name, sku: document.getElementById('rec-sku').value.trim() || 'SKU-'+Date.now().toString(36).toUpperCase(),
     category: document.getElementById('rec-category').value.trim(),
     unit: document.getElementById('rec-unit').value.trim()||'pcs',
-    supplier: document.getElementById('rec-supplier').value.trim(),
     barcode: document.getElementById('rec-barcode').value.trim(),
-    costPrice: parseFloat(document.getElementById('rec-cost').value)||0,
     trackExpiry: document.getElementById('rec-track-expiry').checked,
     expiryDate: document.getElementById('rec-track-expiry').checked ? document.getElementById('rec-expiry-date').value : null,
     salePrice: parseFloat(document.getElementById('rec-price').value)||0,
@@ -10448,9 +10841,9 @@ function saveRecord() {
     lowStockThreshold: parseInt(document.getElementById('rec-low-stock').value)||10,
     status: document.getElementById('rec-status').value,
     weight: document.getElementById('rec-weight').value.trim(),
-    description: document.getElementById('rec-desc').value.trim(),
-    variants: window._editVariants || []
+    description: document.getElementById('rec-desc').value.trim()
   };
+  if (!costLocked) data.costPrice = parseFloat(document.getElementById('rec-cost').value)||0;
   if (recEditId) {
     Object.assign(db.records.find(r=>r.id===recEditId), data); audit('Records','Edit',recEditId,name);
   } else {
@@ -10490,21 +10883,53 @@ function renderRawMaterials() {
   }).join('') : '<tr><td colspan="8"><div class="empty"><div class="empty-icon">🧱</div><div class="empty-title">No raw materials yet</div><button class="btn btn-primary btn-sm" onclick="openMaterialModal()">+ Add Material</button></div></td></tr>';
 }
 
+// A material has "purchase history" once at least one GRN (goods receipt) has been recorded
+// against it. Before that point its cost is just a manual opening estimate; after that point
+// the cost must come exclusively from what was actually paid on purchase orders, so the field
+// is locked and driven by receiveGRN()'s weighted-average update instead.
+function materialHasPurchaseHistory(materialId) {
+  return db.goodsReceived.some(g=>(g.items||[]).some(it=>it.materialId===materialId && it.qtyReceived>0));
+}
+
+// Most recent rate actually paid to a given supplier for a given material, derived from GRN
+// records (which carry the PO rate at time of receipt). Used for display only — never stored
+// as a separately-editable field, so it can never drift out of sync with real purchases.
+function lastPurchaseRate(materialId, supplierId) {
+  const grns = db.goodsReceived
+    .filter(g=>{ const po = db.purchaseOrders.find(p=>p.id===g.poId); return po && po.supplierId===supplierId; })
+    .sort((a,b)=> (a.date||'').localeCompare(b.date||'') || (a.createdAt||0)-(b.createdAt||0));
+  for (let i=grns.length-1;i>=0;i--) {
+    const it = (grns[i].items||[]).find(x=>x.materialId===materialId);
+    if (it && it.rate!=null) return it.rate;
+  }
+  return null;
+}
+
 function openMaterialModal(id=null) {
   matEditId = id;
   const m = id ? db.rawMaterials.find(x=>x.id===id) : null;
+  const locked = id && materialHasPurchaseHistory(id);
   document.getElementById('material-modal-title').textContent = id ? 'Edit Raw Material' : 'Add Raw Material';
   document.getElementById('mat-code').value = m?.code||'';
   document.getElementById('mat-name').value = m?.name||'';
   document.getElementById('mat-category').value = m?.category||'';
   document.getElementById('mat-unit').value = m?.unit||'';
-  document.getElementById('mat-cost').value = m?.cost||'';
+  const costInput = document.getElementById('mat-cost');
+  costInput.value = m?.cost||'';
+  costInput.readOnly = !!locked;
+  costInput.style.background = locked ? 'var(--elevated)' : '';
+  costInput.title = locked ? 'Locked: this material has purchase history, so cost is calculated automatically (weighted average) from Goods Received records.' : '';
+  const costLabel = document.getElementById('mat-cost-label');
+  if (costLabel) costLabel.textContent = locked ? 'Cost / Unit (auto — weighted avg of purchases)' : 'Cost / Unit (opening estimate, until first purchase)';
+  const costHint = document.getElementById('mat-cost-hint');
+  if (costHint) costHint.style.display = locked ? 'block' : 'none';
   document.getElementById('mat-stock').value = m?.stock||'0';
   document.getElementById('mat-reorder').value = m?.reorderLevel||'10';
   document.getElementById('mat-notes').value = m?.notes||'';
   const whSel = document.getElementById('mat-warehouse');
   whSel.innerHTML = db.warehouses.map(w=>`<option value="${w.id}" ${m?.warehouseId===w.id?'selected':''}>${esc(w.name)}</option>`).join('') || '<option value="">No warehouses configured</option>';
   window._editMatSuppliers = id ? db.materialSuppliers.filter(ms=>ms.materialId===id).map(ms=>({...ms})) : [];
+  window._editMatId = id;
   renderMaterialSuppliersList();
   attachSuggest('mat-category', db.settings.categories.rawMaterials||[]);
   attachSuggest('mat-unit', ['kg','g','ltr','ml','pcs','m','cm','sheet','roll','bag']);
@@ -10512,29 +10937,38 @@ function openMaterialModal(id=null) {
   setTimeout(()=>document.getElementById('mat-name')?.focus(), 50);
 }
 
+// Note: this list no longer has a manual "Cost" field. Cost-per-supplier is shown read-only,
+// pulled from the actual rate paid on the most recent GRN against that supplier — the same
+// number the weighted-average material cost is built from — so there's exactly one place
+// (Purchase Order → GRN) where a purchase price is ever typed in.
 function renderMaterialSuppliersList() {
   const list = document.getElementById('mat-suppliers-list');
   const rows = window._editMatSuppliers || [];
-  list.innerHTML = rows.length ? rows.map((r,i)=>`
+  const matId = window._editMatId;
+  list.innerHTML = rows.length ? rows.map((r,i)=>{
+    const last = matId && r.supplierId ? lastPurchaseRate(matId, r.supplierId) : null;
+    return `
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;align-items:center;margin-bottom:6px;padding:8px;background:var(--elevated);border-radius:8px">
       <select class="form-control" onchange="updateMatSupplier(${i},'supplierId',this.value)">
         <option value="">Select supplier...</option>
         ${db.secondary.map(s=>`<option value="${s.id}" ${r.supplierId===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}
       </select>
-      <input class="form-control" type="number" placeholder="Cost" value="${r.cost||''}" oninput="updateMatSupplier(${i},'cost',this.value)">
+      <div class="text-muted text-sm" style="padding:0 4px" title="Last rate paid, from Purchase Orders / GRN">${last!=null ? 'Last rate: '+fmt(last) : 'No purchases yet'}</div>
       <label style="display:flex;align-items:center;gap:4px;font-size:15px"><input type="checkbox" ${r.isPrimary?'checked':''} onchange="setPrimarySupplier(${i})"> Primary</label>
       <button class="btn btn-xs btn-danger" onclick="removeMatSupplierRow(${i})">✕</button>
-    </div>`).join('') : '<div class="text-muted text-sm">No suppliers linked yet.</div>';
+    </div>`;
+  }).join('') : '<div class="text-muted text-sm">No suppliers linked yet.</div>';
 }
 
 function addMaterialSupplierRow() {
   if (!window._editMatSuppliers) window._editMatSuppliers = [];
-  window._editMatSuppliers.push({ supplierId:'', cost:0, isPrimary: window._editMatSuppliers.length===0 });
+  window._editMatSuppliers.push({ supplierId:'', isPrimary: window._editMatSuppliers.length===0 });
   renderMaterialSuppliersList();
 }
 
 function updateMatSupplier(i, key, val) {
-  window._editMatSuppliers[i][key] = key==='cost' ? parseFloat(val)||0 : val;
+  window._editMatSuppliers[i][key] = val;
+  if (key==='supplierId') renderMaterialSuppliersList();
 }
 
 function setPrimarySupplier(i) {
@@ -10555,15 +10989,19 @@ function saveMaterial() {
   if (isDuplicateName(db.rawMaterials, code, matEditId, 'code')) { toast(`Code "${code}" is already used`,'error'); return; }
   const unit = document.getElementById('mat-unit').value.trim();
   if (!unit) { toast('Unit is required','error'); return; }
+  // Cost is only taken from this form when the material has no purchase history yet (a fresh
+  // opening estimate). Once GRNs exist, receiveGRN's weighted-average update is the sole writer
+  // of m.cost — the field is readonly in the UI as a second layer of protection.
+  const locked = matEditId && materialHasPurchaseHistory(matEditId);
   const data = {
     code, name, category: document.getElementById('mat-category').value.trim(), unit,
-    cost: parseFloat(document.getElementById('mat-cost').value)||0,
     stock: parseFloat(document.getElementById('mat-stock').value)||0,
     reorderLevel: parseFloat(document.getElementById('mat-reorder').value)||0,
     warehouseId: document.getElementById('mat-warehouse').value,
     notes: document.getElementById('mat-notes').value.trim(),
     status: 'active'
   };
+  if (!locked) data.cost = parseFloat(document.getElementById('mat-cost').value)||0;
   let matId;
   if (matEditId) {
     Object.assign(db.rawMaterials.find(m=>m.id===matEditId), data);
@@ -10576,10 +11014,11 @@ function saveMaterial() {
     audit('RawMaterials','Create',matId,name);
     if (data.stock > 0) db.stockHistory.push({ id:uid(), recordId:matId, recordName:name, type:'opening', qty:data.stock, balanceAfter:data.stock, date:today(), createdAt:now() });
   }
-  // Sync supplier mappings: remove old links for this material, add fresh
+  // Sync supplier mappings: remove old links for this material, add fresh. No cost is stored
+  // here — it's always looked up live from GRN history so it can never go stale.
   db.materialSuppliers = db.materialSuppliers.filter(ms=>ms.materialId!==matId);
   (window._editMatSuppliers||[]).filter(r=>r.supplierId).forEach(r=>{
-    db.materialSuppliers.push({ id:uid(), materialId:matId, supplierId:r.supplierId, cost:r.cost||0, isPrimary:!!r.isPrimary });
+    db.materialSuppliers.push({ id:uid(), materialId:matId, supplierId:r.supplierId, isPrimary:!!r.isPrimary });
   });
   saveDB(); closeModal('material-modal-overlay'); renderRawMaterials(); toast('Raw material saved','success');
 }
@@ -10594,13 +11033,13 @@ function viewMaterialProfile(id) {
     <div class="profile-header"><div class="profile-avatar" style="background:var(--accent)">🧱</div><div><div class="profile-name">${esc(m.name)}</div><div class="profile-sub">${esc(m.code)} · ${esc(m.category||'')}</div></div></div>
     <div class="info-grid">
       <div class="info-item"><label>Stock</label><p class="font-mono">${m.stock} ${esc(m.unit)}</p></div>
-      <div class="info-item"><label>Cost/Unit</label><p class="font-mono amt-purchase">${fmt(m.cost||0)}</p></div>
+      <div class="info-item"><label>Cost/Unit${materialHasPurchaseHistory(m.id)?' (weighted avg)':' (opening est.)'}</label><p class="font-mono amt-purchase">${fmt(m.cost||0)}</p></div>
       <div class="info-item"><label>Reorder Level</label><p class="font-mono">${m.reorderLevel||0}</p></div>
       <div class="info-item"><label>Stock Value</label><p class="font-mono text-accent">${fmt((m.cost||0)*(m.stock||0))}</p></div>
     </div>
     ${m.notes?`<div class="form-group"><label class="form-label">Notes</label><p>${esc(m.notes)}</p></div>`:''}
     <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Suppliers</h3>
-    <div class="table-wrap"><table><thead><tr><th>Supplier</th><th>Cost</th><th>Primary</th></tr></thead><tbody>${links.length?links.map(l=>{const sp=db.secondary.find(s=>s.id===l.supplierId);return `<tr><td>${esc(sp?.name||'—')}</td><td class="mono amt-purchase">${fmt(l.cost||0)}</td><td>${l.isPrimary?'⭐':''}</td></tr>`;}).join(''):'<tr><td colspan="3" class="text-center text-muted">No suppliers linked</td></tr>'}</tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Supplier</th><th>Last Rate Paid</th><th>Primary</th></tr></thead><tbody>${links.length?links.map(l=>{const sp=db.secondary.find(s=>s.id===l.supplierId);const rate=lastPurchaseRate(m.id,l.supplierId);return `<tr><td>${esc(sp?.name||'—')}</td><td class="mono amt-purchase">${rate!=null?fmt(rate):'—'}</td><td>${l.isPrimary?'⭐':''}</td></tr>`;}).join(''):'<tr><td colspan="3" class="text-center text-muted">No suppliers linked</td></tr>'}</tbody></table></div>
     <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Stock History</h3>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Qty</th><th>Balance</th><th>Ref</th></tr></thead><tbody>${sh.length?sh.map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${esc(h.type)}</td><td class="mono ${h.qty>=0?'text-success':'text-danger'}">${h.qty>0?'+':''}${h.qty}</td><td class="mono">${h.balanceAfter}</td><td class="mono">${esc(h.ref||'—')}</td></tr>`).join(''):'<tr><td colspan="5" class="text-center text-muted">No history</td></tr>'}</tbody></table></div>
     ${profileAuditHtml('rawMaterial',id)}`;
@@ -10776,14 +11215,12 @@ function renderInvMaterials() {
 function openMaterialAdj(id) {
   const m = db.rawMaterials.find(x=>x.id===id);
   if (!m) return;
-  const delta = prompt(`Adjust stock for ${m.name}\nCurrent: ${m.stock} ${m.unit}\n\nEnter adjustment (+10 or -5):`);
-  if (delta === null) return;
-  const d = parseFloat(delta);
-  if (isNaN(d)) { toast('Invalid number','error'); return; }
-  m.stock = Math.max(0, m.stock + d);
-  db.stockHistory.push({ id:uid(), recordId:m.id, recordName:m.name, type:'adjustment', qty:d, balanceAfter:m.stock, date:today(), ref:'Manual', createdAt:now() });
-  audit('Inventory','Adjustment',m.id,`${m.name}: ${d>0?'+':''}${d}`);
-  saveDB(); renderInvMaterials(); toast('Stock adjusted','success');
+  adjRecordId = id; adjRecordType = 'material';
+  document.getElementById('adj-current').textContent = `${m.stock} ${m.unit}`;
+  document.getElementById('adj-amount').value = '';
+  document.getElementById('adj-reason').value = '';
+  setAdjDirection('add');
+  openModal('stock-adj-overlay');
 }
 
 function renderInvAdjustments() {
@@ -10796,7 +11233,7 @@ function renderReorderAlerts() {
   const lowProducts = db.records.filter(r=>r.status==='active' && r.stock<=(r.lowStockThreshold||db.settings.lowStockThreshold||10));
   const lowMaterials = db.rawMaterials.filter(m=>m.status!=='archived' && m.stock<=(m.reorderLevel||0));
   const items = [
-    ...lowProducts.map(r=>({type:'Product',name:r.name,stock:r.stock,reorder:r.lowStockThreshold||10,supplier:r.supplier||'—',id:r.id,kind:'record'})),
+    ...lowProducts.map(r=>({type:'Product',name:r.name,stock:r.stock,reorder:r.lowStockThreshold||10,supplier:'—',id:r.id,kind:'record'})),
     ...lowMaterials.map(m=>{ const link = db.materialSuppliers.find(ms=>ms.materialId===m.id&&ms.isPrimary); const sp = link?db.secondary.find(s=>s.id===link.supplierId):null; return {type:'Raw Material',name:m.name,stock:m.stock,reorder:m.reorderLevel,supplier:sp?.name||'—',id:m.id,kind:'rawMaterial'}; })
   ];
   document.getElementById('reorder-tbody').innerHTML = items.length ? items.map(i=>`
@@ -11013,11 +11450,25 @@ function renderProductionOrders() {
       <td class="mono">${esc(o.orderNumber||o.id.slice(-6))}</td>
       <td>${esc(prod?.name||'—')}</td>
       <td class="mono">${o.qtyPlanned}</td>
-      <td><span class="badge ${o.status==='completed'?'badge-success':o.status==='in_progress'?'badge-info':'badge-warning'}">${esc(o.status)}</span></td>
+      <td><span class="badge ${o.status==='completed'?'badge-success':o.status==='in_progress'?'badge-info':o.status==='cancelled'?'badge-muted':'badge-warning'}">${esc(o.status)}</span></td>
       <td>${fmtDate(o.scheduledDate)||'—'}</td>
-      <td>${o.status!=='completed'?`<button class="btn btn-xs btn-success" onclick="completeProductionOrder('${o.id}')">✅ Complete & Produce</button>`:'<span class="text-muted">Done</span>'}</td>
+      <td>${o.status!=='completed'&&o.status!=='cancelled'?`<button class="btn btn-xs btn-success" onclick="completeProductionOrder('${o.id}')">✅ Complete & Produce</button> <button class="btn btn-xs btn-danger" onclick="cancelProductionOrder('${o.id}')">Cancel</button>`:o.status==='cancelled'?'<span class="text-muted">Cancelled</span>':'<span class="text-muted">Done</span>'}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📝</div><div class="empty-title">No production orders yet</div><button class="btn btn-primary btn-sm" onclick="openProductionOrderModal()">+ New Production Order</button></div></td></tr>';
+}
+
+// Safe to cancel outright at any point before completion — completeProductionOrder() is the
+// only place that ever touches material stock or product cost, and it does so atomically, so
+// a pending/in-progress order has affected nothing yet. Nothing to reverse.
+function cancelProductionOrder(id) {
+  const order = db.productionOrders.find(o=>o.id===id);
+  if (!order) return;
+  if (order.status === 'completed') { toast("A completed order can't be cancelled","error"); return; }
+  confirm(`Cancel production order ${order.orderNumber}? No materials have been consumed yet, so nothing else is affected.`, ()=>{
+    order.status = 'cancelled';
+    audit('Production','Cancel Order',id,order.orderNumber);
+    saveDB(); renderProductionOrders(); toast('Production order cancelled','success');
+  });
 }
 
 function openProductionOrderModal() {
@@ -11062,6 +11513,8 @@ function saveProductionOrder() {
 function completeProductionOrder(id) {
   const order = db.productionOrders.find(o=>o.id===id);
   if (!order) return;
+  if (order.status === 'completed') { toast('This order was already completed','error'); return; }
+  if (order.status === 'cancelled') { toast('This order was cancelled','error'); return; }
   const bom = db.boms.find(b=>b.id===order.bomId);
   if (!bom) { toast('BOM not found','error'); return; }
   const batches = order.qtyPlanned / (bom.outputQty||1);
@@ -11074,23 +11527,43 @@ function completeProductionOrder(id) {
   }
   confirm(`Complete production order ${order.orderNumber}?\nThis will deduct materials and add ${order.qtyPlanned} finished units.`, ()=>{
     let totalCost = 0;
+    let rawMaterialCost = 0;
     const consumed = [];
+    const batchNumber = 'BATCH-'+Date.now().toString(36).toUpperCase();
     bom.items.forEach(it=>{
       const store = it.itemType==='product' ? db.records : db.rawMaterials;
       const m = store.find(x=>x.id===it.materialId);
       const needed = it.qty * batches;
       m.stock -= needed;
-      totalCost += needed * (it.itemType==='product' ? (m.costPrice||0) : (m.cost||0));
+      const lineCost = needed * (it.itemType==='product' ? (m.costPrice||0) : (m.cost||0));
+      totalCost += lineCost;
+      if (it.itemType !== 'product') rawMaterialCost += lineCost; // only raw-material consumption moves value out of 1040
       consumed.push({ materialId:m.id, materialName:m.name, qty:needed, unit:m.unit, itemType:it.itemType||'material' });
       db.stockHistory.push({ id:uid(), recordId:m.id, recordName:m.name, type:'production_consumption', qty:-needed, balanceAfter:m.stock, date:today(), ref:order.orderNumber, createdAt:now() });
     });
-    // Increase finished goods
+    // Increase finished goods AND keep cost price a true weighted average — this was previously
+    // missing here even though the "Make Now" shortcut already did it correctly, so a Production
+    // Order completion silently left the product's cost stale (wrong COGS at time of sale) every
+    // single time it was used instead of Make Now.
     const product = db.records.find(r=>r.id===bom.productId);
     if (product) {
-      product.stock = (product.stock||0) + order.qtyPlanned;
+      const existingValue = (product.stock||0) * (product.costPrice||0);
+      const newValue = existingValue + totalCost;
+      const newTotalQty = (product.stock||0) + order.qtyPlanned;
+      product.costPrice = newTotalQty > 0 ? +(newValue / newTotalQty).toFixed(2) : product.costPrice;
+      product.stock = newTotalQty;
       db.stockHistory.push({ id:uid(), recordId:product.id, recordName:product.name, type:'production', qty:order.qtyPlanned, balanceAfter:product.stock, date:today(), ref:order.orderNumber, createdAt:now() });
     }
-    const batch = { id:uid(), orderId:order.id, batchNumber:'BATCH-'+Date.now().toString(36).toUpperCase(), productId:bom.productId, qtyProduced:order.qtyPlanned, materialsConsumed:consumed, cost:totalCost, date:today(), status:'completed', createdBy:session.username };
+    // Ledger: inventory transfer (invisible) — raw materials become finished/trading goods. Same
+    // journal posting Make Now already does; this workflow was silently skipping it, which meant
+    // raw material value vanished from the books without ever being recorded as moved anywhere.
+    if (rawMaterialCost > 0) {
+      postJournalEntry({ date: today(), voucherKind:'Journal', refType:'production', refId: batchNumber, reference: batchNumber, description: `Production — ${bom.name} (${order.orderNumber})`, lines: [
+        { accountCode: db.settings.acctMappings.inventoryAccount, debit: rawMaterialCost, credit: 0 },
+        { accountCode: '1040', debit: 0, credit: rawMaterialCost }
+      ]});
+    }
+    const batch = { id:uid(), orderId:order.id, batchNumber, productId:bom.productId, qtyProduced:order.qtyPlanned, materialsConsumed:consumed, cost:totalCost, date:today(), status:'completed', createdBy:session.username };
     db.productionBatches.push(batch);
     order.status = 'completed';
     audit('Production','Complete',order.id,`${order.orderNumber} — ${order.qtyPlanned} units produced`);
@@ -11144,14 +11617,45 @@ function renderPurchaseOrders() {
       <td>${esc(sp?.name||'—')}</td>
       <td>${(po.items||[]).length} item(s)</td>
       <td class="mono amt-revenue">${fmt(total)}</td>
-      <td><span class="badge ${po.status==='Received'?'badge-success':po.status==='Partially Received'?'badge-warning':po.status==='Cancelled'?'badge-muted':'badge-info'}">${esc(po.status)}</span></td>
+      <td><span class="badge ${po.status==='Received'?'badge-success':po.status==='Partially Received'?'badge-warning':(po.status==='Cancelled'||po.status==='Closed')?'badge-muted':'badge-info'}">${esc(po.status)}</span></td>
       <td>${fmtDate(po.date)}</td>
       <td>
-        ${po.status!=='Received'&&po.status!=='Cancelled'?`<button class="btn btn-xs btn-success" onclick="openGRNModal('${po.id}')">📥 Receive</button>`:''}
+        ${po.status!=='Received'&&po.status!=='Cancelled'&&po.status!=='Closed'?`<button class="btn btn-xs btn-success" onclick="openGRNModal('${po.id}')">📥 Receive</button>`:''}
+        ${po.status==='Ordered'?`<button class="btn btn-xs btn-danger" onclick="cancelPO('${po.id}')">Cancel</button>`:''}
+        ${po.status==='Partially Received'?`<button class="btn btn-xs btn-secondary" onclick="closePO('${po.id}')">Close (stop expecting rest)</button>`:''}
         <button class="btn btn-xs btn-secondary btn-view" onclick="viewPODetail('${po.id}')">View</button>
       </td>
     </tr>`;
   }).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📝</div><div class="empty-title">No purchase orders yet</div><button class="btn btn-primary btn-sm" onclick="openPOModal()">+ New Purchase Order</button></div></td></tr>';
+}
+
+// Only safe to cancel outright before anything has been received — nothing has touched stock
+// or cost yet, so there's nothing to reverse. Once even one GRN exists against the PO, use
+// closePO() instead, which leaves what was already received untouched and just stops
+// expecting the rest.
+function cancelPO(id) {
+  const po = db.purchaseOrders.find(p=>p.id===id);
+  if (!po) return;
+  if (po.status !== 'Ordered') { toast('Only a PO with nothing received yet can be cancelled — use Close instead','error'); return; }
+  confirm(`Cancel ${po.poNumber}? This PO has nothing received against it yet, so nothing else is affected.`, ()=>{
+    po.status = 'Cancelled';
+    audit('Purchase','Cancel PO',id,po.poNumber);
+    saveDB(); renderPurchaseOrders(); toast('Purchase order cancelled','success');
+  });
+}
+
+// For a PO that's partially received and never will be fully received (supplier short-shipped,
+// item discontinued, etc.) — closes it out without touching the stock/cost already recorded
+// from GRNs received so far.
+function closePO(id) {
+  const po = db.purchaseOrders.find(p=>p.id===id);
+  if (!po) return;
+  if (po.status !== 'Partially Received') { toast('Only a partially received PO can be closed this way','error'); return; }
+  confirm(`Close ${po.poNumber}? Whatever has already been received stays exactly as recorded — this just stops it showing as awaiting the rest.`, ()=>{
+    po.status = 'Closed';
+    audit('Purchase','Close PO',id,po.poNumber);
+    saveDB(); renderPurchaseOrders(); toast('Purchase order closed','success');
+  });
 }
 
 function openPOModal() {
@@ -11159,11 +11663,17 @@ function openPOModal() {
   supSel.innerHTML = db.secondary.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('') || '<option value="">No suppliers — add one first</option>';
   document.getElementById('pord-expected').value = '';
   document.getElementById('pord-notes').value = '';
-  window._poItems = [{materialId:'',qty:0,rate:0}];
+  window._poItems = [{materialId:'',qty:0,rate:null}];
   renderPOItemsList();
   openModal('po-modal-overlay');
 }
 
+// Purchase Orders are for Raw Materials only — Products are made, not bought (suppliers link
+// to raw materials; see Raw Materials / Products redesign notes elsewhere in this file).
+// Rate is intentionally optional here: a price is often not confirmed until the supplier
+// actually delivers and invoices, so a PO can be raised with quantities alone and the rate
+// filled in later at Goods Received / Supplier Invoice — that's the one place a rate actually
+// has to be locked in before it affects cost.
 function renderPOItemsList() {
   const list = document.getElementById('pord-items-list');
   const items = window._poItems || [];
@@ -11174,20 +11684,21 @@ function renderPOItemsList() {
         ${db.rawMaterials.map(m=>`<option value="${m.id}" ${it.materialId===m.id?'selected':''}>${esc(m.name)} (${esc(m.unit)})</option>`).join('')}
       </select>
       <input class="form-control" type="number" placeholder="Qty" value="${it.qty||''}" oninput="updatePOItem(${i},'qty',this.value)">
-      <input class="form-control" type="number" placeholder="Rate" value="${it.rate||''}" oninput="updatePOItem(${i},'rate',this.value)">
+      <input class="form-control" type="number" placeholder="Rate (optional)" value="${it.rate??''}" oninput="updatePOItem(${i},'rate',this.value)">
       <button class="btn btn-xs btn-danger" onclick="removePOItem(${i})">✕</button>
     </div>`).join('') : '<div class="text-muted text-sm">No items added.</div>';
   updatePOTotal();
 }
 
-function addPOItemRow() { window._poItems = window._poItems||[]; window._poItems.push({materialId:'',qty:0,rate:0}); renderPOItemsList(); }
+function addPOItemRow() { window._poItems = window._poItems||[]; window._poItems.push({materialId:'',qty:0,rate:null}); renderPOItemsList(); }
 function updatePOItem(i,key,val) {
-  window._poItems[i][key] = key==='materialId'?val:parseFloat(val)||0;
+  window._poItems[i][key] = key==='materialId' ? val : (val===''? null : (parseFloat(val)||0));
   if (key==='materialId') {
-    // Only rebuild the list when the material changes (auto-fills rate) — rebuilding on every
-    // keystroke of Qty/Rate destroys and recreates the input, which steals focus and only lets
-    // a single digit be typed at a time. Qty/Rate just update the running total in place instead.
-    const m=db.rawMaterials.find(x=>x.id===val); if(m) window._poItems[i].rate = m.cost||0;
+    // Only rebuild the list when the material changes (auto-fills rate as a starting suggestion,
+    // still editable/clearable) — rebuilding on every keystroke of Qty/Rate destroys and
+    // recreates the input, which steals focus and only lets a single digit be typed at a time.
+    const m = db.rawMaterials.find(x=>x.id===val);
+    window._poItems[i].rate = m?.cost || null;
     renderPOItemsList();
   } else {
     updatePOTotal();
@@ -11195,9 +11706,11 @@ function updatePOItem(i,key,val) {
 }
 function removePOItem(i) { window._poItems.splice(i,1); renderPOItemsList(); }
 function updatePOTotal() {
-  const total = (window._poItems||[]).reduce((a,i)=>a+(i.qty*i.rate),0);
+  const items = window._poItems||[];
+  const total = items.reduce((a,i)=>a+(i.qty*(i.rate||0)),0);
+  const hasUnknownRate = items.some(i=>i.materialId && (i.rate===null || i.rate===undefined));
   const el = document.getElementById('pord-total');
-  if (el) el.textContent = 'Total: ' + fmt(total);
+  if (el) el.textContent = hasUnknownRate ? `Total so far: ${fmt(total)} (some prices not yet confirmed)` : 'Total: ' + fmt(total);
 }
 
 function savePO() {
@@ -11205,7 +11718,7 @@ function savePO() {
   if (!supplierId) { toast('Select a supplier','error'); return; }
   const items = (window._poItems||[]).filter(i=>i.materialId && i.qty>0);
   if (!items.length) { toast('Add at least one item','error'); return; }
-  items.forEach(i=>{ i.name = db.rawMaterials.find(m=>m.id===i.materialId)?.name||''; });
+  items.forEach(i=>{ i.name = db.rawMaterials.find(m=>m.id===i.materialId)?.name||''; i.rate = i.rate || 0; });
   const po = {
     id:uid(), poNumber:'PO-'+Date.now().toString(36).toUpperCase(), supplierId, items,
     status:'Ordered', date:today(), expectedDate:document.getElementById('pord-expected').value,
@@ -11228,18 +11741,24 @@ function viewPODetail(id) {
 function openGRNModal(poId) {
   const po = db.purchaseOrders.find(x=>x.id===poId);
   if (!po) return;
+  if (po.status === 'Cancelled' || po.status === 'Closed') { toast(`This PO is ${po.status.toLowerCase()} — nothing more can be received against it`,'error'); return; }
   window._grnPO = po;
   const sp = db.secondary.find(s=>s.id===po.supplierId);
   document.getElementById('grn-po-info').innerHTML = `<strong>${esc(po.poNumber)}</strong> — Supplier: ${esc(sp?.name||'—')}`;
   document.getElementById('grn-date').value = today();
   const list = document.getElementById('grn-items-list');
-  list.innerHTML = (po.items||[]).map((it,i)=>{
+  // Rate is confirmed HERE, not assumed from the PO — a PO can be raised with prices not yet
+  // known, so this is the one point in the whole purchase flow where a rate actually has to be
+  // locked in, because it's what the raw material's weighted-average cost gets built from.
+  list.innerHTML = `<div class="form-hint" style="margin-bottom:8px">Confirm the actual rate for each item — this is what updates the material's cost, so it matters more than what was guessed when the PO was raised.</div>` + (po.items||[]).map((it,i)=>{
     const alreadyReceived = (db.goodsReceived.filter(g=>g.poId===poId).flatMap(g=>g.items||[]).filter(x=>x.materialId===it.materialId).reduce((a,x)=>a+x.qtyReceived,0));
     const remaining = it.qty - alreadyReceived;
-    return `<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px;margin-bottom:6px;align-items:center">
-      <span>${esc(it.name)}</span>
-      <span class="text-muted text-sm">Ordered: ${it.qty} | Remaining: ${remaining}</span>
+    const unit = db.rawMaterials.find(m=>m.id===it.materialId)?.unit || 'unit';
+    return `<div style="display:grid;grid-template-columns:1.6fr 1fr 0.8fr 0.8fr;gap:6px;margin-bottom:6px;align-items:center">
+      <span>${esc(it.name)}<div class="text-muted text-sm">Ordered: ${it.qty} | Remaining: ${remaining}</div></span>
       <input class="form-control" type="number" id="grn-qty-${i}" placeholder="Qty received" value="${remaining>0?remaining:0}" max="${remaining}">
+      <input class="form-control" type="number" id="grn-rate-${i}" placeholder="Rate ${it.rate?'':'(not set yet)'}" value="${it.rate||''}">
+      <span class="text-muted text-sm">/${esc(unit)}</span>
     </div>`;
   }).join('');
   openModal('grn-modal-overlay');
@@ -11248,21 +11767,53 @@ function openGRNModal(poId) {
 function saveGRN() {
   const po = window._grnPO;
   if (!po) return;
-  const items = (po.items||[]).map((it,i)=>{
+  // The "Remaining: X" shown when this modal opens was only ever an HTML max= attribute —
+  // decorative, not enforced. Nothing stopped a typo (500 instead of 50) from silently
+  // over-receiving stock with no warning. Recompute and actually check it here.
+  const priorReceived = {};
+  db.goodsReceived.filter(g=>g.poId===po.id).forEach(g=>(g.items||[]).forEach(x=>{
+    priorReceived[x.materialId] = (priorReceived[x.materialId]||0) + x.qtyReceived;
+  }));
+  const items = [];
+  for (let i=0;i<(po.items||[]).length;i++) {
+    const it = po.items[i];
     const qtyReceived = parseFloat(document.getElementById('grn-qty-'+i)?.value)||0;
-    return { materialId: it.materialId, name: it.name, qtyReceived, qtyOrdered: it.qty };
-  }).filter(x=>x.qtyReceived>0);
+    if (qtyReceived <= 0) continue;
+    const remaining = it.qty - (priorReceived[it.materialId]||0);
+    if (qtyReceived > remaining + 0.0001) {
+      toast(`${it.name}: can't receive ${qtyReceived} — only ${Math.max(0,remaining)} remaining on this PO. If the supplier genuinely sent extra, raise a new PO for the surplus instead.`,'error');
+      return;
+    }
+    // Rate is read from what was actually confirmed on this GRN screen, not silently trusted
+    // from the PO — a PO can be raised before the price is known, so this is the one place a
+    // rate must actually be locked in, since it's what the material's weighted-average cost
+    // gets built from.
+    const rate = parseFloat(document.getElementById('grn-rate-'+i)?.value);
+    if (isNaN(rate) || rate <= 0) { toast(`${it.name}: enter the confirmed rate before receiving — it can't stay unknown once goods are actually in hand`,'error'); return; }
+    items.push({ materialId: it.materialId, name: it.name, qtyReceived, qtyOrdered: it.qty, rate });
+  }
   if (!items.length) { toast('Enter at least one received quantity','error'); return; }
   const grn = { id:uid(), poId:po.id, grnNumber:'GRN-'+Date.now().toString(36).toUpperCase(), items, date:document.getElementById('grn-date').value||today(), receivedBy:session.username, createdAt:now() };
   db.goodsReceived.push(grn);
-  // Update raw material stock
+  // Update raw material stock AND cost together. Cost moves to a weighted average of what's
+  // already on hand plus this receipt — the only place a raw material's cost is ever set once
+  // it has been purchased at least once (see materialHasPurchaseHistory / the locked field in
+  // its edit form).
   items.forEach(it=>{
     const m = db.rawMaterials.find(x=>x.id===it.materialId);
     if (m) {
-      m.stock = (m.stock||0) + it.qtyReceived;
+      const existingValue = (m.stock||0) * (m.cost||0);
+      const newValue = existingValue + it.qtyReceived*it.rate;
+      const newStock = (m.stock||0) + it.qtyReceived;
+      m.cost = newStock > 0 ? +(newValue / newStock).toFixed(4) : m.cost;
+      m.stock = newStock;
       db.stockHistory.push({ id:uid(), recordId:m.id, recordName:m.name, type:'purchase_receipt', qty:it.qtyReceived, balanceAfter:m.stock, date:grn.date, ref:grn.grnNumber, createdAt:now() });
     }
   });
+  // Feed the confirmed rate back onto the PO's own line too, so the PO's "Total" reflects
+  // reality even if it was raised with prices unknown, and so any further GRNs against the
+  // same PO default to the last confirmed rate instead of asking again from scratch.
+  items.forEach(it=>{ const poItem = po.items.find(x=>x.materialId===it.materialId); if (poItem) poItem.rate = it.rate; });
   // Update PO status
   const totalOrdered = (po.items||[]).reduce((a,i)=>a+i.qty,0);
   const totalReceived = db.goodsReceived.filter(g=>g.poId===po.id).flatMap(g=>g.items||[]).reduce((a,i)=>a+i.qtyReceived,0);
@@ -11490,6 +12041,7 @@ function renderRolesList() {
   if (!list) return;
   const userCount = roleId => db.users.filter(u=>u.role===roleId).length;
   const adminCount = userCount('admin');
+  const isAdmin = session?.role === 'admin';
   let html = `
     <div style="background:var(--elevated);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:start;opacity:.85">
       <div>
@@ -11510,10 +12062,11 @@ function renderRolesList() {
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">
+        ${isAdmin ? `
         <button class="btn btn-xs btn-secondary btn-edit" onclick="openRoleModal('${r.id}')">✏️ Edit</button>
         <button class="btn btn-xs btn-secondary" onclick="duplicateRole('${r.id}')">📋 Duplicate</button>
         <button class="btn btn-xs btn-secondary" onclick="toggleRoleActive('${r.id}')">${active?'⏸️ Deactivate':'▶️ Activate'}</button>
-        <button class="btn btn-xs btn-danger" onclick="deleteRole('${r.id}')">Del</button>
+        <button class="btn btn-xs btn-danger" onclick="deleteRole('${r.id}')">Del</button>` : `<span class="text-muted text-sm">Admin only</span>`}
       </div>
     </div>`;
   }).join('') : '<div style="color:var(--text-muted);font-size:17px;padding:8px 0">No custom roles yet — click "+ New Role" to create one.</div>';
@@ -11537,6 +12090,12 @@ function openRoleModal(id=null) {
 }
 
 function saveRole() {
+  // A role's permission set defines what any account assigned to it can do — including the
+  // editor's own account, if they happen to hold that role. Letting a non-admin "Manage Users"
+  // holder edit role permissions would let them silently grant themselves (or a new role they
+  // then assign themselves) Manage Users / System Settings / anything else, sidestepping the
+  // admin-only checks just added to saveUser(). Only a real admin may define what a role means.
+  if (session?.role !== 'admin') { toast('Only an Admin can edit role permissions','error'); return; }
   const name = document.getElementById('role-name').value.trim();
   if (!name) { toast('Role name required','error'); return; }
   if (!db.settings.roles) db.settings.roles = [];
@@ -11557,6 +12116,7 @@ function saveRole() {
 }
 
 function duplicateRole(id) {
+  if (session?.role !== 'admin') { toast('Only an Admin can create roles','error'); return; }
   const r = (db.settings.roles||[]).find(x=>x.id===id);
   if (!r) return;
   let baseName = r.name + ' (Copy)', name = baseName, n = 2;
@@ -11568,6 +12128,7 @@ function duplicateRole(id) {
 }
 
 function toggleRoleActive(id) {
+  if (session?.role !== 'admin') { toast('Only an Admin can activate/deactivate roles','error'); return; }
   const r = (db.settings.roles||[]).find(x=>x.id===id);
   if (!r) return;
   r.active = r.active===false ? true : false;
@@ -11577,6 +12138,7 @@ function toggleRoleActive(id) {
 }
 
 function deleteRole(id) {
+  if (session?.role !== 'admin') { toast('Only an Admin can delete roles','error'); return; }
   const r = (db.settings.roles||[]).find(x=>x.id===id);
   if (!r) return;
   const usersWithRole = db.users.filter(u=>u.role===id);
@@ -11772,7 +12334,87 @@ function downloadCSV(data, name) {
   URL.revokeObjectURL(url);
 }
 
-function importCSV(type) { toast('CSV import: Select a file','info'); /* TODO: file picker */ }
+// Small, dependency-free CSV line parser — handles quoted fields with embedded commas/quotes,
+// matching the shape downloadCSV() writes, so a file exported from here re-imports cleanly.
+function parseCSVLine(line) {
+  const out = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"') { if (line[i+1] === '"') { cur += '"'; i++; } else inQ = false; }
+      else cur += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { out.push(cur); cur = ''; }
+      else cur += c;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+function importCSV(type) {
+  // This used to just show a toast implying a file picker would open and then do nothing —
+  // a dead-end button. Products is the one type wired up to it; a general importer for every
+  // module is a much bigger job than this pass covers, so it's scoped honestly to that.
+  if (type !== 'records') { toast('CSV import is currently only available for Products','info'); return; }
+  if (!(session?.role==='admin' || hasPermission('Edit Products'))) { toast("You don't have permission to import products",'error'); return; }
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.csv,text/csv';
+  input.onchange = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => importRecordsCSV(ev.target.result);
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function importRecordsCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+  if (lines.length < 2) { toast('CSV has no data rows','error'); return; }
+  const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
+  const col = name => headers.indexOf(name);
+  const idxName = col('name'), idxSku = col('sku'), idxId = col('id'), idxCategory = col('category'),
+    idxUnit = col('unit'), idxCost = col('costprice'),
+    idxSale = col('saleprice') >= 0 ? col('saleprice') : col('retail price'),
+    idxWholesale = col('wholesaleprice'), idxStock = col('stock'),
+    idxReorder = col('lowstockthreshold') >= 0 ? col('lowstockthreshold') : col('reorderlevel'),
+    idxBarcode = col('barcode');
+  if (idxName < 0) { toast('CSV must have a "name" column (matching the Export CSV format)','error'); return; }
+
+  let created = 0, updated = 0, skipped = 0, costSkipped = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const cells = parseCSVLine(lines[i]);
+    const name = (cells[idxName]||'').trim();
+    if (!name) { skipped++; continue; }
+    const sku = idxSku >= 0 ? (cells[idxSku]||'').trim() : '';
+    const id = idxId >= 0 ? (cells[idxId]||'').trim() : '';
+    const existing = (id && db.records.find(r=>r.id===id)) || (sku && db.records.find(r=>r.sku===sku));
+    // Same rule as the product form: cost can't be hand-set once real production history
+    // exists — an import must respect that too, not provide a side door around it.
+    const costLocked = existing && productHasProductionHistory(existing.id);
+    if (costLocked && idxCost >= 0) costSkipped++;
+    const fields = {
+      name,
+      sku: sku || existing?.sku || ('SKU-'+Date.now().toString(36).toUpperCase()+i),
+      category: idxCategory >= 0 ? (cells[idxCategory]||'').trim() : (existing?.category||''),
+      unit: idxUnit >= 0 ? ((cells[idxUnit]||'').trim()||'pcs') : (existing?.unit||'pcs'),
+      salePrice: idxSale >= 0 ? (parseFloat(cells[idxSale])||0) : (existing?.salePrice||0),
+      wholesalePrice: idxWholesale >= 0 ? (parseFloat(cells[idxWholesale])||0) : (existing?.wholesalePrice||0),
+      stock: idxStock >= 0 ? (parseFloat(cells[idxStock])||0) : (existing?.stock||0),
+      lowStockThreshold: idxReorder >= 0 ? (parseFloat(cells[idxReorder])||10) : (existing?.lowStockThreshold||10),
+      barcode: idxBarcode >= 0 ? (cells[idxBarcode]||'').trim() : (existing?.barcode||'')
+    };
+    if (!costLocked && idxCost >= 0) fields.costPrice = parseFloat(cells[idxCost])||0;
+    if (existing) { Object.assign(existing, fields); updated++; }
+    else { db.records.push({ id:uid(), createdAt:now(), status:'active', trackExpiry:false, costPrice:0, ...fields }); created++; }
+  }
+  saveDB(); renderRecords();
+  audit('Products','CSV Import','',`${created} created, ${updated} updated, ${skipped} skipped`);
+  toast(`Import complete: ${created} created, ${updated} updated${skipped?`, ${skipped} skipped (blank name)`:''}${costSkipped?`, cost ignored for ${costSkipped} (locked by production history)`:''}`, 'success');
+}
 
 /* ══ SORT & PAGINATION ══ */
 function sortTable(table, key) {

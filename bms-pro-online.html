@@ -3175,6 +3175,10 @@ function seedChartOfAccounts() {
   });
 }
 
+function getAccountByCode(code) {
+  return (db.chartOfAccounts||[]).find(a => a.code === code) || null;
+}
+
 // ══ ACCOUNTING INTEGRITY CHECKER ══
 // A full scan of the ledger for the specific things that can make Trial Balance or Balance
 // Sheet disagree with reality, each with the exact voucher(s) responsible — not just "something
@@ -11147,7 +11151,7 @@ function renderRawMaterials() {
 // A material has "purchase history" once at least one GRN (goods receipt) has been recorded
 // against it. Before that point its cost is just a manual opening estimate; after that point
 // the cost must come exclusively from what was actually paid on purchase orders, so the field
-// is locked and driven by receiveGRN()'s weighted-average update instead.
+// is locked and driven by saveGRN()'s weighted-average update instead.
 function materialHasPurchaseHistory(materialId) {
   return db.goodsReceived.some(g=>(g.items||[]).some(it=>it.materialId===materialId && it.qtyReceived>0));
 }
@@ -11251,7 +11255,7 @@ function saveMaterial() {
   const unit = document.getElementById('mat-unit').value.trim();
   if (!unit) { toast('Unit is required','error'); return; }
   // Cost is only taken from this form when the material has no purchase history yet (a fresh
-  // opening estimate). Once GRNs exist, receiveGRN's weighted-average update is the sole writer
+  // opening estimate). Once GRNs exist, saveGRN's weighted-average update is the sole writer
   // of m.cost — the field is readonly in the UI as a second layer of protection.
   const locked = matEditId && materialHasPurchaseHistory(matEditId);
   const data = {

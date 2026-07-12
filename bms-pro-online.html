@@ -3206,6 +3206,9 @@ function getAccountByCode(code) {
 //     a bug in the aggregation logic itself, the same class of bug just fixed above).
 function runAccountingIntegrityCheck(asOf) {
   const date = asOf || today();
+  // Structural checks (orphans, duplicates, unbalanced entries) deliberately scan every active
+  // entry regardless of date — a bad entry hiding in a future-dated transaction is still a bad
+  // entry, and should be caught here rather than waiting for its date to arrive.
   const activeEntries = (db.journalEntries||[]).filter(j=>!j.isVoid);
   const knownCodes = new Set((db.chartOfAccounts||[]).map(a=>a.code));
 
@@ -3234,11 +3237,22 @@ function runAccountingIntegrityCheck(asOf) {
     entries: list.map(j=>({ voucherNumber:j.voucherNumber, date:j.date, description:j.description, amount: (j.lines||[]).reduce((a,l)=>a+l.debit,0) }))
   }));
 
-  // (3) Raw ledger totals — every debit line and every credit line in the entire active ledger,
-  // computed directly (not via computeTrialBalance's per-account loop), as an independent check
-  // that the two methods agree with each other.
+  // (3) Raw ledger totals — every debit line and every credit line, AS OF THE SAME DATE Trial
+  // Balance itself uses (ledgerLinesUpTo scopes to j.date <= date). This used to sum literally
+  // every active entry regardless of date, which meant a single future-dated entry (a real,
+  // valid thing to have — e.g. something scheduled ahead) would make this comparison flag a
+  // "mismatch" that wasn't actually a books problem, just two numbers scoped differently being
+  // compared as if they meant the same thing. Scoping both sides the same way makes this an
+  // honest apples-to-apples check.
+  const entriesAsOf = activeEntries.filter(j => j.date <= date);
   let rawDebit = 0, rawCredit = 0;
-  activeEntries.forEach(j=>(j.lines||[]).forEach(l=>{ rawDebit += l.debit||0; rawCredit += l.credit||0; }));
+  entriesAsOf.forEach(j=>(j.lines||[]).forEach(l=>{ rawDebit += l.debit||0; rawCredit += l.credit||0; }));
+
+  // Not a problem by itself — a future-dated entry can be entirely legitimate (something
+  // scheduled ahead of time) — but it's exactly what would make an unscoped total disagree with
+  // a "Trial Balance as of [date]" figure, so it's worth showing plainly rather than leaving
+  // that difference unexplained.
+  const futureDatedEntries = activeEntries.filter(j => j.date > date).map(j=>({ voucherNumber:j.voucherNumber, date:j.date, description:j.description, amount: (j.lines||[]).reduce((a,l)=>a+(l.debit||0),0) }));
 
   const tb = computeTrialBalance(null, date);
   const bs = computeBalanceSheet(date);
@@ -3258,7 +3272,7 @@ function runAccountingIntegrityCheck(asOf) {
     trialBalanceMatchesRawLedger: Math.abs(tb.totalDebit - rawDebit) < 0.01 && Math.abs(tb.totalCredit - rawCredit) < 0.01,
     totalAssets: bs.totalAssets, totalLiabilities: bs.totalLiabilities, totalEquity: bs.totalEquity, balanceSheetDiff: bsDiff,
     clean: orphanLines.length===0 && duplicateGroups.length===0 && unbalancedEntries.length===0 && Math.abs(rawDebit-rawCredit)<0.01 && Math.abs(bsDiff)<1,
-    orphanLines, duplicateGroups, unbalancedEntries
+    orphanLines, duplicateGroups, unbalancedEntries, futureDatedEntries
   };
 }
 
@@ -9697,8 +9711,9 @@ function generateReport() {
       <tr><td>Total Debits</td><td style="text-align:right" class="mono">${fmt(check.totalDebits)}</td></tr>
       <tr><td>Total Credits</td><td style="text-align:right" class="mono">${fmt(check.totalCredits)}</td></tr>
       <tr style="background:#f0f0f0"><td><strong>Difference</strong></td><td style="text-align:right"><strong style="color:${Math.abs(check.difference)<0.01?'green':'red'}">${fmt(Math.abs(check.difference))}</strong></td></tr>
-      <tr><td>Trial Balance figure matches raw ledger total</td><td style="text-align:right">${check.trialBalanceMatchesRawLedger?'<span style="color:green">✓ Yes</span>':'<span style="color:red">✗ No — Trial Balance calculation itself disagrees with the ledger</span>'}</td></tr>
+      <tr><td>Trial Balance figure matches raw ledger total</td><td style="text-align:right">${check.trialBalanceMatchesRawLedger?'<span style="color:green">✓ Yes</span>':'<span style="color:orange">⚠ No — see future-dated entries below</span>'}</td></tr>
     </tbody></table>
+    ${check.futureDatedEntries.length ? `<div style="margin-top:10px;padding:8px;background:#fffbe6;border-radius:6px"><strong>Future-Dated Entries (${check.futureDatedEntries.length})</strong> — not a problem by themselves, but they're excluded from "as of ${fmtDate(check.asOf)}" totals, which is why the figure above may not match a raw all-time sum.<table style="margin-top:4px"><thead><tr><th>Voucher</th><th>Date</th><th>Description</th><th>Amount</th></tr></thead><tbody>${check.futureDatedEntries.map(e=>`<tr><td class="mono">${esc(e.voucherNumber)}</td><td>${fmtDate(e.date)}</td><td>${esc(e.description)}</td><td class="mono">${fmt(e.amount)}</td></tr>`).join('')}</tbody></table></div>` : ''}
     <table style="margin-top:14px"><tbody>
       <tr><td>Total Assets</td><td style="text-align:right" class="mono">${fmt(check.totalAssets)}</td></tr>
       <tr><td>Total Liabilities</td><td style="text-align:right" class="mono">${fmt(check.totalLiabilities)}</td></tr>

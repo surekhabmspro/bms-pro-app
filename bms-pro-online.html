@@ -1110,12 +1110,12 @@ textarea.form-control{resize:vertical;min-height:80px}
             <button class="btn btn-primary btn-sm" onclick="openBOMModal()">+ New Recipe</button>
           </div>
           <div class="form-hint" style="margin-bottom:10px">A recipe (BOM) lists which raw materials go into one finished product. Click "🏭 Make Now" any time you've produced a batch — it instantly updates stock.</div>
-          <div class="table-wrap"><table><thead><tr><th>Recipe</th><th>Makes Product</th><th>Materials Used</th><th>Yield per Batch</th><th>Actions</th></tr></thead><tbody id="bom-tbody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Recipe</th><th>Makes Product</th><th>Materials Used</th><th>Typical Yield</th><th>Actions</th></tr></thead><tbody id="bom-tbody"></tbody></table></div>
         </div>
         <div id="prod-orders" style="display:none">
           <div class="form-hint" style="margin-bottom:10px">Use this only if you want to plan production ahead of time (e.g. schedule next week's batch). For immediate production, use "🏭 Make Now" on the Recipes tab instead.</div>
           <div class="filter-bar"><button class="btn btn-primary btn-sm" onclick="openProductionOrderModal()">+ Schedule Production</button></div>
-          <div class="table-wrap"><table><thead><tr><th>Order #</th><th>Product</th><th>Qty Planned</th><th>Status</th><th>Scheduled</th><th>Actions</th></tr></thead><tbody id="po-prod-tbody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Order #</th><th>Product</th><th>Batches / Actual Yield</th><th>Status</th><th>Scheduled</th><th>Actions</th></tr></thead><tbody id="po-prod-tbody"></tbody></table></div>
         </div>
         <div id="prod-batches" style="display:none">
           <div class="table-wrap"><table><thead><tr><th>Batch #</th><th>Product</th><th>Qty Produced</th><th>Cost</th><th>Date</th><th>Status</th></tr></thead><tbody id="batch-tbody"></tbody></table></div>
@@ -1196,7 +1196,7 @@ textarea.form-control{resize:vertical;min-height:80px}
           <button class="btn btn-secondary btn-sm" onclick="exportCSV('secondary')">📤 Export</button>
           <button class="btn btn-primary btn-sm" onclick="openSecondaryModal()">+ Add</button>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Type</th><th>Actions</th></tr></thead><tbody id="sec-tbody"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Type</th><th>Outstanding</th><th>Actions</th></tr></thead><tbody id="sec-tbody"></tbody></table></div>
       </div>
       <!-- ACCOUNTING -->
       <div class="module-view" id="view-accounting">
@@ -2377,6 +2377,10 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="form-group"><label class="form-label">Phone</label><input class="form-control" id="sec-phone" placeholder="+1 234 567 8900"></div>
         <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="sec-email" placeholder="email@example.com"></div>
       </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Contact Person<span class="help-tip" data-tip="The specific person you deal with there, if different from the business name.">?</span></label><input class="form-control" id="sec-contact-person" placeholder="e.g. Mr. Yadav"></div>
+        <div class="form-group"><label class="form-label">Payment Terms<span class="help-tip" data-tip="For your own reference — e.g. 'Net 30', 'Cash on delivery', '50% advance'.">?</span></label><input class="form-control" id="sec-payment-terms" placeholder="e.g. Net 30, COD"></div>
+      </div>
       <div class="form-group"><label class="form-label">Address</label><input class="form-control" id="sec-address" placeholder="Street address, City, Country"></div>
       <div class="form-group"><label class="form-label">Notes</label><textarea class="form-control" id="sec-notes" rows="2" placeholder="Optional — payment terms, lead times, etc."></textarea></div>
     </div>
@@ -2467,7 +2471,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="form-group"><label class="form-label">Recipe Name *</label><input class="form-control" id="bom-name" placeholder="e.g. Steel Nail 2 inch — Standard Recipe"></div>
         <div class="form-group"><label class="form-label">Finished Product *</label><select class="form-control" id="bom-product"></select></div>
       </div>
-      <div class="form-group"><label class="form-label">Output Quantity (per batch)<span class="help-tip" data-tip="How many finished units this recipe produces in one production run. E.g. if 5kg flour makes 100 cookies, set this to 100.">?</span></label><input class="form-control" type="number" id="bom-output-qty" value="1" placeholder="1"></div>
+      <div class="form-group"><label class="form-label">Typical Yield (reference only)<span class="help-tip" data-tip="Roughly how many finished units one standard run of this recipe tends to produce — used to estimate material needs when planning. The real number is recorded each time you actually finish a production run, since real yield always varies a bit.">?</span></label><input class="form-control" type="number" id="bom-output-qty" value="1" placeholder="1"></div>
       <h3 style="font-size:17px;font-weight:700;margin:12px 0 8px">Raw Materials Required</h3>
       <div id="bom-items-list"></div>
       <button class="btn btn-secondary btn-sm" onclick="addBOMItemRow()">+ Add Material</button>
@@ -2483,11 +2487,12 @@ textarea.form-control{resize:vertical;min-height:80px}
     <div class="modal-header"><div class="modal-title">🏭 Make Now</div><button class="modal-close" onclick="closeModal('makenow-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div id="makenow-recipe-info" style="margin-bottom:12px;font-weight:600"></div>
-      <div class="form-group"><label class="form-label">Quantity Produced *</label><input class="form-control" type="number" id="makenow-qty" value="1" min="1" oninput="previewMakeNowMaterials()"></div>
+      <div class="form-group"><label class="form-label">Number of Batches *<span class="help-tip" data-tip="How many times you're running this recipe — decides how much raw material gets used.">?</span></label><input class="form-control" type="number" id="makenow-batches" value="1" min="0.1" step="0.1" oninput="previewMakeNowMaterials()"></div>
       <div id="makenow-material-preview" class="form-hint" style="margin-bottom:8px"></div>
-      <div class="form-hint">This will deduct the materials below and add the produced quantity to stock immediately.</div>
+      <div class="form-group"><label class="form-label">Actual Quantity Produced *<span class="help-tip" data-tip="What you actually ended up with — real yield always varies a bit from the estimate, so this is editable.">?</span></label><input class="form-control" type="number" id="makenow-qty" value="1" min="0" step="0.01" oninput="this.dataset.touched='1'"></div>
+      <div class="form-hint">This will deduct the materials above and add the actual quantity produced to stock immediately.</div>
     </div>
-    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('makenow-modal-overlay')">Cancel</button><button class="btn btn-primary" onclick="confirmMakeNow()">✅ Confirm & Update Stock</button></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('makenow-modal-overlay')">Cancel</button><button class="btn btn-primary" id="makenow-confirm-btn" onclick="confirmMakeNow()">✅ Confirm & Update Stock</button></div>
   </div>
 </div>
 
@@ -2505,11 +2510,23 @@ textarea.form-control{resize:vertical;min-height:80px}
     <div class="modal-header"><div class="modal-title">New Production Order</div><button class="modal-close" onclick="closeModal('prodorder-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Bill of Materials *</label><select class="form-control" id="po-bom" onchange="onPOBOMChange()"></select></div>
-      <div class="form-group"><label class="form-label">Quantity to Produce *</label><input class="form-control" type="number" id="po-qty" value="1" oninput="previewMaterialNeeds()"></div>
+      <div class="form-group"><label class="form-label">Number of Batches *<span class="help-tip" data-tip="How many times to run this recipe — decides how much raw material gets set aside. The actual finished quantity you end up with is recorded separately when you complete this order, since real output always varies a bit from the estimate.">?</span></label><input class="form-control" type="number" id="po-batches" value="1" min="0.1" step="0.1" oninput="previewMaterialNeeds()"></div>
       <div id="po-material-preview" class="form-hint" style="margin-bottom:8px"></div>
       <div class="form-group"><label class="form-label">Scheduled Date</label><input class="form-control" id="po-sched-date" onfocus="openCalendar('po-sched-date','standard')"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('prodorder-modal-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveProductionOrder()">💾 Create Order</button></div>
+  </div>
+</div>
+
+<!-- Complete Production Modal — captures the real, actual yield -->
+<div class="modal-overlay" id="complete-production-overlay" onclick="closeModalOnOverlay(event,'complete-production-overlay')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Complete Production Order</div><button class="modal-close" onclick="closeModal('complete-production-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div id="cp-summary" class="form-hint" style="margin-bottom:10px"></div>
+      <div class="form-group"><label class="form-label">Actual Quantity Produced *<span class="help-tip" data-tip="How many finished units actually came out of this run — real yield, not the estimate. This is what goes into stock and decides this batch's true cost per unit.">?</span></label><input class="form-control" type="number" id="cp-actual-qty" min="0" step="0.01"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('complete-production-overlay')">Cancel</button><button class="btn btn-primary" onclick="confirmCompleteProduction()">✅ Complete & Add to Stock</button></div>
   </div>
 </div>
 
@@ -2789,7 +2806,7 @@ function defaultDB() {
     rawMaterials: [],   // raw material master
     materialSuppliers: [], // many-to-many: material <-> supplier links {id, materialId, supplierId, isPrimary}. No cost here — cost always comes live from Purchase Order/GRN history (see lastPurchaseRate()).
     boms: [],            // bill of materials: {id, productId, name, items:[{materialId, qty, unit}], outputQty, notes}
-    productionOrders: [], // {id, bomId, productId, qtyPlanned, status, scheduledDate}
+    productionOrders: [], // {id, bomId, productId, batches, status, scheduledDate, actualQty(set on completion)}
     productionBatches: [], // {id, orderId, batchNumber, qtyProduced, materialsConsumed:[], cost, date, status}
     purchaseOrders: [],  // {id, poNumber, supplierId, items:[{materialId,name,qty,unit,rate}], status, date, expectedDate}
     goodsReceived: [],   // {id, poId, grnNumber, items:[{materialId,qtyReceived,qtyOrdered}], date, receivedBy}
@@ -3461,12 +3478,24 @@ function runLedgerMigration() {
   });
 
   // Step 3 — open the correct Accounts Payable balance for any supplier invoice still unpaid.
+  // Two real bugs fixed here: (1) this always debited Finished Goods Inventory (1042) even for
+  // ordinary raw-material invoices, which should hit Raw Materials Inventory (1040) instead —
+  // wrong account, though it wouldn't itself break the books since AP still balanced against it.
+  // (2) Equipment bought on credit already gets its own correct, direct journal entry the moment
+  // it's added (refType 'fixed-asset-purchase', debiting the specific asset account) — but this
+  // step used to also try to open an "opening balance" for that SAME invoice against Inventory,
+  // regardless. Since this migration is explicitly "safe to re-run anytime," re-running it after
+  // any equipment-on-credit existed would double-post that invoice: once correctly, once wrong —
+  // overstating both Accounts Payable and Inventory by the same amount. That's exactly the shape
+  // of a small, persistent Assets ≠ Liabilities+Equity gap. Skipping already-covered invoices
+  // closes it.
   (db.supplierInvoices||[]).forEach(inv=>{
+    if (inv.category === 'fixed-asset') return; // already has its own correct entry from saveFixedAsset()
     const paid = (db.supplierPayments||[]).filter(p=>p.invoiceId===inv.id).reduce((a,p)=>a+p.amount,0);
     const outstanding = (inv.amount||0) - paid;
     if (outstanding > 0.01) {
       const lines = [
-        { accountCode: db.settings.acctMappings.inventoryAccount, debit: outstanding, credit: 0 },
+        { accountCode: '1040', debit: outstanding, credit: 0 },
         { accountCode: db.settings.acctMappings.apAccount, debit: 0, credit: outstanding }
       ];
       if (postJournalEntry({ date: today(), voucherKind:'Journal', refType:'opening-balance', refId: inv.id, reference: inv.invoiceNumber, description: `Opening balance — outstanding payable, ${inv.invoiceNumber}`, lines })) openingCount++;
@@ -6126,7 +6155,7 @@ const VIEW_ONLY_HIDE_FUNCTIONS = new Set([
   'exportReportPDF','generatePurchaseRegister','generateReport','generateSalesRegister',
   'generateTaxInvoiceList','generateVATReport','importCSV',
   // Status-changing / workflow actions
-  'completeCreditSale','completeProductionOrder','processPayroll','quickStatusUpdate',
+  'completeCreditSale','openCompleteProductionModal','confirmCompleteProduction','processPayroll','quickStatusUpdate',
   'setLeaveStatus','toggleRoleActive','bulkMarkAttendance','cycleAttendance',
   'biometricCheckInUI','markQRPaid','cancelQRPayment','duplicateRole','resetUserPw',
   'checkout','clearCart','changeQty','systemReset','doBackup'
@@ -7384,14 +7413,20 @@ let secEditId = null;
 function renderSecondary() {
   const s = document.getElementById('sec-search')?.value?.toLowerCase()||'';
   const items = db.secondary.filter(x => !x.archived && (!s || x.name?.toLowerCase().includes(s) || x.type?.toLowerCase().includes(s)));
-  document.getElementById('sec-tbody').innerHTML = items.length ? items.map(c=>`
+  document.getElementById('sec-tbody').innerHTML = items.length ? items.map(c=>{
+    const due = db.supplierInvoices.filter(i=>i.supplierId===c.id).reduce((a,i)=>{
+      const paid = db.supplierPayments.filter(p=>p.invoiceId===i.id).reduce((a2,p)=>a2+p.amount,0);
+      return a + Math.max(0, i.amount - paid);
+    },0);
+    return `
     <tr>
       <td><a href="#" onclick="viewProfile('secondary','${c.id}');return false" style="font-weight:500">${esc(c.name)}</a></td>
       <td>${esc(c.phone||'—')}</td>
-      <td>${esc(c.email||'—')}</td>
       <td>${esc(c.type||'—')}</td>
+      <td class="mono ${due>0.01?'text-danger font-bold':''}">${due>0.01?fmt(due):'—'}</td>
       <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openSecondaryModal('${c.id}')">Edit</button> <button class="btn btn-xs btn-secondary btn-archive" onclick="quickArchive('secondary','${c.id}')">${c.archived?'↩️ Unarchive':'🗄️ Archive'}</button></td>
-    </tr>`).join('') : '<tr><td colspan="5"><div class="empty"><div class="empty-icon">🏭</div><div class="empty-title">No suppliers yet</div><button class="btn btn-primary btn-sm" onclick="openSecondaryModal()">+ Add Supplier</button></div></td></tr>';
+    </tr>`;
+  }).join('') : '<tr><td colspan="5"><div class="empty"><div class="empty-icon">🏭</div><div class="empty-title">No suppliers yet</div><button class="btn btn-primary btn-sm" onclick="openSecondaryModal()">+ Add Supplier</button></div></td></tr>';
 }
 
 function openSecondaryModal(id=null) {
@@ -7402,6 +7437,8 @@ function openSecondaryModal(id=null) {
   document.getElementById('sec-type').value = c?.type||'';
   document.getElementById('sec-phone').value = c?.phone||'';
   document.getElementById('sec-email').value = c?.email||'';
+  document.getElementById('sec-contact-person').value = c?.contactPerson||'';
+  document.getElementById('sec-payment-terms').value = c?.paymentTerms||'';
   document.getElementById('sec-address').value = c?.address||'';
   document.getElementById('sec-notes').value = c?.notes||'';
   openModal('sec-modal-overlay');
@@ -7413,7 +7450,7 @@ function saveSecondary() {
   const name = document.getElementById('sec-name').value.trim();
   if (!name) { toast('Name required','error'); return; }
   if (isDuplicateName(db.secondary, name, secEditId)) { toast(`A supplier named "${name}" already exists`,'error'); return; }
-  const data = { name, type: document.getElementById('sec-type').value.trim(), phone: document.getElementById('sec-phone').value.trim(), email: document.getElementById('sec-email').value.trim(), address: document.getElementById('sec-address').value.trim(), notes: document.getElementById('sec-notes').value.trim() };
+  const data = { name, type: document.getElementById('sec-type').value.trim(), phone: document.getElementById('sec-phone').value.trim(), email: document.getElementById('sec-email').value.trim(), contactPerson: document.getElementById('sec-contact-person').value.trim(), paymentTerms: document.getElementById('sec-payment-terms').value.trim(), address: document.getElementById('sec-address').value.trim(), notes: document.getElementById('sec-notes').value.trim() };
   if (secEditId) {
     Object.assign(db.secondary.find(c=>c.id===secEditId), data); audit('Secondary','Edit',secEditId,name);
   } else {
@@ -8494,18 +8531,55 @@ function viewProfile(type, id) {
     if (!sp) return;
     archived = sp.archived === true;
     title = sp.name;
-    const purchases = db.accounting.filter(a=>a.type==='expense'&&a.description?.includes(sp.name)).slice(-15).reverse();
-    body = `<div class="profile-header"><div class="profile-avatar" style="background:var(--accent)">🏭</div><div><div class="profile-name">${esc(sp.name)}</div><div class="profile-sub">${esc(sp.category||'Supplier')}</div></div>${archived?'<span class="badge badge-muted" style="margin-left:auto">🗄️ Archived</span>':''}</div>
+    // Real purchase history from Purchase Orders — not a fragile text search against the flat
+    // Accounting list (which used to just guess by checking if the supplier's name appeared
+    // inside a transaction description).
+    const spPOs = db.purchaseOrders.filter(p=>p.supplierId===sp.id).sort((a,b)=>b.date.localeCompare(a.date));
+    const spInvoices = db.supplierInvoices.filter(i=>i.supplierId===sp.id);
+    const invoicesWithDue = spInvoices.map(inv=>{
+      const paid = db.supplierPayments.filter(p=>p.invoiceId===inv.id).reduce((a,p)=>a+p.amount,0);
+      return { ...inv, paidAmount: paid, due: inv.amount - paid };
+    });
+    const outstandingBalance = invoicesWithDue.filter(i=>i.due>0.01).reduce((a,i)=>a+i.due,0);
+    const totalPurchased = spInvoices.reduce((a,i)=>a+i.amount,0);
+    // On-time delivery: for POs that had an expected date AND have actually been received at
+    // least once, compare the date goods actually showed up (last GRN against that PO) to what
+    // was promised.
+    const deliveryChecks = spPOs.filter(p=>p.expectedDate && (p.status==='Received'||p.status==='Partially Received')).map(p=>{
+      const grns = db.goodsReceived.filter(g=>g.poId===p.id).sort((a,b)=>b.date.localeCompare(a.date));
+      if (!grns.length) return null;
+      return grns[0].date <= p.expectedDate;
+    }).filter(x=>x!==null);
+    const onTimeRate = deliveryChecks.length ? Math.round(100*deliveryChecks.filter(Boolean).length/deliveryChecks.length) : null;
+    // Materials this supplier is actually linked to, with the real last rate paid — reuses the
+    // same source of truth Raw Materials already shows, so the two pages can never disagree.
+    const spMaterials = db.materialSuppliers.filter(ms=>ms.supplierId===sp.id).map(ms=>{
+      const m = db.rawMaterials.find(x=>x.id===ms.materialId);
+      return { name: m?.name||'—', unit: m?.unit||'', rate: m ? lastPurchaseRate(m.id, sp.id) : null, isPrimary: ms.isPrimary, materialId: ms.materialId };
+    });
+    body = `<div class="profile-header"><div class="profile-avatar" style="background:var(--accent)">🏭</div><div><div class="profile-name">${esc(sp.name)}</div><div class="profile-sub">${esc(sp.type||'Supplier')}${sp.contactPerson?' · '+esc(sp.contactPerson):''}</div></div>${archived?'<span class="badge badge-muted" style="margin-left:auto">🗄️ Archived</span>':''}</div>
     <div class="info-grid">
       <div class="info-item"><label>Phone</label><p>${esc(sp.phone||'—')}</p></div>
       <div class="info-item"><label>Email</label><p>${esc(sp.email||'—')}</p></div>
+      <div class="info-item"><label>Payment Terms</label><p>${esc(sp.paymentTerms||'—')}</p></div>
       <div class="info-item"><label>Address</label><p>${esc(sp.address||'—')}</p></div>
-      <div class="info-item"><label>Total Supplied</label><p class="font-mono amt-purchase">${fmt(sp.totalValue||0)}</p></div>
+      <div class="info-item"><label>Total Purchased (lifetime)</label><p class="font-mono amt-purchase">${fmt(totalPurchased)}</p></div>
+      <div class="info-item"><label>Outstanding Balance</label><p class="font-mono ${outstandingBalance>0?'text-danger font-bold':''}">${fmt(outstandingBalance)}</p></div>
+      <div class="info-item"><label>Purchase Orders Placed</label><p class="font-mono">${spPOs.length}</p></div>
+      <div class="info-item"><label>On-Time Delivery Rate<span class="help-tip" data-tip="Of POs with a promised delivery date that have been received, the share where goods arrived on or before that date.">?</span></label><p class="font-mono">${onTimeRate!==null?onTimeRate+'%':'Not enough data yet'}</p></div>
     </div>
     ${sp.notes?`<div class="form-group"><label class="form-label">Notes</label><p>${esc(sp.notes)}</p></div>`:''}
+    ${spMaterials.length?`<div style="page-break-inside:avoid;break-inside:avoid">
+      <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Raw Materials Supplied</h3>
+      <div class="table-wrap"><table><thead><tr><th>Material</th><th>Last Rate Paid</th><th>Primary Supplier?</th></tr></thead><tbody>${spMaterials.map(m=>`<tr><td><a href="#" onclick="viewMaterialProfile('${m.materialId}');return false">${esc(m.name)}</a></td><td class="mono">${m.rate!=null?fmt(m.rate)+' / '+esc(m.unit):'No purchases yet'}</td><td>${m.isPrimary?'⭐ Primary':''}</td></tr>`).join('')}</tbody></table></div>
+    </div>`:''}
     <div style="page-break-inside:avoid;break-inside:avoid">
-      <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Purchase History</h3>
-      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead><tbody>${purchases.length?purchases.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${esc(p.description)}</td><td class="mono amt-payment">${fmt(p.amount)}</td></tr>`).join(''):'<tr><td colspan="3" class="text-center text-muted">No purchases recorded</td></tr>'}</tbody></table></div>
+      <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Purchase Orders</h3>
+      <div class="table-wrap"><table><thead><tr><th>PO #</th><th>Date</th><th>Status</th><th>Total</th></tr></thead><tbody>${spPOs.length?spPOs.slice(0,15).map(p=>`<tr><td class="mono">${esc(p.poNumber)}</td><td>${fmtDate(p.date)}</td><td><span class="badge ${p.status==='Received'?'badge-success':p.status==='Partially Received'?'badge-warning':(p.status==='Cancelled'||p.status==='Closed')?'badge-muted':'badge-info'}">${esc(p.status)}</span></td><td class="mono amt-purchase">${fmt((p.items||[]).reduce((a,i)=>a+i.qty*(i.rate||0),0))}</td></tr>`).join(''):'<tr><td colspan="4" class="text-center text-muted">No purchase orders yet</td></tr>'}</tbody></table></div>
+    </div>
+    <div style="page-break-inside:avoid;break-inside:avoid">
+      <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Invoices &amp; Balance</h3>
+      <div class="table-wrap"><table><thead><tr><th>Invoice #</th><th>Date</th><th>Amount</th><th>Paid</th><th>Due</th></tr></thead><tbody>${invoicesWithDue.length?invoicesWithDue.slice().reverse().slice(0,15).map(i=>`<tr><td class="mono">${esc(i.invoiceNumber)}</td><td>${fmtDate(i.date)}</td><td class="mono">${fmt(i.amount)}</td><td class="mono text-success">${fmt(i.paidAmount)}</td><td class="mono ${i.due>0.01?'text-danger font-bold':''}">${fmt(i.due)}</td></tr>`).join(''):'<tr><td colspan="5" class="text-center text-muted">No invoices yet</td></tr>'}</tbody></table></div>
     </div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='transaction') {
@@ -10770,7 +10844,7 @@ function renderRecords() {
 }
 
 // A product has "production history" once at least one production batch has been completed
-// for it. Before that its cost is a manual opening estimate; after that, completeProductionOrder()
+// for it. Before that its cost is a manual opening estimate; after that, confirmCompleteProduction()
 // owns cost via weighted average and the form field locks. Products are made from raw materials
 // via Production/BOM only — they are never purchased directly, so there's no separate
 // purchase-history check the way raw materials have (see the redesign note there for why).
@@ -10789,7 +10863,7 @@ function openRecordModal(id=null) {
   document.getElementById('rec-barcode').value = r?.barcode||'';
   // Cost is only manually editable here before this product has ever actually been produced.
   // Once a Production run has completed for it, its cost is a real weighted average from what
-  // that run's ingredients actually cost (see completeProductionOrder) and hand-editing it here
+  // that run's ingredients actually cost (see confirmCompleteProduction) and hand-editing it here
   // would corrupt that number. Products are made from raw materials, not bought directly — see
   // the redesign note by Raw Materials for why suppliers link there and not here.
   const locked = id && productHasProductionHistory(id);
@@ -11254,33 +11328,52 @@ function openMakeNow(bomId) {
   window._makeNowBomId = bomId;
   const product = db.records.find(r=>r.id===bom.productId);
   document.getElementById('makenow-recipe-info').textContent = `${bom.name} → ${product?.name||'?'}`;
-  document.getElementById('makenow-qty').value = bom.outputQty||1;
+  document.getElementById('makenow-batches').value = 1;
+  const qtyEl0 = document.getElementById('makenow-qty');
+  qtyEl0.value = bom.outputQty||1;
+  delete qtyEl0.dataset.touched;
   previewMakeNowMaterials();
   openModal('makenow-modal-overlay');
 }
 
 function previewMakeNowMaterials() {
   const bom = db.boms.find(b=>b.id===window._makeNowBomId);
-  const qty = parseFloat(document.getElementById('makenow-qty').value)||0;
+  const batches = parseFloat(document.getElementById('makenow-batches').value)||0;
   const previewEl = document.getElementById('makenow-material-preview');
-  if (!bom || qty<=0) { previewEl.innerHTML = ''; return; }
-  const batches = qty / (bom.outputQty||1);
+  const confirmBtn = document.getElementById('makenow-confirm-btn');
+  if (!bom || batches<=0) { previewEl.innerHTML = ''; return; }
+  let allEnough = true;
   const lines = bom.items.map(it=>{
     const store = it.itemType==='product' ? db.records : db.rawMaterials;
     const m = store.find(x=>x.id===it.materialId);
     const needed = it.qty * batches;
     const enough = m && m.stock >= needed;
+    if (!enough) allEnough = false;
     return `<div style="${enough?'':'color:var(--danger);font-weight:600'}">${esc(m?.name||'?')}: ${needed.toFixed(2)} ${esc(m?.unit||'')} ${enough?'':`⚠️ Only ${m?.stock||0} available`}</div>`;
   }).join('');
   previewEl.innerHTML = `<strong>Materials needed:</strong><br>${lines}`;
+  // The warning above used to sit right next to a Confirm button that still looked fully active
+  // — clicking it was actually blocked by confirmMakeNow()'s own check, but nothing on screen
+  // told you that before you clicked. Disabling it here removes the ambiguity entirely.
+  if (confirmBtn) {
+    confirmBtn.disabled = !allEnough;
+    confirmBtn.style.opacity = allEnough ? '1' : '0.5';
+    confirmBtn.style.cursor = allEnough ? 'pointer' : 'not-allowed';
+    confirmBtn.title = allEnough ? '' : 'Not enough material in stock — reduce batches or receive more stock first';
+  }
+  // Nudge the actual-quantity field to a sensible starting estimate as batches change, but only
+  // if the user hasn't already typed a real number in — don't clobber a genuine entry.
+  const qtyEl = document.getElementById('makenow-qty');
+  if (qtyEl && !qtyEl.dataset.touched) qtyEl.value = +(batches * (bom.outputQty||1)).toFixed(2);
 }
 
 function confirmMakeNow() {
   const bom = db.boms.find(b=>b.id===window._makeNowBomId);
   if (!bom) return;
-  const qty = parseFloat(document.getElementById('makenow-qty').value)||0;
-  if (qty<=0) { toast('Enter a valid quantity','error'); return; }
-  const batches = qty / (bom.outputQty||1);
+  const batches = parseFloat(document.getElementById('makenow-batches').value)||0;
+  if (batches<=0) { toast('Enter how many batches you\'re running','error'); return; }
+  const qty = parseFloat(document.getElementById('makenow-qty').value);
+  if (isNaN(qty) || qty < 0) { toast('Enter the actual quantity produced','error'); return; }
   for (const it of bom.items) {
     const store = it.itemType==='product' ? db.records : db.rawMaterials;
     const m = store.find(x=>x.id===it.materialId);
@@ -11289,6 +11382,7 @@ function confirmMakeNow() {
   }
   let totalCost = 0;
   let rawMaterialCost = 0;
+  let productIngredientCost = 0;
   const consumed = [];
   const batchNumber = 'BATCH-'+Date.now().toString(36).toUpperCase();
   bom.items.forEach(it=>{
@@ -11298,7 +11392,7 @@ function confirmMakeNow() {
     m.stock -= needed;
     const lineCost = needed * (it.itemType==='product' ? (m.costPrice||0) : (m.cost||0));
     totalCost += lineCost;
-    if (it.itemType !== 'product') rawMaterialCost += lineCost; // only raw-material consumption moves value out of 1040
+    if (it.itemType === 'product') productIngredientCost += lineCost; else rawMaterialCost += lineCost;
     consumed.push({ materialId:m.id, materialName:m.name, qty:needed, unit:m.unit, itemType:it.itemType||'material' });
     db.stockHistory.push({ id:uid(), recordId:m.id, recordName:m.name, type:'production_consumption', qty:-needed, balanceAfter:m.stock, date:today(), ref:batchNumber, createdAt:now() });
   });
@@ -11313,13 +11407,18 @@ function confirmMakeNow() {
     product.stock = newTotalQty;
     db.stockHistory.push({ id:uid(), recordId:product.id, recordName:product.name, type:'production', qty, balanceAfter:product.stock, date:today(), ref:batchNumber, createdAt:now() });
   }
-  // Ledger: inventory transfer (invisible) — raw materials become finished/trading goods.
-  // Not a sale or expense, so it never touches P&L — just moves value between two asset accounts.
-  if (rawMaterialCost > 0) {
-    postJournalEntry({ date: today(), voucherKind:'Journal', refType:'production', refId: batchNumber, reference: batchNumber, description: `Production — ${bom.name}`, lines: [
-      { accountCode: db.settings.acctMappings.inventoryAccount, debit: rawMaterialCost, credit: 0 },
-      { accountCode: '1040', debit: 0, credit: rawMaterialCost }
-    ]});
+  // Ledger: inventory transfer (invisible) — raw materials AND any semi-finished product used as
+  // an ingredient both become the new finished/trading goods. Not a sale or expense, so it never
+  // touches P&L — just moves value between asset accounts. Previously, semi-finished-product
+  // ingredients (a recipe that uses another product you made, not a raw material) were included
+  // in the product's own cost calculation but silently never appeared in the books at all — the
+  // consumed product's value just vanished from account 1042 with nothing recorded. Both
+  // components are posted now, so the full picture is auditable.
+  if (totalCost > 0) {
+    const lines = [ { accountCode: db.settings.acctMappings.inventoryAccount, debit: totalCost, credit: 0 } ];
+    if (rawMaterialCost > 0) lines.push({ accountCode: '1040', debit: 0, credit: rawMaterialCost });
+    if (productIngredientCost > 0) lines.push({ accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: productIngredientCost });
+    postJournalEntry({ date: today(), voucherKind:'Journal', refType:'production', refId: batchNumber, reference: batchNumber, description: `Production — ${bom.name}`, lines });
   }
   db.productionBatches.push({ id:uid(), orderId:null, batchNumber, productId:bom.productId, qtyProduced:qty, materialsConsumed:consumed, cost:totalCost, date:today(), status:'completed', createdBy:session.username });
   audit('Production','Make Now',bom.id,`${bom.name} — ${qty} units produced`);
@@ -11446,18 +11545,21 @@ function renderProductionOrders() {
   tbody.innerHTML = db.productionOrders.length ? [...db.productionOrders].reverse().map(o=>{
     const bom = db.boms.find(b=>b.id===o.bomId);
     const prod = bom ? db.records.find(r=>r.id===bom.productId) : null;
+    const qtyCell = o.status==='completed'
+      ? `${o.actualQty} <span class="text-muted text-sm">(${o.batches} batch(es))</span>`
+      : `${o.batches} batch(es) <span class="text-muted text-sm">~${(o.batches*(bom?.outputQty||1)).toFixed(2)} est.</span>`;
     return `<tr>
       <td class="mono">${esc(o.orderNumber||o.id.slice(-6))}</td>
       <td>${esc(prod?.name||'—')}</td>
-      <td class="mono">${o.qtyPlanned}</td>
+      <td class="mono">${qtyCell}</td>
       <td><span class="badge ${o.status==='completed'?'badge-success':o.status==='in_progress'?'badge-info':o.status==='cancelled'?'badge-muted':'badge-warning'}">${esc(o.status)}</span></td>
       <td>${fmtDate(o.scheduledDate)||'—'}</td>
-      <td>${o.status!=='completed'&&o.status!=='cancelled'?`<button class="btn btn-xs btn-success" onclick="completeProductionOrder('${o.id}')">✅ Complete & Produce</button> <button class="btn btn-xs btn-danger" onclick="cancelProductionOrder('${o.id}')">Cancel</button>`:o.status==='cancelled'?'<span class="text-muted">Cancelled</span>':'<span class="text-muted">Done</span>'}</td>
+      <td>${o.status!=='completed'&&o.status!=='cancelled'?`<button class="btn btn-xs btn-success" onclick="openCompleteProductionModal('${o.id}')">✅ Complete & Produce</button> <button class="btn btn-xs btn-danger" onclick="cancelProductionOrder('${o.id}')">Cancel</button>`:o.status==='cancelled'?'<span class="text-muted">Cancelled</span>':'<span class="text-muted">Done</span>'}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📝</div><div class="empty-title">No production orders yet</div><button class="btn btn-primary btn-sm" onclick="openProductionOrderModal()">+ New Production Order</button></div></td></tr>';
 }
 
-// Safe to cancel outright at any point before completion — completeProductionOrder() is the
+// Safe to cancel outright at any point before completion — confirmCompleteProduction() is the
 // only place that ever touches material stock or product cost, and it does so atomically, so
 // a pending/in-progress order has affected nothing yet. Nothing to reverse.
 function cancelProductionOrder(id) {
@@ -11474,7 +11576,7 @@ function cancelProductionOrder(id) {
 function openProductionOrderModal() {
   const bomSel = document.getElementById('po-bom');
   bomSel.innerHTML = db.boms.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('') || '<option value="">No BOMs available — create one first</option>';
-  document.getElementById('po-qty').value = 1;
+  document.getElementById('po-batches').value = 1;
   document.getElementById('po-sched-date').value = today();
   previewMaterialNeeds();
   openModal('prodorder-modal-overlay');
@@ -11484,11 +11586,10 @@ function onPOBOMChange() { previewMaterialNeeds(); }
 
 function previewMaterialNeeds() {
   const bomId = document.getElementById('po-bom').value;
-  const qty = parseFloat(document.getElementById('po-qty').value)||1;
+  const batches = parseFloat(document.getElementById('po-batches').value)||1;
   const bom = db.boms.find(b=>b.id===bomId);
   const previewEl = document.getElementById('po-material-preview');
   if (!bom) { previewEl.innerHTML = ''; return; }
-  const batches = qty / (bom.outputQty||1);
   const lines = bom.items.map(it=>{
     const store = it.itemType==='product' ? db.records : db.rawMaterials;
     const m = store.find(x=>x.id===it.materialId);
@@ -11496,79 +11597,99 @@ function previewMaterialNeeds() {
     const enough = m && m.stock >= needed;
     return `<div style="${enough?'':'color:var(--danger);font-weight:600'}">${esc(m?.name||'?')}: need ${needed.toFixed(2)} ${esc(m?.unit||'')} (have ${m?.stock||0}) ${enough?'✓':'⚠️ Insufficient'}</div>`;
   }).join('');
-  previewEl.innerHTML = `<strong>Materials required:</strong><br>${lines}`;
+  const estYield = +(batches * (bom.outputQty||1)).toFixed(2);
+  previewEl.innerHTML = `<strong>Materials required:</strong><br>${lines}<div style="margin-top:6px">Expect roughly <strong>${estYield}</strong> finished units — you'll record the real number when this order is completed.</div>`;
 }
 
 function saveProductionOrder() {
   const bomId = document.getElementById('po-bom').value;
   if (!bomId) { toast('Select a BOM','error'); return; }
-  const qty = parseFloat(document.getElementById('po-qty').value)||0;
-  if (qty <= 0) { toast('Enter a valid quantity','error'); return; }
-  const order = { id:uid(), orderNumber:'PRO-'+Date.now().toString(36).toUpperCase(), bomId, qtyPlanned:qty, status:'pending', scheduledDate:document.getElementById('po-sched-date').value||today(), createdAt:now(), createdBy:session.username };
+  const batches = parseFloat(document.getElementById('po-batches').value)||0;
+  if (batches <= 0) { toast('Enter how many batches to run','error'); return; }
+  const order = { id:uid(), orderNumber:'PRO-'+Date.now().toString(36).toUpperCase(), bomId, batches, status:'pending', scheduledDate:document.getElementById('po-sched-date').value||today(), createdAt:now(), createdBy:session.username };
   db.productionOrders.push(order);
   audit('Production','Create Order',order.id,order.orderNumber);
   saveDB(); closeModal('prodorder-modal-overlay'); renderProductionOrders(); toast('Production order created','success');
 }
 
-function completeProductionOrder(id) {
+function openCompleteProductionModal(id) {
   const order = db.productionOrders.find(o=>o.id===id);
   if (!order) return;
   if (order.status === 'completed') { toast('This order was already completed','error'); return; }
   if (order.status === 'cancelled') { toast('This order was cancelled','error'); return; }
   const bom = db.boms.find(b=>b.id===order.bomId);
   if (!bom) { toast('BOM not found','error'); return; }
-  const batches = order.qtyPlanned / (bom.outputQty||1);
-  // Verify sufficient stock
+  // Verify sufficient stock before even opening the modal — no point asking for actual yield
+  // if the materials to run it aren't actually there.
   for (const it of bom.items) {
     const store = it.itemType==='product' ? db.records : db.rawMaterials;
     const m = store.find(x=>x.id===it.materialId);
-    const needed = it.qty * batches;
+    const needed = it.qty * order.batches;
     if (!m || m.stock < needed) { toast(`Insufficient stock: ${m?.name||'ingredient'} (need ${needed.toFixed(2)}, have ${m?.stock||0})`,'error'); return; }
   }
-  confirm(`Complete production order ${order.orderNumber}?\nThis will deduct materials and add ${order.qtyPlanned} finished units.`, ()=>{
-    let totalCost = 0;
-    let rawMaterialCost = 0;
-    const consumed = [];
-    const batchNumber = 'BATCH-'+Date.now().toString(36).toUpperCase();
-    bom.items.forEach(it=>{
-      const store = it.itemType==='product' ? db.records : db.rawMaterials;
-      const m = store.find(x=>x.id===it.materialId);
-      const needed = it.qty * batches;
-      m.stock -= needed;
-      const lineCost = needed * (it.itemType==='product' ? (m.costPrice||0) : (m.cost||0));
-      totalCost += lineCost;
-      if (it.itemType !== 'product') rawMaterialCost += lineCost; // only raw-material consumption moves value out of 1040
-      consumed.push({ materialId:m.id, materialName:m.name, qty:needed, unit:m.unit, itemType:it.itemType||'material' });
-      db.stockHistory.push({ id:uid(), recordId:m.id, recordName:m.name, type:'production_consumption', qty:-needed, balanceAfter:m.stock, date:today(), ref:order.orderNumber, createdAt:now() });
-    });
-    // Increase finished goods AND keep cost price a true weighted average — this was previously
-    // missing here even though the "Make Now" shortcut already did it correctly, so a Production
-    // Order completion silently left the product's cost stale (wrong COGS at time of sale) every
-    // single time it was used instead of Make Now.
-    const product = db.records.find(r=>r.id===bom.productId);
-    if (product) {
-      const existingValue = (product.stock||0) * (product.costPrice||0);
-      const newValue = existingValue + totalCost;
-      const newTotalQty = (product.stock||0) + order.qtyPlanned;
-      product.costPrice = newTotalQty > 0 ? +(newValue / newTotalQty).toFixed(2) : product.costPrice;
-      product.stock = newTotalQty;
-      db.stockHistory.push({ id:uid(), recordId:product.id, recordName:product.name, type:'production', qty:order.qtyPlanned, balanceAfter:product.stock, date:today(), ref:order.orderNumber, createdAt:now() });
-    }
-    // Ledger: inventory transfer (invisible) — raw materials become finished/trading goods. Same
-    // journal posting Make Now already does; this workflow was silently skipping it, which meant
-    // raw material value vanished from the books without ever being recorded as moved anywhere.
-    if (rawMaterialCost > 0) {
-      postJournalEntry({ date: today(), voucherKind:'Journal', refType:'production', refId: batchNumber, reference: batchNumber, description: `Production — ${bom.name} (${order.orderNumber})`, lines: [
-        { accountCode: db.settings.acctMappings.inventoryAccount, debit: rawMaterialCost, credit: 0 },
-        { accountCode: '1040', debit: 0, credit: rawMaterialCost }
-      ]});
-    }
-    const batch = { id:uid(), orderId:order.id, batchNumber, productId:bom.productId, qtyProduced:order.qtyPlanned, materialsConsumed:consumed, cost:totalCost, date:today(), status:'completed', createdBy:session.username };
-    db.productionBatches.push(batch);
-    order.status = 'completed';
-    audit('Production','Complete',order.id,`${order.orderNumber} — ${order.qtyPlanned} units produced`);
-    saveDB(); renderProductionOrders(); toast(`Production complete! ${order.qtyPlanned} units added, cost ${fmt(totalCost)}`,'success');
+  window._completingOrderId = id;
+  const estYield = +(order.batches * (bom.outputQty||1)).toFixed(2);
+  document.getElementById('cp-summary').innerHTML = `<strong>${esc(order.orderNumber)}</strong> — ${esc(bom.name)}, ${order.batches} batch(es). Estimated yield: ~${estYield} units (edit below to match what you actually got).`;
+  document.getElementById('cp-actual-qty').value = estYield;
+  openModal('complete-production-overlay');
+  setTimeout(()=>document.getElementById('cp-actual-qty')?.focus(), 50);
+}
+
+function confirmCompleteProduction() {
+  const id = window._completingOrderId;
+  const order = db.productionOrders.find(o=>o.id===id);
+  if (!order) return;
+  const bom = db.boms.find(b=>b.id===order.bomId);
+  if (!bom) return;
+  const actualQty = parseFloat(document.getElementById('cp-actual-qty').value);
+  if (isNaN(actualQty) || actualQty < 0) { toast('Enter the actual quantity produced','error'); return; }
+  const batches = order.batches;
+  let totalCost = 0;
+  let rawMaterialCost = 0;
+  let productIngredientCost = 0;
+  const consumed = [];
+  const batchNumber = 'BATCH-'+Date.now().toString(36).toUpperCase();
+  bom.items.forEach(it=>{
+    const store = it.itemType==='product' ? db.records : db.rawMaterials;
+    const m = store.find(x=>x.id===it.materialId);
+    const needed = it.qty * batches;
+    m.stock -= needed;
+    const lineCost = needed * (it.itemType==='product' ? (m.costPrice||0) : (m.cost||0));
+    totalCost += lineCost;
+    if (it.itemType === 'product') productIngredientCost += lineCost; else rawMaterialCost += lineCost;
+    consumed.push({ materialId:m.id, materialName:m.name, qty:needed, unit:m.unit, itemType:it.itemType||'material' });
+    db.stockHistory.push({ id:uid(), recordId:m.id, recordName:m.name, type:'production_consumption', qty:-needed, balanceAfter:m.stock, date:today(), ref:order.orderNumber, createdAt:now() });
   });
+  // Increase finished goods by the REAL quantity produced, not the estimate — this is the
+  // whole point of the redesign: cost per unit now reflects what actually happened (get more
+  // than expected, cost/unit drops; get less, it rises), instead of a number computed from a
+  // fixed ratio that was only ever a planning guess.
+  const product = db.records.find(r=>r.id===bom.productId);
+  if (product && actualQty > 0) {
+    const existingValue = (product.stock||0) * (product.costPrice||0);
+    const newValue = existingValue + totalCost;
+    const newTotalQty = (product.stock||0) + actualQty;
+    product.costPrice = newTotalQty > 0 ? +(newValue / newTotalQty).toFixed(2) : product.costPrice;
+    product.stock = newTotalQty;
+    db.stockHistory.push({ id:uid(), recordId:product.id, recordName:product.name, type:'production', qty:actualQty, balanceAfter:product.stock, date:today(), ref:order.orderNumber, createdAt:now() });
+  }
+  // Ledger: inventory transfer (invisible) — raw materials AND any semi-finished product used as
+  // an ingredient both become the new finished/trading goods. Previously, semi-finished-product
+  // ingredients were folded into this product's cost calculation but never appeared in the books
+  // at all — the consumed product's value just vanished from account 1042 with nothing recorded.
+  // Both components are posted now, so the full picture is auditable (same fix as Make Now).
+  if (totalCost > 0) {
+    const lines = [ { accountCode: db.settings.acctMappings.inventoryAccount, debit: totalCost, credit: 0 } ];
+    if (rawMaterialCost > 0) lines.push({ accountCode: '1040', debit: 0, credit: rawMaterialCost });
+    if (productIngredientCost > 0) lines.push({ accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: productIngredientCost });
+    postJournalEntry({ date: today(), voucherKind:'Journal', refType:'production', refId: batchNumber, reference: batchNumber, description: `Production — ${bom.name} (${order.orderNumber})`, lines });
+  }
+  const batch = { id:uid(), orderId:order.id, batchNumber, productId:bom.productId, qtyProduced:actualQty, materialsConsumed:consumed, cost:totalCost, date:today(), status:'completed', createdBy:session.username };
+  db.productionBatches.push(batch);
+  order.status = 'completed';
+  order.actualQty = actualQty;
+  audit('Production','Complete',order.id,`${order.orderNumber} — ${actualQty} units produced`);
+  saveDB(); closeModal('complete-production-overlay'); renderProductionOrders(); toast(`Production complete! ${actualQty} units added, cost ${fmt(totalCost)}`,'success');
 }
 
 function renderProductionBatches() {

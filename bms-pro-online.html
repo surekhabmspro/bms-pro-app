@@ -1200,6 +1200,7 @@ textarea.form-control{resize:vertical;min-height:80px}
       </div>
       <!-- ACCOUNTING -->
       <div class="module-view" id="view-accounting">
+        <div id="acct-integrity-banner"></div>
         <div class="kpi-grid" id="acct-kpi"></div>
         <div class="filter-bar">
           <input class="form-control" id="acct-search" placeholder="🔍 Search..." oninput="renderAccounting()">
@@ -2530,6 +2531,19 @@ textarea.form-control{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- Orphan Journal Entry Correction Modal -->
+<div class="modal-overlay" id="orphan-correction-overlay" onclick="closeModalOnOverlay(event,'orphan-correction-overlay')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Correct Orphan Entry</div><button class="modal-close" onclick="closeModal('orphan-correction-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div id="oc-summary" class="form-hint" style="margin-bottom:12px"></div>
+      <div class="form-group"><label class="form-label">Repost this entry against *</label><select class="form-control" id="oc-replacement"></select></div>
+      <div class="form-hint">The original entry is voided (kept, not deleted) and a corrected one is posted in its place with the same date, amount, and description — only the account changes.</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('orphan-correction-overlay')">Cancel</button><button class="btn btn-primary" onclick="confirmOrphanCorrection()">✅ Correct Entry</button></div>
+  </div>
+</div>
+
 <!-- Purchase Order Modal -->
 <div class="modal-overlay" id="po-modal-overlay" onclick="closeModalOnOverlay(event,'po-modal-overlay')">
   <div class="modal modal-lg">
@@ -3161,8 +3175,126 @@ function seedChartOfAccounts() {
   });
 }
 
-function getAccountByCode(code) {
-  return (db.chartOfAccounts||[]).find(a => a.code === code) || null;
+// ══ ACCOUNTING INTEGRITY CHECKER ══
+// A full scan of the ledger for the specific things that can make Trial Balance or Balance
+// Sheet disagree with reality, each with the exact voucher(s) responsible — not just "something
+// is wrong somewhere". Every individual journal entry is already guaranteed balanced at the
+// moment it's posted (see postJournalEntry's own guard, and saveAdvancedJournalEntry's), so this
+// isn't looking for a malformed entry — it's looking for the other three ways books drift:
+// (1) a line posted to an account code that no longer exists in the Chart of Accounts (orphaned
+//     — invisible to every report that iterates chartOfAccounts, including Balance Sheet),
+// (2) the same real-world event posted more than once (a reprocess/re-run that didn't void the
+//     prior entry first — the exact bug class already found and fixed in Payroll and the
+//     Historical Migration tool this session),
+// (3) Trial Balance's own total not matching the sum of every line in the ledger (would indicate
+//     a bug in the aggregation logic itself, the same class of bug just fixed above).
+function runAccountingIntegrityCheck(asOf) {
+  const date = asOf || today();
+  const activeEntries = (db.journalEntries||[]).filter(j=>!j.isVoid);
+  const knownCodes = new Set((db.chartOfAccounts||[]).map(a=>a.code));
+
+  // (1) Orphan lines — posted to a code that isn't a real account anymore.
+  const orphanLines = [];
+  activeEntries.forEach(j=>{
+    (j.lines||[]).forEach(l=>{
+      if (!knownCodes.has(l.accountCode)) {
+        orphanLines.push({ voucherNumber:j.voucherNumber, date:j.date, description:j.description, accountCode:l.accountCode, debit:l.debit, credit:l.credit });
+      }
+    });
+  });
+
+  // (2) Duplicate postings — the same (refType, refId) should map to at most one active entry
+  // anywhere in this system; every posting function keys its ref this way specifically so this
+  // check is possible. More than one active entry for the same ref means a re-run didn't void
+  // the previous one first.
+  const byRef = {};
+  activeEntries.forEach(j=>{
+    if (!j.refType || !j.refId) return;
+    const key = j.refType+'::'+j.refId;
+    (byRef[key] = byRef[key]||[]).push(j);
+  });
+  const duplicateGroups = Object.entries(byRef).filter(([k,list])=>list.length>1).map(([key,list])=>({
+    refType: key.split('::')[0], refId: key.split('::')[1],
+    entries: list.map(j=>({ voucherNumber:j.voucherNumber, date:j.date, description:j.description, amount: (j.lines||[]).reduce((a,l)=>a+l.debit,0) }))
+  }));
+
+  // (3) Raw ledger totals — every debit line and every credit line in the entire active ledger,
+  // computed directly (not via computeTrialBalance's per-account loop), as an independent check
+  // that the two methods agree with each other.
+  let rawDebit = 0, rawCredit = 0;
+  activeEntries.forEach(j=>(j.lines||[]).forEach(l=>{ rawDebit += l.debit||0; rawCredit += l.credit||0; }));
+
+  const tb = computeTrialBalance(null, date);
+  const bs = computeBalanceSheet(date);
+  const bsDiff = +(bs.totalAssets - (bs.totalLiabilities + bs.totalEquity)).toFixed(2);
+
+  // Voucher-level culprits: any single entry whose own lines don't balance would already have
+  // been refused at posting time, so none should exist — but list any found anyway, since a
+  // corrupted import/restore could in theory introduce one outside the normal save path.
+  const unbalancedEntries = activeEntries.filter(j=>{
+    const d = (j.lines||[]).reduce((a,l)=>a+(l.debit||0),0), c = (j.lines||[]).reduce((a,l)=>a+(l.credit||0),0);
+    return Math.abs(d-c) > 0.01;
+  }).map(j=>({ voucherNumber:j.voucherNumber, date:j.date, description:j.description }));
+
+  return {
+    asOf: date,
+    totalDebits: +rawDebit.toFixed(2), totalCredits: +rawCredit.toFixed(2), difference: +(rawDebit-rawCredit).toFixed(2),
+    trialBalanceMatchesRawLedger: Math.abs(tb.totalDebit - rawDebit) < 0.01 && Math.abs(tb.totalCredit - rawCredit) < 0.01,
+    totalAssets: bs.totalAssets, totalLiabilities: bs.totalLiabilities, totalEquity: bs.totalEquity, balanceSheetDiff: bsDiff,
+    clean: orphanLines.length===0 && duplicateGroups.length===0 && unbalancedEntries.length===0 && Math.abs(rawDebit-rawCredit)<0.01 && Math.abs(bsDiff)<1,
+    orphanLines, duplicateGroups, unbalancedEntries
+  };
+}
+
+// Correcting a duplicate: keep the earliest entry (the real one), void every later duplicate.
+// Voiding — not deleting — is deliberate: it keeps the mistaken entry fully visible in the audit
+// trail with a reason attached, and every report already excludes voided entries automatically.
+function correctDuplicateGroup(refType, refId) {
+  if (session?.role !== 'admin') { toast('Only an Admin can correct accounting entries','error'); return; }
+  const entries = (db.journalEntries||[]).filter(j=>!j.isVoid && j.refType===refType && j.refId===refId)
+    .sort((a,b)=> a.date.localeCompare(b.date) || (a.createdAt||0)-(b.createdAt||0));
+  if (entries.length < 2) { toast('No duplicate found for this reference','info'); return; }
+  const keep = entries[0];
+  confirm(`Keep ${keep.voucherNumber} (earliest) and void the other ${entries.length-1} duplicate entr${entries.length-1===1?'y':'ies'} for this transaction?`, ()=>{
+    entries.slice(1).forEach(j=>voidJournalEntry(j.id, `Duplicate of ${keep.voucherNumber} — corrected via Accounting Integrity Checker`));
+    saveDB(); toast('Duplicate entries voided','success'); openAccountingIntegrityReport();
+  });
+}
+
+// Correcting an orphan: the account code on the entry no longer exists in the Chart of
+// Accounts (renamed, merged, or removed after the entry was posted). Void the original
+// (preserved, not deleted) and repost an identical entry with a valid account substituted in
+// its place, so the transaction's real financial effect is restored without guessing at intent
+// beyond "point this at where it should have gone."
+function openOrphanCorrectionModal(voucherNumber) {
+  if (session?.role !== 'admin') { toast('Only an Admin can correct accounting entries','error'); return; }
+  const entry = (db.journalEntries||[]).find(j=>j.voucherNumber===voucherNumber && !j.isVoid);
+  if (!entry) { toast('Entry not found or already corrected','error'); return; }
+  window._orphanCorrectingVoucher = voucherNumber;
+  const orphanCodes = [...new Set((entry.lines||[]).filter(l=>!getAccountByCode(l.accountCode)).map(l=>l.accountCode))];
+  document.getElementById('oc-summary').innerHTML = `<strong>${esc(entry.voucherNumber)}</strong> — ${esc(entry.description)}<br>Unknown account code(s): ${orphanCodes.map(c=>`<code>${esc(c)}</code>`).join(', ')}`;
+  const sel = document.getElementById('oc-replacement');
+  sel.innerHTML = '<option value="">Select the correct account...</option>' + (db.chartOfAccounts||[]).filter(a=>a.active!==false).map(a=>`<option value="${a.code}">${esc(a.code)} — ${esc(a.name)}</option>`).join('');
+  window._orphanCodesToFix = orphanCodes;
+  openModal('orphan-correction-overlay');
+}
+
+function confirmOrphanCorrection() {
+  const voucherNumber = window._orphanCorrectingVoucher;
+  const replacement = document.getElementById('oc-replacement').value;
+  if (!replacement) { toast('Select the correct account first','error'); return; }
+  const entry = (db.journalEntries||[]).find(j=>j.voucherNumber===voucherNumber && !j.isVoid);
+  if (!entry) return;
+  const newLines = (entry.lines||[]).map(l=> window._orphanCodesToFix.includes(l.accountCode) ? { ...l, accountCode: replacement } : l);
+  voidJournalEntry(entry.id, `Account code corrected — reposted as new entry`);
+  postJournalEntry({ date: entry.date, voucherKind: entry.voucherKind, refType: entry.refType, refId: entry.refId, reference: entry.reference, description: `${entry.description} (corrected account mapping)`, lines: newLines });
+  audit('Accounting','Orphan Entry Corrected', entry.id, `${voucherNumber} → ${replacement}`);
+  saveDB(); closeModal('orphan-correction-overlay'); toast('Entry corrected','success'); openAccountingIntegrityReport();
+}
+
+function openAccountingIntegrityReport() {
+  openModule('reports');
+  quickReport('financial-statements', 'accounting-integrity');
 }
 
 /* ── Mapping resolvers (read db.settings.acctMappings — editable once, not per-transaction) ── */
@@ -3593,9 +3725,17 @@ function accountBalanceAsOf(code, date) {
 }
 
 // ── 1. Trial Balance ──
+// BUG FIXED: this used to only iterate accounts where active!==false, and summed totalDebit/
+// totalCredit only across THAT filtered list. If any account was ever deactivated while still
+// holding real journal activity (or a residual balance), every debit/credit line posted to it
+// silently vanished from the Trial Balance's own totals — even though those lines are completely
+// real and still sit in db.journalEntries. That's not a data problem, it's a calculation bug:
+// Trial Balance's total debits and credits must be computed from EVERY account that ever had
+// activity, active or not, or the "Debit = Credit" self-check can fail for a reason that has
+// nothing to do with the actual books being wrong.
 function computeTrialBalance(from, to) {
   const toDate = to || today();
-  const accounts = (db.chartOfAccounts||[]).filter(a=>a.active!==false).sort((a,b)=>a.code.localeCompare(b.code));
+  const accounts = (db.chartOfAccounts||[]).slice().sort((a,b)=>a.code.localeCompare(b.code));
   let totalDebit = 0, totalCredit = 0;
   const rows = accounts.map(acc => {
     const allLines = ledgerLinesUpTo(toDate).filter(l=>l.accountCode===acc.code);
@@ -6156,6 +6296,7 @@ const VIEW_ONLY_HIDE_FUNCTIONS = new Set([
   'generateTaxInvoiceList','generateVATReport','importCSV',
   // Status-changing / workflow actions
   'completeCreditSale','openCompleteProductionModal','confirmCompleteProduction','processPayroll','quickStatusUpdate',
+  'correctDuplicateGroup','openOrphanCorrectionModal','confirmOrphanCorrection',
   'setLeaveStatus','toggleRoleActive','bulkMarkAttendance','cycleAttendance',
   'biometricCheckInUI','markQRPaid','cancelQRPayment','duplicateRole','resetUserPw',
   'checkout','clearCart','changeQty','systemReset','doBackup'
@@ -7481,6 +7622,21 @@ function getFilteredAccountingItems() {
 
 function renderAccounting() {
   const cat = document.getElementById('acct-cat-filter')?.value||'';
+  
+  // Runs automatically every time this module opens — the closest thing to "after every
+  // transaction" that's practical without adding a full ledger re-scan to every single save in
+  // the app. Every individual entry is already guaranteed balanced at the moment it's posted
+  // (see postJournalEntry); this catches the structural issues that guard can't — duplicates and
+  // orphaned account references — and tells you immediately rather than waiting for a report.
+  const banner = document.getElementById('acct-integrity-banner');
+  if (banner) {
+    const check = runAccountingIntegrityCheck();
+    banner.innerHTML = check.clean ? '' : `
+      <div style="background:#fff3f3;border:1px solid var(--danger);border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div>⚠️ <strong>Accounting Integrity Checker found issues</strong> — ${check.orphanLines.length?`${check.orphanLines.length} orphan entr${check.orphanLines.length===1?'y':'ies'}`:''}${check.orphanLines.length&&check.duplicateGroups.length?', ':''}${check.duplicateGroups.length?`${check.duplicateGroups.length} duplicate posting${check.duplicateGroups.length===1?'':'s'}`:''}${Math.abs(check.difference)>=0.01?` — ledger off by ${fmt(Math.abs(check.difference))}`:''}.</div>
+        <button class="btn btn-danger btn-sm" onclick="openAccountingIntegrityReport()" style="flex-shrink:0">🔍 Investigate</button>
+      </div>`;
+  }
   
   // Category filter
   const catSel = document.getElementById('acct-cat-filter');
@@ -9126,6 +9282,7 @@ const REPORT_CATEGORIES = [
     {v:'cash-flow', label:'Cash Flow Statement'},
     {v:'owners-equity', label:"Owner's Equity / Partners' Capital"},
     {v:'business-summary', label:'Business Health Check (One-Page Summary)'},
+    {v:'accounting-integrity', label:'🔍 Accounting Integrity Checker'},
     {v:'audit', label:'Audit & Compliance (Admin)'}
   ]},
   { id:'ledger-tools', group:'business', icon:'🗂️', title:'Ledger & Management Tools', desc:'Day Book, Account Ledger, Aging, Equipment — for your own day-to-day tracking', types:[
@@ -9513,7 +9670,37 @@ function generateReport() {
     <table><tbody>
       <tr><td>Trial Balance (Debit = Credit)</td><td style="text-align:right">${tb.balanced?'<span style="color:green">✓ Balanced</span>':'<span style="color:red">⚠ Out of balance</span>'}</td></tr>
       <tr><td>Balance Sheet (Assets = Liabilities + Equity)</td><td style="text-align:right">${bs.balanced?'<span style="color:green">✓ Balanced</span>':'<span style="color:red">⚠ Out of balance</span>'}</td></tr>
-    </tbody></table>`;
+    </tbody></table>
+    ${(!tb.balanced||!bs.balanced)?`<p style="margin-top:10px"><button class="btn btn-danger btn-sm" onclick="openAccountingIntegrityReport()">🔍 Run Accounting Integrity Checker to find the exact cause</button></p>`:''}`;
+  } else if (type==='accounting-integrity') {
+    const check = runAccountingIntegrityCheck(to||today());
+    const isAdmin = session?.role === 'admin';
+    bodyHtml = `<h2>🔍 Accounting Integrity Checker</h2>
+    <p style="font-size:15px;color:#555">A complete scan of the ledger — not just "balanced or not," but exactly which voucher(s) are responsible when it isn't. As of ${fmtDate(check.asOf)}.</p>
+    <table style="margin-top:12px"><tbody>
+      <tr><td>Total Debits</td><td style="text-align:right" class="mono">${fmt(check.totalDebits)}</td></tr>
+      <tr><td>Total Credits</td><td style="text-align:right" class="mono">${fmt(check.totalCredits)}</td></tr>
+      <tr style="background:#f0f0f0"><td><strong>Difference</strong></td><td style="text-align:right"><strong style="color:${Math.abs(check.difference)<0.01?'green':'red'}">${fmt(Math.abs(check.difference))}</strong></td></tr>
+      <tr><td>Trial Balance figure matches raw ledger total</td><td style="text-align:right">${check.trialBalanceMatchesRawLedger?'<span style="color:green">✓ Yes</span>':'<span style="color:red">✗ No — Trial Balance calculation itself disagrees with the ledger</span>'}</td></tr>
+    </tbody></table>
+    <table style="margin-top:14px"><tbody>
+      <tr><td>Total Assets</td><td style="text-align:right" class="mono">${fmt(check.totalAssets)}</td></tr>
+      <tr><td>Total Liabilities</td><td style="text-align:right" class="mono">${fmt(check.totalLiabilities)}</td></tr>
+      <tr><td>Total Equity</td><td style="text-align:right" class="mono">${fmt(check.totalEquity)}</td></tr>
+      <tr style="background:#f0f0f0"><td><strong>Assets − (Liabilities + Equity)</strong></td><td style="text-align:right"><strong style="color:${Math.abs(check.balanceSheetDiff)<1?'green':'red'}">${fmt(check.balanceSheetDiff)}</strong></td></tr>
+    </tbody></table>
+    <h3 style="margin-top:18px">Orphan Entries ${check.orphanLines.length?`(${check.orphanLines.length})`:''}<span class="help-tip" data-tip="A journal line posted to an account code that no longer exists in the Chart of Accounts — invisible to Balance Sheet and Trial Balance alike until corrected.">?</span></h3>
+    ${check.orphanLines.length ? `<table><thead><tr><th>Voucher</th><th>Date</th><th>Description</th><th>Unknown Account</th><th>Amount</th>${isAdmin?'<th></th>':''}</tr></thead><tbody>${check.orphanLines.map(o=>`<tr><td class="mono">${esc(o.voucherNumber)}</td><td>${fmtDate(o.date)}</td><td>${esc(o.description)}</td><td class="mono" style="color:red">${esc(o.accountCode)}</td><td class="mono">${fmt(o.debit||o.credit)}</td>${isAdmin?`<td><button class="btn btn-xs btn-danger" onclick="openOrphanCorrectionModal('${esc(o.voucherNumber)}')">Fix</button></td>`:''}</tr>`).join('')}</tbody></table>` : '<p style="color:green">✓ None found — every journal line points to a real account.</p>'}
+    <h3 style="margin-top:18px">Duplicate Postings ${check.duplicateGroups.length?`(${check.duplicateGroups.length})`:''}<span class="help-tip" data-tip="The same transaction posted more than once — usually from reprocessing something without voiding the original entry first.">?</span></h3>
+    ${check.duplicateGroups.length ? check.duplicateGroups.map(g=>`
+      <div style="margin-bottom:10px;padding:8px;background:#fff3f3;border-radius:6px">
+        <strong>${esc(g.refType)}</strong> — ${esc(g.refId)}
+        <table style="margin-top:4px"><thead><tr><th>Voucher</th><th>Date</th><th>Description</th><th>Amount</th></tr></thead><tbody>${g.entries.map(e=>`<tr><td class="mono">${esc(e.voucherNumber)}</td><td>${fmtDate(e.date)}</td><td>${esc(e.description)}</td><td class="mono">${fmt(e.amount)}</td></tr>`).join('')}</tbody></table>
+        ${isAdmin?`<button class="btn btn-xs btn-danger" style="margin-top:6px" onclick="correctDuplicateGroup('${esc(g.refType)}','${esc(g.refId)}')">Void duplicates, keep earliest</button>`:''}
+      </div>`).join('') : '<p style="color:green">✓ None found — every transaction has exactly one active journal entry.</p>'}
+    <h3 style="margin-top:18px">Individually Unbalanced Entries ${check.unbalancedEntries.length?`(${check.unbalancedEntries.length})`:''}<span class="help-tip" data-tip="A single journal entry whose own debit and credit lines don't match — should be impossible through normal use, since every posting path refuses to save one of these.">?</span></h3>
+    ${check.unbalancedEntries.length ? `<table><thead><tr><th>Voucher</th><th>Date</th><th>Description</th></tr></thead><tbody>${check.unbalancedEntries.map(e=>`<tr><td class="mono">${esc(e.voucherNumber)}</td><td>${fmtDate(e.date)}</td><td>${esc(e.description)}</td></tr>`).join('')}</tbody></table><p style="color:red">These likely came from a restored backup or import that bypassed normal entry — review manually.</p>` : '<p style="color:green">✓ None found.</p>'}
+    <p style="margin-top:18px;font-weight:700;color:${check.clean?'green':'red'}">${check.clean?'✓ Books are fully balanced and internally consistent':'⚠ Issues found above — correct them (Admin) and re-run this check'}</p>`;
   } else if (type==='sales') {
     const retail = periodSales.filter(x=>x.customerType!=='Wholesale');
     const wholesale = periodSales.filter(x=>x.customerType==='Wholesale');

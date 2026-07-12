@@ -3053,7 +3053,17 @@ function loadDB() {
         tdsApplicableCategories: ['Rent','Contractor','Professional Fees']
         };
       }
-      if (!db.chartOfAccounts.length) seedChartOfAccounts();
+      // BUG FIXED — this is the actual root cause of the $4,250 orphan-entry imbalance found by
+      // the Integrity Checker: seedChartOfAccounts() only ever ran when chartOfAccounts was
+      // completely empty (a brand-new install). Any account added to the code's defaults *after*
+      // a business already had data — like account 5095 for Stock Adjustments — would silently
+      // never reach that business's real Chart of Accounts, even though the Stock Adjustment
+      // feature assumed it existed. seedChartOfAccounts() itself is already safe to re-run (it
+      // only adds accounts that aren't already present), so it should just always run — "top up"
+      // instead of "seed once" — and this one line is what makes every future default-account
+      // addition retroactively reach existing businesses automatically instead of creating a new
+      // orphan every time.
+      seedChartOfAccounts();
       // Phase 6: 5010 is now perpetual Cost of Goods Sold (recognized at sale), not Purchases-at-buy-time
       const acc5010 = db.chartOfAccounts.find(a=>a.code==='5010');
       if (acc5010 && acc5010.name.includes('Purchases')) acc5010.name = 'Cost of Goods Sold';
@@ -3100,7 +3110,8 @@ function loadDB() {
   } catch(e) {
     db = defaultDB();
   }
-  if (!db.chartOfAccounts || !db.chartOfAccounts.length) seedChartOfAccounts();
+  // Same fix as above — always top up, never "only if totally empty".
+  seedChartOfAccounts();
   runDepreciationCatchup();
 }
 
@@ -3167,7 +3178,8 @@ const DEFAULT_CHART_OF_ACCOUNTS = [
 ];
 
 function seedChartOfAccounts() {
-  const existingCodes = new Set((db.chartOfAccounts||[]).map(a=>a.code));
+  if (!db.chartOfAccounts) db.chartOfAccounts = [];
+  const existingCodes = new Set(db.chartOfAccounts.map(a=>a.code));
   DEFAULT_CHART_OF_ACCOUNTS.forEach(a => {
     if (!existingCodes.has(a.code)) {
       db.chartOfAccounts.push({ id: uid(), ...a, active: true });

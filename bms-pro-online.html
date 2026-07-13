@@ -3112,6 +3112,7 @@ function loadDB() {
   }
   // Same fix as above — always top up, never "only if totally empty".
   seedChartOfAccounts();
+  correctPrematureDepreciation();
   runDepreciationCatchup();
 }
 
@@ -4472,7 +4473,15 @@ function renderEquipmentList() {
 // Runs automatically on every app load (and before Balance Sheet/P&L generation) — catches up any
 // months of depreciation that haven't been posted yet, so you never have to calculate or post this.
 function runDepreciationCatchup() {
-  const currentMonth = today().slice(0,7); // YYYY-MM
+  const now28 = today().slice(0,7) + '-28';
+  // BUG FIXED: this used to always include the current, still-in-progress month in the catch-up
+  // loop and post it dated to that month's 28th — even when today is only the 13th, 15 days
+  // before that date actually arrives. Depreciation for a month that hasn't reached its own
+  // posting day yet isn't due, so it shouldn't be recorded yet. The fix: only treat the current
+  // month as due once today's date has actually reached the 28th; otherwise the catch-up stops
+  // at the last month that's genuinely complete, and next month gets caught up in turn the next
+  // time this runs on or after ITS 28th.
+  const currentMonth = today() >= now28 ? today().slice(0,7) : shiftMonth(today().slice(0,7), -1);
   (db.fixedAssets||[]).filter(a=>a.status==='active').forEach(asset => {
     const monthlyDep = asset.cost / (asset.usefulLifeYears * 12);
     if (!monthlyDep || monthlyDep <= 0) return;
@@ -4493,6 +4502,24 @@ function runDepreciationCatchup() {
       cursor = shiftMonth(cursor, 1);
     }
   });
+}
+// One-time correction for depreciation entries this bug already posted early, before this fix —
+// voids them (kept, not deleted) and rolls back the affected asset's accumulated depreciation so
+// the normal catch-up above re-posts each one correctly once its real due date actually arrives.
+function correctPrematureDepreciation() {
+  const premature = (db.journalEntries||[]).filter(j=>!j.isVoid && j.refType==='depreciation' && j.date > today());
+  if (!premature.length) return;
+  premature.forEach(j=>{
+    const [assetId, month] = (j.refId||'').split(':');
+    const asset = (db.fixedAssets||[]).find(a=>a.id===assetId);
+    const amount = (j.lines||[]).reduce((a,l)=>a+(l.debit||0),0);
+    if (asset) {
+      asset.accumulatedDepreciation = Math.max(0, +(asset.accumulatedDepreciation - amount).toFixed(2));
+      if (asset.lastDepreciatedMonth === month) asset.lastDepreciatedMonth = shiftMonth(month, -1);
+    }
+    voidJournalEntry(j.id, 'Posted before its actual due date — corrected by depreciation catch-up fix');
+  });
+  audit('Accounting','Depreciation Correction','',`${premature.length} premature entries voided and rolled back`);
 }
 function shiftMonth(ym, delta) {
   const [y,m] = ym.split('-').map(Number);

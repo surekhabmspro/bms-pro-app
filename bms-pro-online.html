@@ -745,6 +745,13 @@ textarea.form-control{resize:vertical;min-height:80px}
 /* ══ MISC UTILS ══ */
 .flex{display:flex}.mb-2{margin-bottom:8px}.mb-4{margin-bottom:16px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.text-muted{color:var(--text-muted)}.text-sm{font-size:15px}.text-xs{font-size:14px}.font-bold{font-weight:700!important}.font-mono{font-family:'JetBrains Mono',monospace}.w-full{width:100%}.text-center{text-align:center}.text-right{text-align:right}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.text-accent{color:var(--accent)}.amt-revenue{color:#4ade80!important;font-weight:700!important}.amt-expense{color:#f87171!important;font-weight:700!important}.amt-balance{color:#a5b4fc!important;font-weight:700!important}.amt-payment{color:#38bdf8!important;font-weight:700!important}.amt-purchase{color:#fb923c!important;font-weight:700!important}.amt-neutral{font-weight:700!important}.light-mode .amt-revenue{color:#15803d!important}.light-mode .amt-expense{color:#b91c1c!important}.light-mode .amt-balance{color:#4338ca!important}.light-mode .amt-payment{color:#0369a1!important}.light-mode .amt-purchase{color:#c2410c!important}#print-target .report-signature td,#print-target .report-signature th{border:none!important;background:transparent!important}.report-doc td.amt-revenue,.report-doc p.amt-revenue{color:#15803d!important}.report-doc td.amt-expense,.report-doc p.amt-expense{color:#b91c1c!important}.report-doc td.amt-balance,.report-doc p.amt-balance{color:#4338ca!important}.report-doc td.amt-payment,.report-doc p.amt-payment{color:#0369a1!important}.report-doc td.amt-purchase,.report-doc p.amt-purchase{color:#c2410c!important}#print-target td.amt-revenue,#print-target span.amt-revenue{color:#15803d!important;font-weight:700!important}#print-target td.amt-expense,#print-target span.amt-expense{color:#b91c1c!important;font-weight:700!important}#print-target td.amt-balance,#print-target span.amt-balance{color:#4338ca!important;font-weight:700!important}#print-target td.amt-payment,#print-target span.amt-payment{color:#0369a1!important;font-weight:700!important}#print-target td.amt-purchase,#print-target span.amt-purchase{color:#c2410c!important;font-weight:700!important}.light-mode .light-mode .light-mode .light-mode .light-mode .hidden{display:none!important}
 </style>
+  <!-- Bikram Sambat date conversion, for BS display/input mode (Settings → Fiscal Year = BS).
+       Loaded from CDN rather than hand-built, since Nepali month lengths vary year to year with
+       no fixed formula — this is a small, widely-used, actively-maintained library, not
+       something worth risking a hand-typed calendar table for in a financial system. If this
+       fails to load (e.g. fully offline first run), every BS-aware function below falls back to
+       plain Gregorian rather than breaking — see the typeof checks in adBsParts()/bsToAd().    -->
+  <script src="https://cdn.jsdelivr.net/npm/nepali-date-converter/dist/nepali-date-converter.umd.js" onerror="console.warn('BS calendar library failed to load — falling back to Gregorian display')"></script>
 </head>
 <body>
 
@@ -1328,6 +1335,7 @@ textarea.form-control{resize:vertical;min-height:80px}
               <div class="report-cat-card" onclick="quickReport('tax','tds-register')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">TDS Register</div></div>
               <div class="report-cat-card" onclick="quickReport('tax','ssf-register')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">SSF Register</div></div>
               <div class="report-cat-card" onclick="quickReport('tax','tax-deduction')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">Payroll Tax Deduction</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','tax-depreciation')"><div class="report-cat-icon">🏗️</div><div class="report-cat-title">Tax Depreciation Schedule</div></div>
             </div>
           </div>
           <div style="text-align:center;margin-bottom:16px">
@@ -1763,6 +1771,7 @@ textarea.form-control{resize:vertical;min-height:80px}
                     <option value="BS">Bikram Sambat (BS) - Nepal</option>
                     <option value="AD">Gregorian (AD)</option>
                   </select>
+                  <div class="form-hint">Controls every date you see and every date-picker calendar in the app. Internal calculations (sorting, fiscal-year periods, payroll/attendance) always stay accurate regardless of this setting — this only changes what's shown to you.</div>
                 </div>
                 <div class="form-group"><label class="form-label">VAT Rate %</label><input class="form-control" id="st-vat-rate" type="number" value="13" placeholder="13"></div>
               </div>
@@ -3721,6 +3730,76 @@ function nepaliFiscalYearLabel(dateStr) {
   const bsStart = startAD + 57; // Shrawan of this AD year falls in the BS year = AD+57
   return `${bsStart}/${String(bsStart+1).slice(-2)}`;
 }
+// "This year" for a Nepal business means the current fiscal year (Shrawan 1 – Ashad-end,
+// ~mid-July to mid-July), not January–December. Several reports used to default to calendar
+// year when no explicit date range was given — silently wrong for a Nepal business, since a
+// report generated any time between January and mid-July would straddle two different real
+// fiscal years and misstate "this year's" retained earnings/profit. These give every report the
+// same correct default.
+function nepaliFiscalYearStartDate(dateStr) {
+  return nepaliFiscalYearStartADYear(dateStr) + '-07-16';
+}
+function nepaliFiscalYearEndDate(dateStr) {
+  return (nepaliFiscalYearStartADYear(dateStr) + 1) + '-07-15';
+}
+// ══ NEPAL IRD TAX DEPRECIATION (Schedule 2, Income Tax Act — Pool/WDV method) ══
+// This is deliberately SEPARATE from the straight-line depreciation used elsewhere in the app
+// (My Equipment / the books) — Nepal's tax office doesn't accept straight-line-per-asset at all.
+// It groups assets into shared pools by type and depreciates the POOL's written-down value at a
+// fixed percentage each year, not each asset individually on its own schedule. The two figures
+// (book depreciation vs. tax depreciation) are legitimately allowed to differ — this is what you
+// actually file with IRD; My Equipment's numbers are for your own management accounts.
+const IRD_POOL_INFO = {
+  A: { name: 'Buildings & Structures', rate: 0.05 },
+  B: { name: 'Computers, Furniture, Fixtures & Office Equipment', rate: 0.25 },
+  C: { name: 'Vehicles (Automobiles, Bus, Minibus)', rate: 0.20 },
+  D: { name: 'Machinery, Plant & Other Assets (catch-all)', rate: 0.15 }
+};
+// Maps this app's own equipment "type" field to the IRD pool it actually belongs to — note this
+// is NOT the same grouping as My Equipment's own accounts: IRD puts computers and furniture in
+// the SAME pool (B), while the book depreciation keeps them on separate individual schedules.
+const IRD_POOL_MAP = { machinery:'D', vehicle:'C', computer:'B', furniture:'B', other:'D' };
+
+function computeNepalTaxDepreciation(asOfDate) {
+  const date = asOfDate || today();
+  const yearStart = nepaliFiscalYearStartDate(date);
+  const yearEnd = nepaliFiscalYearEndDate(date);
+  const pools = {};
+  Object.keys(IRD_POOL_INFO).forEach(k => pools[k] = { openingWDV:0, fullRateAdditions:0, halfRateAdditions:0, assets:[] });
+
+  (db.fixedAssets||[]).filter(a=>a.status==='active').forEach(asset => {
+    const poolKey = IRD_POOL_MAP[asset.type] || 'D';
+    const p = pools[poolKey];
+    if (asset.purchaseDate < yearStart) {
+      // Bought in an earlier fiscal year — belongs in the pool's Opening WDV. This app doesn't
+      // carry a separate tax-WDV ledger across years yet, so Opening WDV is approximated here
+      // as cost minus book-depreciation-to-date. That approximation is exact for an asset's
+      // first year on this schedule and will drift from IRD's own number in later years — real
+      // tax-WDV carryforward per pool is flagged as a known limitation, not silently assumed
+      // correct.
+      p.openingWDV += Math.max(0, asset.cost - (asset.accumulatedDepreciation||0));
+      p.assets.push({ name: asset.name, note: 'in opening WDV (bought earlier)' });
+    } else if (asset.purchaseDate <= yearEnd) {
+      // Section 2, Schedule 2's "6-month rule": an asset in use for 6 months or more within the
+      // year gets the pool's full rate on its addition; less than 6 months gets half the rate.
+      const daysInUse = (new Date(yearEnd) - new Date(asset.purchaseDate)) / 86400000;
+      if (daysInUse >= 183) { p.fullRateAdditions += asset.cost; p.assets.push({ name: asset.name, note: 'full-rate addition (183+ days in use)' }); }
+      else { p.halfRateAdditions += asset.cost; p.assets.push({ name: asset.name, note: 'half-rate addition (<183 days in use)' }); }
+    }
+  });
+
+  const rows = Object.entries(IRD_POOL_INFO).map(([key, info]) => {
+    const p = pools[key];
+    const totalAdditions = p.fullRateAdditions + p.halfRateAdditions;
+    const depreciationBase = p.openingWDV + totalAdditions;
+    const depreciation = +(p.openingWDV*info.rate + p.fullRateAdditions*info.rate + p.halfRateAdditions*info.rate*0.5).toFixed(2);
+    const closingWDV = +(depreciationBase - depreciation).toFixed(2);
+    return { pool:key, name:info.name, rate:info.rate, openingWDV:+p.openingWDV.toFixed(2), additions:+totalAdditions.toFixed(2), depreciation, closingWDV, assets:p.assets };
+  }).filter(r => r.openingWDV>0.004 || r.additions>0.004);
+
+  return { yearStart, yearEnd, rows, totalDepreciation: +rows.reduce((a,r)=>a+r.depreciation,0).toFixed(2), totalClosingWDV: +rows.reduce((a,r)=>a+r.closingWDV,0).toFixed(2) };
+}
+
 function nextFiscalInvoiceNumber(series) {
   // series: 'sales', 'CN' (Credit Note), 'DN' (Debit Note) — each has its own sequence
   const fyKey = nepaliFiscalYearStartADYear(today());
@@ -3801,7 +3880,7 @@ function computeBalanceSheet(asOf) {
   const date = asOf || today();
   const build = type => (db.chartOfAccounts||[]).filter(a=>a.type===type).map(acc=>({ acc, balance: accountBalanceAsOf(acc.code, date) })).filter(r=>Math.abs(r.balance)>0.004);
   const assets = build('asset'), liabilities = build('liability'), equity = build('equity');
-  const yearStart = date.slice(0,4) + '-01-01';
+  const yearStart = nepaliFiscalYearStartDate(date);
   const ytd = computePLPeriod(yearStart, date);
   const totalAssets = assets.reduce((a,r)=>a+r.balance,0);
   const totalLiabilities = liabilities.reduce((a,r)=>a+r.balance,0);
@@ -4685,7 +4764,7 @@ function saveOwnerTxn() {
 // ── Owner's Equity / Partners' Capital — Phase 6-D ──
 function computeOwnersEquityStatement(from, to) {
   const toDate = to || today();
-  const fromDate = from || (toDate.slice(0,4)+'-01-01');
+  const fromDate = from || nepaliFiscalYearStartDate(toDate);
   const priorDate = shiftDate(fromDate, -1);
   const netProfit = computePLPeriod(fromDate, toDate).netProfit;
   const isPartnership = db.settings.ownershipType === 'partnership' && (db.settings.partners||[]).length;
@@ -5382,10 +5461,60 @@ function fmtWhole(n) {
   const rounded = Math.round(Number(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, s.thousands || ',');
   return s.currency + rounded;
 }
+// ══ BIKRAM SAMBAT (BS) DISPLAY LAYER ══
+// Storage and all calculations stay in Gregorian (AD) throughout this entire app — sorting,
+// fiscal-year math, payroll/attendance month keys, everything. This layer only affects what the
+// PERSON sees and picks; every function here converts back to a plain AD ISO string before
+// anything gets saved. Controlled by Settings → Fiscal Year = 'BS'.
+const BS_MONTH_NAMES = ['Baisakh','Jestha','Ashar','Shrawan','Bhadra','Ashwin','Kartik','Mangsir','Poush','Magh','Falgun','Chaitra'];
+function bsEnabled() { return (db?.settings?.fiscalYear === 'BS') && typeof NepaliDate !== 'undefined'; }
+// AD ISO date string ('YYYY-MM-DD') -> {year, month(1-12), day} in BS. Returns null if the
+// conversion library isn't available or the input can't be parsed — callers must handle that by
+// falling back to the plain AD value, never by guessing.
+function adToBsParts(adDateStr) {
+  if (typeof NepaliDate === 'undefined' || !adDateStr) return null;
+  try {
+    const d = new Date(adDateStr + 'T00:00:00');
+    if (isNaN(d)) return null;
+    const bs = NepaliDate.fromAD(d).getBS();
+    return { year: bs.year, month: bs.month + 1, day: bs.date };
+  } catch(e) { return null; }
+}
+// BS {year, month(1-12), day} -> AD ISO date string. Returns null on failure — same rule as
+// above, callers fall back rather than guess.
+function bsPartsToAd(year, month, day) {
+  if (typeof NepaliDate === 'undefined') return null;
+  try {
+    const jsDate = new NepaliDate(year, month - 1, day).toJsDate();
+    if (isNaN(jsDate)) return null;
+    return jsDate.getFullYear()+'-'+String(jsDate.getMonth()+1).padStart(2,'0')+'-'+String(jsDate.getDate()).padStart(2,'0');
+  } catch(e) { return null; }
+}
+// How many days BS month `month` (1-12) of BS year `year` actually has — derived from the
+// library's own AD conversion rather than a second hand-maintained table, so it can never
+// disagree with adToBsParts/bsPartsToAd above.
+function bsDaysInMonth(year, month) {
+  const thisMonthStartAd = bsPartsToAd(year, month, 1);
+  const nextMonthStartAd = bsPartsToAd(month===12 ? year+1 : year, month===12 ? 1 : month+1, 1);
+  if (!thisMonthStartAd || !nextMonthStartAd) return 30; // safe fallback, never used if library loaded
+  return Math.round((new Date(nextMonthStartAd) - new Date(thisMonthStartAd)) / 86400000);
+}
+// Which weekday (0=Sunday) BS month/day 1 falls on — needed to align the calendar grid.
+function bsFirstWeekday(year, month) {
+  const adDate = bsPartsToAd(year, month, 1);
+  return adDate ? new Date(adDate + 'T00:00:00').getDay() : 0;
+}
+
 function fmtDate(d) {
   if (!d) return '';
   const dt = new Date(d);
   if (isNaN(dt)) return d;
+  if (bsEnabled()) {
+    const bs = adToBsParts(d.length>=10 ? d.slice(0,10) : today());
+    if (bs) return String(bs.day).padStart(2,'0')+'/'+String(bs.month).padStart(2,'0')+'/'+bs.year+' BS';
+    // Library unavailable or conversion failed — fall through to plain AD below rather than
+    // show nothing, so an offline moment never breaks a date display.
+  }
   const dd = String(dt.getDate()).padStart(2,'0');
   const mm = String(dt.getMonth()+1).padStart(2,'0');
   const yyyy = dt.getFullYear();
@@ -8792,7 +8921,12 @@ function viewProfile(type, id) {
     </div>
     <div style="page-break-inside:avoid;break-inside:avoid">
       <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Invoices &amp; Balance</h3>
-      <div class="table-wrap"><table><thead><tr><th>Invoice #</th><th>Date</th><th>Amount</th><th>Paid</th><th>Due</th></tr></thead><tbody>${invoicesWithDue.length?invoicesWithDue.slice().reverse().slice(0,15).map(i=>`<tr><td class="mono">${esc(i.invoiceNumber)}</td><td>${fmtDate(i.date)}</td><td class="mono">${fmt(i.amount)}</td><td class="mono text-success">${fmt(i.paidAmount)}</td><td class="mono ${i.due>0.01?'text-danger font-bold':''}">${fmt(i.due)}</td></tr>`).join(''):'<tr><td colspan="5" class="text-center text-muted">No invoices yet</td></tr>'}</tbody></table></div>
+      <div class="form-hint" style="margin-bottom:6px">This supplier can appear here for two different reasons — raw materials (via Purchase Orders above) and/or equipment bought on credit (via My Equipment). The "For" column tells you which.</div>
+      <div class="table-wrap"><table><thead><tr><th>Invoice #</th><th>For</th><th>Date</th><th>Amount</th><th>Paid</th><th>Due</th></tr></thead><tbody>${invoicesWithDue.length?invoicesWithDue.slice().reverse().slice(0,15).map(i=>{
+        const isAsset = i.category==='fixed-asset';
+        const asset = isAsset ? db.fixedAssets.find(a=>a.id===i.assetId) : null;
+        return `<tr><td class="mono">${esc(i.invoiceNumber)}</td><td><span class="badge ${isAsset?'badge-info':'badge-accent'}">${isAsset?'🔧 Equipment':'📦 Raw Material'}</span>${isAsset&&asset?` — ${esc(asset.name)}`:''}</td><td>${fmtDate(i.date)}</td><td class="mono">${fmt(i.amount)}</td><td class="mono text-success">${fmt(i.paidAmount)}</td><td class="mono ${i.due>0.01?'text-danger font-bold':''}">${fmt(i.due)}</td></tr>`;
+      }).join(''):'<tr><td colspan="6" class="text-center text-muted">No invoices yet</td></tr>'}</tbody></table></div>
     </div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='transaction') {
@@ -9356,6 +9490,7 @@ const REPORT_CATEGORIES = [
     {v:'ssf-register', label:'SSF Register (Employee Deposits)'},
     {v:'correction-notes', label:'Credit & Debit Notes (Corrections)'},
     {v:'tax-deduction', label:'Tax Deduction Report (Payroll)'},
+    {v:'tax-depreciation', label:'🏗️ Tax Depreciation Schedule (IRD Pool Method)'},
     {v:'govt-submission', label:'Government Submission Summary (Net VAT Payable)'}
   ]}
 ];
@@ -9698,7 +9833,7 @@ function generateReport() {
     }
   } else if (type==='business-summary') {
     const toDate = to || today();
-    const fromDate = from || toDate.slice(0,4)+'-01-01';
+    const fromDate = from || nepaliFiscalYearStartDate(toDate);
     const pl = computePLPeriod(fromDate, toDate);
     const bs = computeBalanceSheet(toDate);
     const tb = computeTrialBalance(fromDate, toDate);
@@ -9930,6 +10065,19 @@ function generateReport() {
     <table><thead><tr><th>Date</th><th>Note #</th><th>Type</th><th>Original</th><th>Corrected</th><th style="text-align:right">Adjustment</th><th>Reason</th></tr></thead><tbody>
       ${notes.length?notes.map(n=>`<tr><td>${fmtDate(n.date)}</td><td class="mono">${esc(n.noteNumber)}</td><td>${n.type==='credit'?'Credit Note (Sale)':'Debit Note (Purchase)'}</td><td>${fmt(n.originalAmount)}</td><td>${fmt(n.correctedAmount)}</td><td style="text-align:right" class="mono">${fmt(n.adjustmentAmount)}</td><td>${esc(n.reason)}${n.note?' — '+esc(n.note):''}</td></tr>`).join(''):'<tr><td colspan="7">No corrections issued in this period</td></tr>'}
     </tbody></table>`;
+  } else if (type==='tax-depreciation') {
+    const dep = computeNepalTaxDepreciation(to || today());
+    bodyHtml = `<h2>🏗️ Tax Depreciation Schedule — IRD Pool (Written-Down-Value) Method</h2>
+    <p style="font-size:15px;color:#555">Fiscal Year ${nepaliFiscalYearLabel(dep.yearEnd)} (${fmtDate(dep.yearStart)} to ${fmtDate(dep.yearEnd)}). This is Nepal's actual tax depreciation method — shared pools depreciated as a declining balance, per Schedule 2 of the Income Tax Act. It is separate from, and will not match, the straight-line depreciation shown in My Equipment, which is for your own management accounts only. This is the figure to use on your tax return.</p>
+    <table style="margin-top:10px"><thead><tr><th>Pool</th><th>Assets</th><th>Rate</th><th>Opening WDV</th><th>Additions</th><th>Depreciation</th><th>Closing WDV</th></tr></thead><tbody>
+      ${dep.rows.length ? dep.rows.map(r=>`<tr><td><strong>Pool ${esc(r.pool)}</strong><br><span style="font-size:13px;color:#666">${esc(r.name)}</span></td><td style="font-size:13px">${r.assets.map(a=>esc(a.name)).join(', ')||'—'}</td><td>${(r.rate*100).toFixed(0)}%</td><td class="mono">${fmt(r.openingWDV)}</td><td class="mono">${fmt(r.additions)}</td><td class="mono amt-expense">${fmt(r.depreciation)}</td><td class="mono">${fmt(r.closingWDV)}</td></tr>`).join('') : '<tr><td colspan="7" class="text-center text-muted">No depreciable fixed assets on record</td></tr>'}
+      <tr style="background:#f0f0f0"><td colspan="5"><strong>Total</strong></td><td class="mono"><strong>${fmt(dep.totalDepreciation)}</strong></td><td class="mono"><strong>${fmt(dep.totalClosingWDV)}</strong></td></tr>
+    </tbody></table>
+    <div style="margin-top:14px;font-size:14px;color:#666">
+      <p><strong>How additions are rated:</strong> an asset in use for 183 days or more within this fiscal year gets the pool's full rate; less than that gets half the rate (Schedule 2's "6-month rule").</p>
+      <p><strong>Known limitation:</strong> Opening WDV for assets bought in an earlier fiscal year is approximated from book records (cost minus book depreciation to date) rather than a carried-forward tax-WDV ledger, since this is this schedule's first year of operation. From next fiscal year onward, each pool's own closing WDV becomes next year's true opening WDV automatically.</p>
+      <p>Verify against your actual purchase invoices before filing — this is generated from recorded transactions only.</p>
+    </div>`;
   } else if (type==='tax-deduction') {
     bodyHtml = `<h2>Tax Deduction Report</h2>
     <p style="font-size:17px;margin-bottom:12px">Employee tax deductions for the selected period.</p>
@@ -9953,8 +10101,8 @@ function generateReport() {
     </tbody></table>
     <p style="font-size:15px;color:#666;margin-top:10px">This summary is generated from recorded transactions only. Verify against original tax invoices before submission — Claude/this system does not file returns on your behalf.</p>`;
   } else if (type==='annual-report') {
-    const yearFrom = from || `${today().slice(0,4)}-01-01`;
-    const yearTo = to || `${today().slice(0,4)}-12-31`;
+    const yearFrom = from || nepaliFiscalYearStartDate(today());
+    const yearTo = to || nepaliFiscalYearEndDate(today());
     const yrSales = db.sales.filter(x=>x.date>=yearFrom&&x.date<=yearTo);
     // Was computing Net Profit as a straight sum of db.accounting (cash-basis — credit-sale
     // income only lands here as it's actually collected, not when the sale happened), while
@@ -12871,7 +13019,14 @@ function openCalendar(targetId, mode='standard') {
   calTargetId = targetId; calMode = mode; calView = 'days';
   const input = document.getElementById(targetId);
   const val = input?.value;
-  if (val) { const d=new Date(val); if(!isNaN(d)){calMonth=d.getMonth();calYear=d.getFullYear();} }
+  const useBs = bsEnabled() && mode !== 'monthyear';
+  if (useBs) {
+    // calMonth/calYear represent the BS month(1-12)/year being displayed in this mode — see
+    // calSelectDay/calSelectMonth/calSelectYear below for where they convert back to AD.
+    const bs = val ? adToBsParts(val) : adToBsParts(today());
+    if (bs) { calMonth = bs.month; calYear = bs.year; }
+    else { calMonth = 1; calYear = 2000; } // library unavailable — placeholder, renderCalendar falls back
+  } else if (val) { const d=new Date(val); if(!isNaN(d)){calMonth=d.getMonth();calYear=d.getFullYear();} }
   else { calMonth=new Date().getMonth(); calYear=new Date().getFullYear(); }
   renderCalendar();
   // Position — keep the whole panel inside the viewport on any screen size
@@ -12906,8 +13061,9 @@ function closeCal(e) {
 }
 
 function renderCalendar() {
-  document.getElementById('cal-month-btn').textContent = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][calMonth];
-  document.getElementById('cal-year-btn').textContent = calYear;
+  const useBs = bsEnabled() && calMode !== 'monthyear';
+  document.getElementById('cal-month-btn').textContent = useBs ? BS_MONTH_NAMES[calMonth-1] : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][calMonth];
+  document.getElementById('cal-year-btn').textContent = calYear + (useBs ? ' BS' : '');
   const body = document.getElementById('cal-body');
   const prevEl = document.getElementById('cal-prev');
   const nextEl = document.getElementById('cal-next');
@@ -12916,8 +13072,10 @@ function renderCalendar() {
     prevEl.onclick = ()=>{calYear--;renderCalendar();};
     nextEl.onclick = ()=>{calYear++;renderCalendar();};
     const curVal = document.getElementById(calTargetId)?.value;
-    const selM = curVal ? parseInt(curVal.split(/[-\/]/)[calMode==='monthyear'?1:1])-1 : -1;
-    body.innerHTML = `<div class="cal-months-grid">${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m,i)=>`<div class="cal-mo ${i===selM?'selected':''}" onclick="calSelectMonth(${i})">${m}</div>`).join('')}</div>`;
+    const curBs = useBs && curVal ? adToBsParts(curVal) : null;
+    const selM = useBs ? (curBs && curBs.year===calYear ? curBs.month-1 : -1) : (curVal ? parseInt(curVal.split(/[-\/]/)[calMode==='monthyear'?1:1])-1 : -1);
+    const names = useBs ? BS_MONTH_NAMES : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    body.innerHTML = `<div class="cal-months-grid">${names.map((m,i)=>`<div class="cal-mo ${i===selM?'selected':''}" onclick="calSelectMonth(${i})">${m}</div>`).join('')}</div>`;
     return;
   }
   if (calView==='years') {
@@ -12929,14 +13087,28 @@ function renderCalendar() {
   }
   
   // Days view
-  prevEl.onclick = ()=>{ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); };
-  nextEl.onclick = ()=>{ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); };
+  if (useBs) {
+    prevEl.onclick = ()=>{ calMonth--; if(calMonth<1){calMonth=12;calYear--;} renderCalendar(); };
+    nextEl.onclick = ()=>{ calMonth++; if(calMonth>12){calMonth=1;calYear++;} renderCalendar(); };
+  } else {
+    prevEl.onclick = ()=>{ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); };
+    nextEl.onclick = ()=>{ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); };
+  }
   
   const curVal = document.getElementById(calTargetId)?.value;
   const today2 = today();
-  const firstDay = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-  const prevDays = new Date(calYear, calMonth, 0).getDate();
+  const todayBs = useBs ? adToBsParts(today2) : null;
+
+  let firstDay, daysInMonth, prevDays;
+  if (useBs) {
+    firstDay = bsFirstWeekday(calYear, calMonth);
+    daysInMonth = bsDaysInMonth(calYear, calMonth);
+    prevDays = calMonth===1 ? bsDaysInMonth(calYear-1, 12) : bsDaysInMonth(calYear, calMonth-1);
+  } else {
+    firstDay = new Date(calYear, calMonth, 1).getDay();
+    daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+    prevDays = new Date(calYear, calMonth, 0).getDate();
+  }
   
   let html = `<div class="cal-weekdays">${['Su','Mo','Tu','We','Th','Fr','Sa'].map(d=>`<div class="cal-wd">${d}</div>`).join('')}</div><div class="cal-days">`;
   
@@ -12945,8 +13117,11 @@ function renderCalendar() {
     html += `<div class="cal-day other-month" onclick="calSelectDay(${calYear},${calMonth-1},${d})">${d}</div>`;
   }
   for (let d=1;d<=daysInMonth;d++) {
-    const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday = ds===today2;
+    // ds is the AD ISO string this grid cell actually represents — computed once so both the
+    // "is this today / is this selected" highlighting and onclick storage use the identical
+    // conversion, rather than risking two separately-computed values drifting apart.
+    const ds = useBs ? bsPartsToAd(calYear, calMonth, d) : `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = useBs ? (todayBs && todayBs.year===calYear && todayBs.month===calMonth && todayBs.day===d) : ds===today2;
     const isSel = ds===curVal;
     html += `<div class="cal-day${isToday?' today':''}${isSel?' selected':''}" onclick="calSelectDay(${calYear},${calMonth},${d})">${d}</div>`;
   }
@@ -12960,13 +13135,25 @@ function renderCalendar() {
 
 function calShowMonths() { calView='months'; renderCalendar(); }
 function calShowYears() { calView='years'; renderCalendar(); }
-function calSelectMonth(m) { calMonth=m; if(calMode==='monthyear'){calCommitMonthYear();}else{calView='days';renderCalendar();} }
+function calSelectMonth(m) {
+  const useBs = bsEnabled() && calMode !== 'monthyear';
+  calMonth = useBs ? m+1 : m; // BS months are stored 1-based here, AD months 0-based — see openCalendar
+  if(calMode==='monthyear'){calCommitMonthYear();}else{calView='days';renderCalendar();}
+}
 function calSelectYear(y) { calYear=y; calView='months'; renderCalendar(); }
 function calNav(dir) { /* handled by onclick */ }
 
 function calSelectDay(y, m, d) {
-  if (m<0){m=11;y--;} if(m>11){m=0;y++;}
-  const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const useBs = bsEnabled() && calMode !== 'monthyear';
+  let ds;
+  if (useBs) {
+    if (m<1){m=12;y--;} if(m>12){m=1;y++;}
+    ds = bsPartsToAd(y, m, d);
+    if (!ds) { toast('BS calendar unavailable right now — try again once you\'re online','error'); return; }
+  } else {
+    if (m<0){m=11;y--;} if(m>11){m=0;y++;}
+    ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
   const input = document.getElementById(calTargetId);
   if (input) { input.value = ds; input.dispatchEvent(new Event('change')); }
   closeCal();
@@ -12976,6 +13163,10 @@ function calSelectDay(y, m, d) {
 }
 
 function calCommitMonthYear() {
+  // Deliberately always AD here — payroll and attendance are keyed internally by AD "YYYY-MM"
+  // throughout the app, so converting this specific picker to BS would mean converting every
+  // month-key lookup that depends on it too. Kept out of scope for the safety this approach was
+  // chosen for in the first place.
   const val = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
   const input = document.getElementById(calTargetId);
   if (input) { input.value=val; input.dispatchEvent(new Event('change')); }

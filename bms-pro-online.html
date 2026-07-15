@@ -1275,7 +1275,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         </div>
         <div id="hr-payroll" style="display:none">
           <div class="filter-bar">
-            <input class="form-control" id="pay-month" placeholder="Month (YYYY-MM)" onfocus="openCalendar('pay-month','monthyear')" style="width:160px">
+            <input class="form-control" id="pay-month" placeholder="Select month" onfocus="openCalendar('pay-month','monthyear')" readonly style="width:160px">
             <button class="btn btn-primary btn-sm" onclick="renderPayrollTable()">📋 Load</button>
             <button class="btn btn-success btn-sm" onclick="processPayroll()">💵 Process Payroll</button>
             <button class="btn btn-secondary btn-sm" onclick="openPayrollDuplicateCheck()">🔍 Check for Duplicates</button>
@@ -1286,7 +1286,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div id="hr-salary-history" style="display:none">
           <div class="filter-bar">
             <input class="form-control" id="sh-emp-filter" placeholder="Filter by employee..." oninput="renderSalaryHistory()">
-            <input class="form-control" id="sh-month-filter" placeholder="Month (YYYY-MM)" style="width:150px" oninput="renderSalaryHistory()">
+            <input class="form-control" id="sh-month-filter" placeholder="e.g. BS-2083-04" style="width:150px" oninput="renderSalaryHistory()">
           </div>
           <div id="sh-ssf-summary" style="margin-bottom:12px"></div>
           <div class="table-wrap"><table><thead><tr><th>Month</th><th>Employee</th><th>Basic</th><th>Allowances</th><th>Deductions</th><th>Net Pay</th><th>Status</th><th>Actions</th></tr></thead><tbody id="sh-tbody"></tbody></table></div>
@@ -2672,7 +2672,7 @@ textarea.form-control{resize:vertical;min-height:80px}
     <div class="modal-body">
       <div id="credit-sale-info" style="font-size:17px;margin-bottom:14px;padding:10px;background:var(--elevated);border-radius:8px"></div>
       <div class="form-group"><label class="form-label">Amount Paid Now</label><input class="form-control" id="credit-paid-now" type="number" min="0" value="0" placeholder="0 = Full Credit"></div>
-      <div class="form-group"><label class="form-label">Due Date</label><input class="form-control" id="credit-due-date" type="date"></div>
+      <div class="form-group"><label class="form-label">Due Date</label><input class="form-control" id="credit-due-date" onfocus="openCalendar('credit-due-date','standard')" readonly></div>
       <div class="form-group"><label class="form-label">Notes</label><input class="form-control" id="credit-notes" placeholder="Optional notes"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('credit-sale-overlay')">Cancel</button><button class="btn btn-primary" onclick="completeCreditSale()">✅ Confirm Credit Sale</button></div>
@@ -8126,12 +8126,14 @@ function computeAttendanceDeductionDays(empId, month) {
   const unpaidLeaveDates = new Set();
   (db.leaveRecords||[]).filter(l=>l.empId===empId && l.status==='approved' && l.type==='Unpaid Leave').forEach(l=>{
     if (!l.fromDate || !l.toDate) return;
-    let d = new Date(l.fromDate); const end = new Date(l.toDate);
-    while (d <= end) { unpaidLeaveDates.add(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+    let d = new Date(l.fromDate + 'T00:00:00'); const end = new Date(l.toDate + 'T00:00:00');
+    while (d <= end) { unpaidLeaveDates.add(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')); d.setDate(d.getDate()+1); }
   });
   let days = 0;
+  // No date-prefix filter needed here anymore — every entry under db.attendance[month][empId]
+  // already belongs to this exact period month by construction (see renderAttendance/
+  // periodMonthAdDates), whether that period is a real BS month or an AD one.
   Object.entries(empAtt).forEach(([dateStr, status]) => {
-    if (!dateStr.startsWith(month)) return;
     if (status === 'A') days += 1;
     else if (status === 'HD') days += 0.5;
     else if (status === 'L' && unpaidLeaveDates.has(dateStr)) days += 1;
@@ -8141,12 +8143,14 @@ function computeAttendanceDeductionDays(empId, month) {
 
 function computeAttendanceDeductionAmount(emp, month) {
   const days = computeAttendanceDeductionDays(emp.id, month);
-  const dailyRate = (emp.salary||0) / daysInMonth(month);
+  // Real day-count for this specific period month (28-32 for a BS month, 28-31 for AD) — not a
+  // fixed AD assumption, so a daily rate is fair regardless of which calendar is active.
+  const dailyRate = (emp.salary||0) / periodMonthAdDates(month).length;
   return { days, amount: +(dailyRate * days).toFixed(2) };
 }
 
 function renderPayrollTable() {
-  const month = document.getElementById('pay-month')?.value || today().slice(0,7);
+  const month = document.getElementById('pay-month')?.value || currentPeriodMonthKey();
   const employees = db.employees.filter(e=>e.status==='active');
   const sc = db.settings.salaryComponents || { earnings:['Basic Salary','Bonus'], deductions:['Tax','Advance'] };
   if (!employees.length) { document.getElementById('payroll-table-wrap').innerHTML='<div class="empty"><div class="empty-icon">💵</div><div class="empty-title">No active employees</div></div>'; return; }
@@ -8181,7 +8185,7 @@ function renderPayrollTable() {
 function updateNetPayRow(empId) {
   const emp = db.employees.find(e=>e.id===empId);
   const sc = db.settings.salaryComponents || { earnings:['Basic Salary'], deductions:[] };
-  const month = document.getElementById('pay-month')?.value || today().slice(0,7);
+  const month = document.getElementById('pay-month')?.value || currentPeriodMonthKey();
   let extra = 0, deduct = 0;
   sc.earnings.slice(1).forEach(earn => { extra += parseFloat(document.getElementById(`earn-${empId}-${earn.replace(/\s/g,'_')}`)?.value)||0; });
   sc.deductions.forEach(ded => { deduct += parseFloat(document.getElementById(`ded-${empId}-${ded.replace(/\s/g,'_')}`)?.value)||0; });
@@ -8195,7 +8199,7 @@ function processPayroll() {
   // nothing ever actually checked it — anyone who could see the HR module (just "View HR") could
   // click this button and create real salary obligations and ledger postings. Enforce it here.
   if (!hasPermission('Process Payroll')) { toast('You don\'t have permission to process payroll','error'); return; }
-  const month = document.getElementById('pay-month')?.value || today().slice(0,7);
+  const month = document.getElementById('pay-month')?.value || currentPeriodMonthKey();
   if (!month) { toast('Select a month','warning'); return; }
   const employees = db.employees.filter(e=>e.status==='active');
   const sc = db.settings.salaryComponents || { earnings:['Basic Salary'], deductions:[] };
@@ -8220,7 +8224,7 @@ function processPayroll() {
   });
   const totalPay = entries.reduce((a,x)=>a+x.netPay,0);
   const totalSSF = entries.reduce((a,x)=>a+x.employeeSSF+x.employerSSF,0);
-  confirm(`Approve payroll for ${month}?\nNet to employees: ${fmt(totalPay)}\nSSF (employee+employer): ${fmt(totalSSF)}\n\nThis records what's owed — you'll mark each employee's salary (and the SSF deposit) as paid separately, whenever you actually pay them.`, ()=>{
+  confirm(`Approve payroll for ${periodMonthLabel(month)}?\nNet to employees: ${fmt(totalPay)}\nSSF (employee+employer): ${fmt(totalSSF)}\n\nThis records what's owed — you'll mark each employee's salary (and the SSF deposit) as paid separately, whenever you actually pay them.`, ()=>{
     // Preserve any "already paid" status if this month is being reprocessed (e.g. correcting an amount)
     const prevPh = db.payrollHistory.find(ph=>ph.month===month);
     if (prevPh) {
@@ -8345,14 +8349,14 @@ function renderSalaryHistory() {
     ssfPanel.innerHTML = monthsWithSSF.length ? monthsWithSSF.map(m=>{
       const ph = db.payrollHistory.find(p=>p.month===m);
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-alt,#f7f7f9);border-radius:6px;margin-bottom:6px">
-        <span>SSF for ${esc(m)}: <strong>${fmt(ph.totalSSF||0)}</strong> ${ph.ssfPaid?`<span class="badge badge-success">Deposited ${fmtDate(ph.ssfPaidDate)}</span>`:`<span class="badge badge-warning">Pending</span>`}</span>
+        <span>SSF for ${esc(periodMonthLabel(m))}: <strong>${fmt(ph.totalSSF||0)}</strong> ${ph.ssfPaid?`<span class="badge badge-success">Deposited ${fmtDate(ph.ssfPaidDate)}</span>`:`<span class="badge badge-warning">Pending</span>`}</span>
         ${ph.ssfPaid?'':`<button class="btn btn-xs btn-primary" onclick="openMarkSSFDeposited('${m}')">Mark Deposited</button>`}
       </div>`;
     }).join('') : '';
   }
   tbody.innerHTML = all.length ? all.map(e=>`
     <tr>
-      <td class="mono">${esc(e.month)}</td><td>${esc(e.empName)}</td>
+      <td class="mono">${esc(periodMonthLabel(e.month))}</td><td>${esc(e.empName)}</td>
       <td class="mono amt-neutral">${fmt(e.salary)}</td>
       <td class="mono text-success">+${fmt(e.totalEarnings||0)}</td>
       <td class="mono text-danger">-${fmt(e.totalDeductions||0)}${e.employeeSSF?` <span style="font-size:11px;color:#999">(incl. SSF ${fmt(e.employeeSSF)})</span>`:''}</td>
@@ -8424,20 +8428,76 @@ function printPaySlip() {
 }
 
 /* ══ ATTENDANCE SYSTEM (manual + biometric) ══ */
+// ══ ATTENDANCE / PAYROLL PERIOD MONTHS ══
+// A BS month and an AD month don't line up — Shrawan runs roughly mid-July to mid-August, not
+// matching any single AD calendar month. Attendance and Payroll need to group days by whichever
+// calendar the business actually operates on, not silently keep using AD boundaries underneath
+// a BS-relabeled picker. These generate a "period month key" that's genuinely BS-bounded when BS
+// mode is on (prefixed 'BS-' to keep it unambiguous from a plain AD "YYYY-MM"), and a normal AD
+// month otherwise — every attendance/payroll function below works off this key.
+function periodMonthKeyForAdDate(adDateStr) {
+  if (bsEnabled()) {
+    const bs = adToBsParts(adDateStr);
+    if (bs) return 'BS-' + bs.year + '-' + String(bs.month).padStart(2,'0');
+  }
+  return adDateStr.slice(0,7);
+}
+function periodMonthAdDates(monthKey) {
+  if (monthKey.startsWith('BS-')) {
+    const [, yStr, mStr] = monthKey.split('-');
+    const y = parseInt(yStr), m = parseInt(mStr);
+    const n = bsDaysInMonth(y, m);
+    const dates = [];
+    for (let d=1; d<=n; d++) { const ad = bsPartsToAd(y,m,d); if (ad) dates.push(ad); }
+    return dates;
+  }
+  const [y,m] = monthKey.split('-').map(Number);
+  const n = new Date(y, m, 0).getDate();
+  const dates = [];
+  for (let d=1; d<=n; d++) dates.push(`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+  return dates;
+}
+function shiftPeriodMonth(monthKey, delta) {
+  if (monthKey.startsWith('BS-')) {
+    const [, yStr, mStr] = monthKey.split('-');
+    let y = parseInt(yStr), m = parseInt(mStr) + delta;
+    while (m > 12) { m -= 12; y++; }
+    while (m < 1) { m += 12; y--; }
+    return 'BS-' + y + '-' + String(m).padStart(2,'0');
+  }
+  return shiftMonth(monthKey, delta);
+}
+// Whether a period-month key (BS or AD) overlaps a given AD date range — string-comparing
+// "BS-2083-04" against a plain AD "2026-07" range boundary is meaningless, so this checks the
+// period's own real first/last AD dates instead.
+function periodMonthOverlapsRange(monthKey, from, to) {
+  const dates = periodMonthAdDates(monthKey);
+  if (!dates.length) return false;
+  const first = dates[0], last = dates[dates.length-1];
+  return (!from || last >= from) && (!to || first <= to);
+}
+
+function currentPeriodMonthKey() { return periodMonthKeyForAdDate(today()); }
+function periodMonthLabel(monthKey) {
+  if (monthKey.startsWith('BS-')) {
+    const [, yStr, mStr] = monthKey.split('-');
+    return BS_MONTH_NAMES[parseInt(mStr,10)-1] + ' ' + yStr;
+  }
+  const [y,m] = monthKey.split('-').map(Number);
+  return ['January','February','March','April','May','June','July','August','September','October','November','December'][m-1] + ' ' + y;
+}
+
 function initAttendanceMonth() {
   const monthSel = document.getElementById('att-month');
   const empSel = document.getElementById('att-emp');
   if (!monthSel || !empSel) return;
-  // Populate month dropdown: current month + previous 11 months
+  // Populate month dropdown: current period-month + previous 11 — genuinely BS-bounded months
+  // when BS mode is on (Shrawan, Bhadra, ...), not AD calendar months wearing a BS label.
   const months = [];
-  const now2 = new Date();
-  for (let i=0;i<12;i++) {
-    const d = new Date(now2.getFullYear(), now2.getMonth()-i, 1);
-    const ym = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-    months.push(ym);
-  }
+  let cursor = currentPeriodMonthKey();
+  for (let i=0;i<12;i++) { months.push(cursor); cursor = shiftPeriodMonth(cursor, -1); }
   const curSel = monthSel.value || months[0];
-  monthSel.innerHTML = months.map(m=>`<option value="${m}" ${m===curSel?'selected':''}>${m}</option>`).join('');
+  monthSel.innerHTML = months.map(m=>`<option value="${m}" ${m===curSel?'selected':''}>${periodMonthLabel(m)}</option>`).join('');
   // Populate employee dropdown — ALL active employees (fixes "All Employees not showing" bug)
   const curEmp = empSel.value;
   empSel.innerHTML = '<option value="">All Employees</option>' + db.employees.filter(e=>e.status==='active').map(e=>`<option value="${e.id}" ${curEmp===e.id?'selected':''}>${esc(e.name)}</option>`).join('');
@@ -8465,7 +8525,7 @@ function daysInMonth(ym) {
 }
 
 function renderAttendance() {
-  const month = document.getElementById('att-month')?.value || today().slice(0,7);
+  const month = document.getElementById('att-month')?.value || currentPeriodMonthKey();
   const empFilter = document.getElementById('att-emp')?.value || '';
   // Capture current scroll position BEFORE the grid is rebuilt — innerHTML below replaces the
   // .table-wrap entirely, which would otherwise reset horizontal scroll back to Day 1 every time
@@ -8476,7 +8536,11 @@ function renderAttendance() {
   attLastRenderedMonth = month;
 
   const employees = db.employees.filter(e => e.status==='active' && (!empFilter || e.id===empFilter));
-  const numDays = daysInMonth(month);
+  // The real AD calendar dates that make up this period-month — for a BS month this spans two
+  // AD months, which is exactly the point: attendance is grouped by the calendar the business
+  // actually runs on, not by whichever AD month a naive "day 1..31" grid would assume.
+  const periodDates = periodMonthAdDates(month);
+  const numDays = periodDates.length;
   if (!db.attendance[month]) db.attendance[month] = {};
 
   if (!employees.length) {
@@ -8484,12 +8548,10 @@ function renderAttendance() {
     return;
   }
 
-  const dayHeaders = Array.from({length:numDays},(_,i)=>i+1).map(d=>`<th id="att-day-${d}" style="min-width:28px;text-align:center;font-size:13px">${d}</th>`).join('');
+  const dayHeaders = periodDates.map((d,i)=>`<th id="att-day-${i+1}" style="min-width:28px;text-align:center;font-size:13px">${i+1}</th>`).join('');
   const rows = employees.map(e=>{
     const empAtt = db.attendance[month][e.id] || {};
-    const cells = Array.from({length:numDays},(_,i)=>{
-      const day = String(i+1).padStart(2,'0');
-      const dateKey = `${month}-${day}`;
+    const cells = periodDates.map(dateKey=>{
       const status = empAtt[dateKey] || '';
       const colorMap = { P:'var(--success)', A:'var(--danger)', L:'var(--warning)', H:'var(--text-dim)', HD:'#f59e0b' };
       return `<td style="text-align:center;padding:2px"><button onclick="cycleAttendance('${month}','${e.id}','${dateKey}')" style="width:24px;height:24px;border-radius:4px;border:1px solid var(--border);background:${status?colorMap[status]:'var(--elevated)'};color:${status?'#fff':'var(--text-dim)'};font-size:13px;font-weight:700;cursor:pointer">${status||'·'}</button></td>`;
@@ -8509,9 +8571,9 @@ function renderAttendance() {
   const wrap = document.querySelector('#att-matrix .table-wrap');
   if (wrap) {
     if (isFreshMonth) {
-      if (month === today().slice(0,7)) {
-        const todayDay = parseInt(today().slice(8,10), 10);
-        const col = document.getElementById('att-day-'+todayDay);
+      const todayIdx = periodDates.indexOf(today());
+      if (todayIdx >= 0) {
+        const col = document.getElementById('att-day-'+(todayIdx+1));
         if (col) {
           const wrapRect = wrap.getBoundingClientRect();
           const colRect = col.getBoundingClientRect();
@@ -8541,7 +8603,7 @@ function cycleAttendance(month, empId, dateKey) {
 }
 
 function bulkMarkAttendance(status) {
-  const month = today().slice(0,7);
+  const month = currentPeriodMonthKey();
   const dateKey = today();
   const empFilter = document.getElementById('att-emp')?.value || '';
   const employees = db.employees.filter(e => e.status==='active' && (!empFilter || e.id===empFilter));
@@ -8571,7 +8633,7 @@ function saveAttendanceCorrection() {
   const status = document.getElementById('attcorr-status').value;
   const reason = document.getElementById('attcorr-reason').value.trim();
   if (!empId || !date) { toast('Select employee and date','error'); return; }
-  const month = date.slice(0,7);
+  const month = periodMonthKeyForAdDate(date);
   if (!db.attendance[month]) db.attendance[month] = {};
   if (!db.attendance[month][empId]) db.attendance[month][empId] = {};
   const oldVal = db.attendance[month][empId][date] || '(blank)';
@@ -8589,7 +8651,7 @@ function saveAttendanceCorrection() {
 function biometricCheckIn(empId) {
   const emp = db.employees.find(e=>e.id===empId);
   if (!emp) { console.warn('Biometric check-in: unknown employee', empId); return false; }
-  const month = today().slice(0,7);
+  const month = currentPeriodMonthKey();
   if (!db.attendance[month]) db.attendance[month] = {};
   if (!db.attendance[month][empId]) db.attendance[month][empId] = {};
   db.attendance[month][empId][today()] = 'P';
@@ -8609,7 +8671,7 @@ function biometricCheckInUI() {
     entry.textContent = `✅ ${emp.name} checked in at ${new Date().toLocaleTimeString()}`;
     log.prepend(entry);
   }
-  if (ok) { toast(`${emp.name} marked present via biometric`,'success'); if(document.getElementById('att-month').value===today().slice(0,7)) renderAttendance(); }
+  if (ok) { toast(`${emp.name} marked present via biometric`,'success'); if(document.getElementById('att-month').value===currentPeriodMonthKey()) renderAttendance(); }
 }
 
 /* ══ LEAVE MANAGEMENT ══ */
@@ -8687,16 +8749,15 @@ function setLeaveStatus(id, status) {
   const l = db.leaveRecords.find(x=>x.id===id);
   if (!l) return;
   l.status = status;
-  // If approved, mark attendance as Leave for the date range
+  // If approved, mark attendance as Leave for the date range — bucketed by the same real period
+  // month (BS or AD, whichever is active) that the attendance grid itself uses, not a raw AD
+  // month slice. A leave range spanning a period-month boundary correctly splits across both.
   if (status === 'approved') {
-    const month = l.fromDate.slice(0,7);
-    if (!db.attendance[month]) db.attendance[month] = {};
-    if (!db.attendance[month][l.empId]) db.attendance[month][l.empId] = {};
-    let d = new Date(l.fromDate);
-    const end = new Date(l.toDate);
+    let d = new Date(l.fromDate + 'T00:00:00');
+    const end = new Date(l.toDate + 'T00:00:00');
     while (d <= end) {
-      const dateStr = d.toISOString().slice(0,10);
-      const m = dateStr.slice(0,7);
+      const dateStr = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      const m = periodMonthKeyForAdDate(dateStr);
       if (!db.attendance[m]) db.attendance[m] = {};
       if (!db.attendance[m][l.empId]) db.attendance[m][l.empId] = {};
       db.attendance[m][l.empId][dateStr] = 'L';
@@ -8836,8 +8897,8 @@ function viewProfile(type, id) {
     const ph = db.payrollHistory.filter(p=>p.entries&&p.entries.some(x=>x.empId===id)).slice(-12).reverse();
     const leaves = db.leaveRecords.filter(l=>l.empId===id).slice(-10).reverse();
     const reviews = db.performanceRecords.filter(p=>p.empId===id).slice(-10).reverse();
-    // Attendance summary for current month
-    const curMonth = today().slice(0,7);
+    // Attendance summary for current period month
+    const curMonth = currentPeriodMonthKey();
     const attData = db.attendance[curMonth]?.[id] || {};
     const presentDays = Object.values(attData).filter(v=>v==='P').length;
     const absentDays = Object.values(attData).filter(v=>v==='A').length;
@@ -8865,7 +8926,7 @@ function viewProfile(type, id) {
     </div>
     <div style="page-break-inside:avoid;break-inside:avoid">
       <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Payroll History</h3>
-      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Basic</th><th>Earnings</th><th>Deductions</th><th>Net Pay</th></tr></thead><tbody>${ph.length?ph.map(p=>{ const entry=p.entries.find(x=>x.empId===id); return entry?`<tr><td>${esc(p.month)}</td><td class="mono amt-neutral">${fmt(entry.salary)}</td><td class="mono text-success">+${fmt(entry.totalEarnings||0)}</td><td class="mono text-danger">-${fmt(entry.totalDeductions||0)}</td><td class="mono amt-balance">${fmt(entry.netPay)}</td></tr>`:''}).join(''):'<tr><td colspan="5" class="text-center text-muted">No payroll history</td></tr>'}</tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Basic</th><th>Earnings</th><th>Deductions</th><th>Net Pay</th></tr></thead><tbody>${ph.length?ph.map(p=>{ const entry=p.entries.find(x=>x.empId===id); return entry?`<tr><td>${esc(periodMonthLabel(p.month))}</td><td class="mono amt-neutral">${fmt(entry.salary)}</td><td class="mono text-success">+${fmt(entry.totalEarnings||0)}</td><td class="mono text-danger">-${fmt(entry.totalDeductions||0)}</td><td class="mono amt-balance">${fmt(entry.netPay)}</td></tr>`:''}).join(''):'<tr><td colspan="5" class="text-center text-muted">No payroll history</td></tr>'}</tbody></table></div>
     </div>
     ${profileAuditHtml(type,id)}`;
   } else if (type==='secondary') {
@@ -10002,17 +10063,17 @@ function generateReport() {
       <tr style="background:#f0f0f0"><td colspan="5"><strong>Total Headcount: ${emps.length} | Total Payroll:</strong></td><td><strong>${fmt(emps.reduce((a,e)=>a+(e.salary||0),0))}</strong></td></tr>
     </tbody></table>`;
   } else if (type==='attendance-report') {
-    const month = from ? from.slice(0,7) : today().slice(0,7);
+    const month = periodMonthKeyForAdDate(from || today());
     const att = db.attendance[month] || {};
-    bodyHtml = `<h2>Attendance Summary — ${month}</h2>
+    bodyHtml = `<h2>Attendance Summary — ${esc(periodMonthLabel(month))}</h2>
     <table><thead><tr><th>Employee</th><th>Present</th><th>Absent</th><th>Leave</th></tr></thead><tbody>
       ${db.employees.filter(e=>e.status==='active').map(e=>{const a=att[e.id]||{}; const p=Object.values(a).filter(v=>v==='P').length; const ab=Object.values(a).filter(v=>v==='A').length; const l=Object.values(a).filter(v=>v==='L').length; return `<tr><td>${esc(e.name)}</td><td>${p}</td><td>${ab}</td><td>${l}</td></tr>`;}).join('')}
     </tbody></table>`;
   } else if (type==='payroll-report') {
-    const ph = db.payrollHistory.filter(p=>(!from||p.month>=from.slice(0,7))&&(!to||p.month<=to.slice(0,7)));
+    const ph = db.payrollHistory.filter(p=>periodMonthOverlapsRange(p.month, from, to));
     bodyHtml = `<h2>Payroll Summary</h2>
     <table><thead><tr><th>Month</th><th>Employees Paid</th><th>Total Net Pay</th></tr></thead><tbody>
-      ${ph.length?ph.map(p=>`<tr><td>${esc(p.month)}</td><td>${(p.entries||[]).length}</td><td>${fmt((p.entries||[]).reduce((a,e)=>a+e.netPay,0))}</td></tr>`).join(''):'<tr><td colspan="3">No payroll records</td></tr>'}
+      ${ph.length?ph.map(p=>`<tr><td>${esc(periodMonthLabel(p.month))}</td><td>${(p.entries||[]).length}</td><td>${fmt((p.entries||[]).reduce((a,e)=>a+e.netPay,0))}</td></tr>`).join(''):'<tr><td colspan="3">No payroll records</td></tr>'}
     </tbody></table>`;
   } else if (type==='audit') {
     if (session?.role!=='admin') { toast('Audit report — Admin only','warning'); return; }
@@ -10048,14 +10109,14 @@ function generateReport() {
       <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL DUE TO IRD</strong></td><td style="text-align:right"><strong>${fmt(tds.total)}</strong></td></tr>
     </tbody></table>`;
   } else if (type==='ssf-register') {
-    const payrolls = (db.payrollHistory||[]).filter(ph=>(ph.totalSSF||0)>0 && (!from||ph.month>=from.slice(0,7)) && (!to||ph.month<=to.slice(0,7)));
+    const payrolls = (db.payrollHistory||[]).filter(ph=>(ph.totalSSF||0)>0 && periodMonthOverlapsRange(ph.month, from, to));
     let rows = [];
     payrolls.forEach(ph => (ph.entries||[]).filter(e=>e.employeeSSF>0).forEach(e => rows.push({ month:ph.month, empName:e.empName, basic:e.salary, employeeSSF:e.employeeSSF, employerSSF:e.employerSSF, total:e.employeeSSF+e.employerSSF })));
     const totalDue = rows.reduce((a,r)=>a+r.total,0);
     bodyHtml = `<h2>SSF Register — Social Security Fund</h2>
     <p style="font-size:15px;color:#555;margin-bottom:12px">11% employee + 20% employer of basic salary, deposited monthly — this is what your SSF filing needs.</p>
     <table><thead><tr><th>Month</th><th>Employee</th><th style="text-align:right">Basic Salary</th><th style="text-align:right">Employee (11%)</th><th style="text-align:right">Employer (20%)</th><th style="text-align:right">Total</th></tr></thead><tbody>
-      ${rows.length?rows.map(r=>`<tr><td>${esc(r.month)}</td><td>${esc(r.empName)}</td><td style="text-align:right" class="mono">${fmt(r.basic)}</td><td style="text-align:right" class="mono">${fmt(r.employeeSSF)}</td><td style="text-align:right" class="mono">${fmt(r.employerSSF)}</td><td style="text-align:right" class="mono"><strong>${fmt(r.total)}</strong></td></tr>`).join(''):'<tr><td colspan="6">No SSF-enrolled payroll in this period</td></tr>'}
+      ${rows.length?rows.map(r=>`<tr><td>${esc(periodMonthLabel(r.month))}</td><td>${esc(r.empName)}</td><td style="text-align:right" class="mono">${fmt(r.basic)}</td><td style="text-align:right" class="mono">${fmt(r.employeeSSF)}</td><td style="text-align:right" class="mono">${fmt(r.employerSSF)}</td><td style="text-align:right" class="mono"><strong>${fmt(r.total)}</strong></td></tr>`).join(''):'<tr><td colspan="6">No SSF-enrolled payroll in this period</td></tr>'}
       <tr style="background:#f0f0f0"><td colspan="5"><strong>TOTAL SSF DUE</strong></td><td style="text-align:right"><strong>${fmt(totalDue)}</strong></td></tr>
     </tbody></table>`;
   } else if (type==='correction-notes') {
@@ -10082,7 +10143,7 @@ function generateReport() {
     bodyHtml = `<h2>Tax Deduction Report</h2>
     <p style="font-size:17px;margin-bottom:12px">Employee tax deductions for the selected period.</p>
     <table><thead><tr><th>Employee</th><th>Month</th><th>Tax Deducted</th></tr></thead><tbody>
-      ${db.payrollHistory.flatMap(p=>(p.entries||[]).filter(e=>e.deductions?.Tax>0).map(e=>`<tr><td>${esc(e.empName)}</td><td>${esc(p.month)}</td><td>${fmt(e.deductions.Tax)}</td></tr>`)).join('')||'<tr><td colspan="3">No tax deductions recorded</td></tr>'}
+      ${db.payrollHistory.flatMap(p=>(p.entries||[]).filter(e=>e.deductions?.Tax>0).map(e=>`<tr><td>${esc(e.empName)}</td><td>${esc(periodMonthLabel(p.month))}</td><td>${fmt(e.deductions.Tax)}</td></tr>`)).join('')||'<tr><td colspan="3">No tax deductions recorded</td></tr>'}
     </tbody></table>`;
   } else if (type==='govt-submission') {
     const periodSalesG = db.sales.filter(x=>(!from||x.date>=from)&&(!to||x.date<=to));
@@ -13019,13 +13080,21 @@ function openCalendar(targetId, mode='standard') {
   calTargetId = targetId; calMode = mode; calView = 'days';
   const input = document.getElementById(targetId);
   const val = input?.value;
-  const useBs = bsEnabled() && mode !== 'monthyear';
-  if (useBs) {
+  const useBs = bsEnabled();
+  if (useBs && mode==='monthyear') {
+    // monthyear's stored value is already a month-key ("BS-YYYY-MM"), not a date — parse it
+    // directly rather than through adToBsParts, which expects a real calendar date.
+    if (val && val.startsWith('BS-')) { const [,y,m]=val.split('-'); calYear=+y; calMonth=+m; }
+    else { const bs = adToBsParts(today()); if (bs) { calMonth=bs.month; calYear=bs.year; } else { calMonth=1; calYear=2000; } }
+  } else if (useBs) {
     // calMonth/calYear represent the BS month(1-12)/year being displayed in this mode — see
     // calSelectDay/calSelectMonth/calSelectYear below for where they convert back to AD.
     const bs = val ? adToBsParts(val) : adToBsParts(today());
     if (bs) { calMonth = bs.month; calYear = bs.year; }
     else { calMonth = 1; calYear = 2000; } // library unavailable — placeholder, renderCalendar falls back
+  } else if (mode==='monthyear' && val) {
+    const [y,m] = val.split('-').map(Number);
+    if (y && m) { calMonth=m-1; calYear=y; } else { calMonth=new Date().getMonth(); calYear=new Date().getFullYear(); }
   } else if (val) { const d=new Date(val); if(!isNaN(d)){calMonth=d.getMonth();calYear=d.getFullYear();} }
   else { calMonth=new Date().getMonth(); calYear=new Date().getFullYear(); }
   renderCalendar();
@@ -13061,7 +13130,7 @@ function closeCal(e) {
 }
 
 function renderCalendar() {
-  const useBs = bsEnabled() && calMode !== 'monthyear';
+  const useBs = bsEnabled();
   document.getElementById('cal-month-btn').textContent = useBs ? BS_MONTH_NAMES[calMonth-1] : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][calMonth];
   document.getElementById('cal-year-btn').textContent = calYear + (useBs ? ' BS' : '');
   const body = document.getElementById('cal-body');
@@ -13072,8 +13141,18 @@ function renderCalendar() {
     prevEl.onclick = ()=>{calYear--;renderCalendar();};
     nextEl.onclick = ()=>{calYear++;renderCalendar();};
     const curVal = document.getElementById(calTargetId)?.value;
-    const curBs = useBs && curVal ? adToBsParts(curVal) : null;
-    const selM = useBs ? (curBs && curBs.year===calYear ? curBs.month-1 : -1) : (curVal ? parseInt(curVal.split(/[-\/]/)[calMode==='monthyear'?1:1])-1 : -1);
+    // monthyear mode's stored value IS already a month-key ("BS-YYYY-MM" or "YYYY-MM"), not an
+    // AD date — parse it directly rather than through adToBsParts, which expects a real date.
+    let selM = -1;
+    if (curVal) {
+      if (calMode==='monthyear') {
+        if (useBs && curVal.startsWith('BS-')) { const [,y,m]=curVal.split('-'); if(+y===calYear) selM=+m-1; }
+        else if (!useBs && !curVal.startsWith('BS-')) { const [y,m]=curVal.split('-').map(Number); if(y===calYear) selM=m-1; }
+      } else {
+        const curBs = useBs ? adToBsParts(curVal) : null;
+        selM = useBs ? (curBs && curBs.year===calYear ? curBs.month-1 : -1) : (new Date(curVal).getFullYear()===calYear ? new Date(curVal).getMonth() : -1);
+      }
+    }
     const names = useBs ? BS_MONTH_NAMES : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     body.innerHTML = `<div class="cal-months-grid">${names.map((m,i)=>`<div class="cal-mo ${i===selM?'selected':''}" onclick="calSelectMonth(${i})">${m}</div>`).join('')}</div>`;
     return;
@@ -13136,7 +13215,7 @@ function renderCalendar() {
 function calShowMonths() { calView='months'; renderCalendar(); }
 function calShowYears() { calView='years'; renderCalendar(); }
 function calSelectMonth(m) {
-  const useBs = bsEnabled() && calMode !== 'monthyear';
+  const useBs = bsEnabled();
   calMonth = useBs ? m+1 : m; // BS months are stored 1-based here, AD months 0-based — see openCalendar
   if(calMode==='monthyear'){calCommitMonthYear();}else{calView='days';renderCalendar();}
 }
@@ -13163,11 +13242,11 @@ function calSelectDay(y, m, d) {
 }
 
 function calCommitMonthYear() {
-  // Deliberately always AD here — payroll and attendance are keyed internally by AD "YYYY-MM"
-  // throughout the app, so converting this specific picker to BS would mean converting every
-  // month-key lookup that depends on it too. Kept out of scope for the safety this approach was
-  // chosen for in the first place.
-  const val = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
+  // Now genuinely BS-aware (Payroll/Attendance were rebuilt to support real BS month periods —
+  // see periodMonthKeyForAdDate/periodMonthAdDates). The value written here matches exactly the
+  // format those functions expect: "BS-YYYY-MM" in BS mode, plain "YYYY-MM" in AD mode.
+  const useBs = bsEnabled();
+  const val = useBs ? ('BS-' + calYear + '-' + String(calMonth).padStart(2,'0')) : `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
   const input = document.getElementById(calTargetId);
   if (input) { input.value=val; input.dispatchEvent(new Event('change')); }
   closeCal();

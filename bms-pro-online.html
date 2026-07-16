@@ -5540,16 +5540,21 @@ function fmtDate(d) {
   if (!d) return '';
   const dt = new Date(d);
   if (isNaN(dt)) return d;
+  const fmt = (db && db.settings && db.settings.dateFormat) || 'DD/MM/YYYY';
   if (bsEnabled()) {
     const bs = adToBsParts(d.length>=10 ? d.slice(0,10) : today());
-    if (bs) return String(bs.day).padStart(2,'0')+'/'+String(bs.month).padStart(2,'0')+'/'+bs.year+' BS';
+    if (bs) {
+      // Was hardcoded to DD/MM/YYYY order regardless of the Date Format setting — BS dates now
+      // respect the same DD/MM/YYYY vs MM/DD/YYYY vs YYYY-MM-DD choice as AD dates do below.
+      const dd = String(bs.day).padStart(2,'0'), mm = String(bs.month).padStart(2,'0'), yyyy = bs.year;
+      return fmt.replace('DD',dd).replace('MM',mm).replace('YYYY',yyyy) + ' BS';
+    }
     // Library unavailable or conversion failed — fall through to plain AD below rather than
     // show nothing, so an offline moment never breaks a date display.
   }
   const dd = String(dt.getDate()).padStart(2,'0');
   const mm = String(dt.getMonth()+1).padStart(2,'0');
   const yyyy = dt.getFullYear();
-  const fmt = (db && db.settings && db.settings.dateFormat) || 'DD/MM/YYYY';
   return fmt.replace('DD',dd).replace('MM',mm).replace('YYYY',yyyy);
 }
 function today() { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -9121,12 +9126,24 @@ function printCurrentProfile() {
 // onto one line — because they're stored and built as independent values, not parsed text.
 function signatureDateLine() {
   const fmt = (db.settings && db.settings.dateFormat) || 'DD/MM/YYYY';
-  const nowDate = new Date();
-  const monthName = nowDate.toLocaleString('en-US', { month: 'long' });
-  const monthNum = String(nowDate.getMonth()+1).padStart(2,'0');
-  const year = nowDate.getFullYear();
+  // This used to build its own date from new Date() directly, completely bypassing fmtDate() and
+  // the BS setting — so the signature block showed AD while the report header above it (which
+  // does go through fmtDate()) correctly showed BS. Same conversion path as everywhere else now.
+  let monthName, monthNum, year;
+  const bs = bsEnabled() ? adToBsParts(today()) : null;
+  if (bs) {
+    monthName = BS_MONTH_NAMES[bs.month-1];
+    monthNum = String(bs.month).padStart(2,'0');
+    year = bs.year + ' BS';
+  } else {
+    const nowDate = new Date();
+    monthName = nowDate.toLocaleString('en-US', { month: 'long' });
+    monthNum = String(nowDate.getMonth()+1).padStart(2,'0');
+    year = nowDate.getFullYear();
+  }
   // Day is intentionally always left blank for manual completion after printing. Order of
-  // day/month/year follows the app-wide Date Format setting (Settings → Currency & Localization).
+  // day/month/year follows the app-wide Date Format setting (Settings → Currency & Localization)
+  // regardless of whether the month/year above came from the BS or AD calendar.
   if (fmt.startsWith('YYYY')) return `Date: ${year} - ${monthName} - ____`;
   if (fmt.startsWith('MM')) return `Date: ${monthNum} / ____ / ${year}`;
   return `Date: ____ / ${monthName} / ${year}`; // default DD/MM/YYYY ordering

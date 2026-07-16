@@ -3715,19 +3715,31 @@ function shiftDate(dateStr, days) {
 /* ══════════════════════════════════════════════════════════════════════════
    PHASE 4 — NEPALI FISCAL-YEAR SEQUENTIAL INVOICE NUMBERING
    Nepal's fiscal year runs Shrawan 1 – Ashad-end (~mid-July to mid-July).
-   This uses a fixed 16-July Gregorian cutover as a practical approximation
-   of Shrawan 1 (the exact date shifts by a day or two some years) — accurate
-   enough for keeping invoice numbers sequential and gap-free per fiscal year,
-   which is what IRD actually checks. Not a full Bikram Sambat calendar.
+   Now uses the real BS conversion library (see bsPartsToAd/adToBsParts) for the
+   exact Shrawan 1 date whenever it's available — the "16 July" cutover below is
+   kept only as an offline fallback (library unavailable), since real Shrawan 1
+   shifts by a day or two some years and IRD invoice-numbering/fiscal boundaries
+   should be exact, not approximate, whenever the real calendar is reachable.
    ══════════════════════════════════════════════════════════════════════════ */
 function nepaliFiscalYearStartADYear(dateStr) {
+  const bs = adToBsParts(dateStr);
+  if (bs) {
+    const shrawanBsYear = bs.month >= 4 ? bs.year : bs.year - 1; // Shrawan = BS month 4
+    const shrawan1Ad = bsPartsToAd(shrawanBsYear, 4, 1);
+    if (shrawan1Ad) return parseInt(shrawan1Ad.slice(0,4), 10);
+  }
   const d = new Date(dateStr + 'T00:00:00');
   const y = d.getFullYear(), m = d.getMonth()+1, day = d.getDate();
   return (m > 7 || (m === 7 && day >= 16)) ? y : y - 1;
 }
 function nepaliFiscalYearLabel(dateStr) {
+  const bs = adToBsParts(dateStr);
+  if (bs) {
+    const fy = bs.month >= 4 ? bs.year : bs.year - 1;
+    return `${fy}/${String(fy+1).slice(-2)}`;
+  }
   const startAD = nepaliFiscalYearStartADYear(dateStr);
-  const bsStart = startAD + 57; // Shrawan of this AD year falls in the BS year = AD+57
+  const bsStart = startAD + 57; // Shrawan of this AD year falls in the BS year = AD+57 (fallback)
   return `${bsStart}/${String(bsStart+1).slice(-2)}`;
 }
 // "This year" for a Nepal business means the current fiscal year (Shrawan 1 – Ashad-end,
@@ -3737,9 +3749,21 @@ function nepaliFiscalYearLabel(dateStr) {
 // fiscal years and misstate "this year's" retained earnings/profit. These give every report the
 // same correct default.
 function nepaliFiscalYearStartDate(dateStr) {
+  const bs = adToBsParts(dateStr);
+  if (bs) {
+    const shrawanBsYear = bs.month >= 4 ? bs.year : bs.year - 1;
+    const exact = bsPartsToAd(shrawanBsYear, 4, 1);
+    if (exact) return exact;
+  }
   return nepaliFiscalYearStartADYear(dateStr) + '-07-16';
 }
 function nepaliFiscalYearEndDate(dateStr) {
+  const bs = adToBsParts(dateStr);
+  if (bs) {
+    const nextShrawanBsYear = (bs.month >= 4 ? bs.year : bs.year - 1) + 1;
+    const nextStart = bsPartsToAd(nextShrawanBsYear, 4, 1);
+    if (nextStart) return shiftDate(nextStart, -1);
+  }
   return (nepaliFiscalYearStartADYear(dateStr) + 1) + '-07-15';
 }
 // ══ NEPAL IRD TAX DEPRECIATION (Schedule 2, Income Tax Act — Pool/WDV method) ══
@@ -5467,25 +5491,32 @@ function fmtWhole(n) {
 // PERSON sees and picks; every function here converts back to a plain AD ISO string before
 // anything gets saved. Controlled by Settings → Fiscal Year = 'BS'.
 const BS_MONTH_NAMES = ['Baisakh','Jestha','Ashar','Shrawan','Bhadra','Ashwin','Kartik','Mangsir','Poush','Magh','Falgun','Chaitra'];
-function bsEnabled() { return (db?.settings?.fiscalYear === 'BS') && typeof NepaliDate !== 'undefined'; }
+// The UMD bundle sets window.NepaliDate to a *namespace object* (from its exports.default = ...
+// pattern), not the class itself — so window.NepaliDate.default is the real constructor, not
+// window.NepaliDate directly. Verified by downloading and inspecting the actual published
+// package rather than assuming from documentation. This helper isolates that quirk to one place.
+function _NDClass() { return (typeof NepaliDate !== 'undefined') ? (NepaliDate.default || NepaliDate) : null; }
+function bsEnabled() { return (db?.settings?.fiscalYear === 'BS') && !!_NDClass(); }
 // AD ISO date string ('YYYY-MM-DD') -> {year, month(1-12), day} in BS. Returns null if the
 // conversion library isn't available or the input can't be parsed — callers must handle that by
 // falling back to the plain AD value, never by guessing.
 function adToBsParts(adDateStr) {
-  if (typeof NepaliDate === 'undefined' || !adDateStr) return null;
+  const ND = _NDClass();
+  if (!ND || !adDateStr) return null;
   try {
     const d = new Date(adDateStr + 'T00:00:00');
     if (isNaN(d)) return null;
-    const bs = NepaliDate.fromAD(d).getBS();
+    const bs = ND.fromAD(d).getBS();
     return { year: bs.year, month: bs.month + 1, day: bs.date };
   } catch(e) { return null; }
 }
 // BS {year, month(1-12), day} -> AD ISO date string. Returns null on failure — same rule as
 // above, callers fall back rather than guess.
 function bsPartsToAd(year, month, day) {
-  if (typeof NepaliDate === 'undefined') return null;
+  const ND = _NDClass();
+  if (!ND) return null;
   try {
-    const jsDate = new NepaliDate(year, month - 1, day).toJsDate();
+    const jsDate = new ND(year, month - 1, day).toJsDate();
     if (isNaN(jsDate)) return null;
     return jsDate.getFullYear()+'-'+String(jsDate.getMonth()+1).padStart(2,'0')+'-'+String(jsDate.getDate()).padStart(2,'0');
   } catch(e) { return null; }

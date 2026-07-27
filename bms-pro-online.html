@@ -1373,6 +1373,12 @@ textarea.form-control{resize:vertical;min-height:80px}
                 <select class="form-control" id="rpt-ledger-target"></select>
               </div>
             </div>
+            <div class="form-row" id="rpt-tax-adjust-group" style="display:none">
+              <div class="form-group">
+                <label class="form-label">Disallowed / Non-Deductible Expenses This Period<span class="help-tip" data-tip="Personal expenses run through the business, unsupported/undocumented costs, fines & penalties, donations above the allowed limit, etc. — IRD doesn't let you deduct these. Enter what you know of for this period; leave at 0 if none or unsure.">?</span></label>
+                <input class="form-control" id="rpt-tax-disallowed" type="number" min="0" placeholder="0">
+              </div>
+            </div>
             <div class="form-group">
               <label class="form-label">Remarks / Key Observations</label>
               <textarea class="form-control" id="rpt-remarks" rows="2" placeholder="Optional remarks that will appear in the report..."></textarea>
@@ -1788,6 +1794,30 @@ textarea.form-control{resize:vertical;min-height:80px}
                   <button class="btn btn-secondary btn-sm" onclick="generatePurchaseRegister()">📥 Purchase Register</button>
                   <button class="btn btn-secondary btn-sm" onclick="generateSalesRegister()">📤 Sales Register</button>
                   <button class="btn btn-secondary btn-sm" onclick="generateTaxInvoiceList()">🧾 Tax Invoice List</button>
+                </div>
+              </div>
+              <div class="card" style="margin-top:12px;margin-bottom:16px">
+                <div class="card-header"><div class="card-title">⚖️ Statutory Rates<span class="help-tip" data-tip="These are set by the government and change periodically via the Finance Act / budget. Update them here when they change — every payroll, TDS, and tax calculation in the app reads from these fields, so nothing needs editing in code.">?</span></div></div>
+                <div class="form-hint" style="margin-bottom:8px">SSF %</div>
+                <div class="form-row">
+                  <div class="form-group"><label class="form-label">SSF — Employee %</label><input class="form-control" id="st-ssf-employee" type="number" step="0.01" min="0" placeholder="11"></div>
+                  <div class="form-group"><label class="form-label">SSF — Employer %</label><input class="form-control" id="st-ssf-employer" type="number" step="0.01" min="0" placeholder="20"></div>
+                </div>
+                <div class="form-hint" style="margin:10px 0 8px">TDS % (withholding on rent/contractor/professional payments)</div>
+                <div class="form-row">
+                  <div class="form-group"><label class="form-label">Rent (to a company)</label><input class="form-control" id="st-tds-rentCompany" type="number" step="0.01" min="0" placeholder="10"></div>
+                  <div class="form-group"><label class="form-label">Contractor (VAT registered)</label><input class="form-control" id="st-tds-contractorVAT" type="number" step="0.01" min="0" placeholder="1.5"></div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group"><label class="form-label">Contractor (not VAT registered)</label><input class="form-control" id="st-tds-contractorNoVAT" type="number" step="0.01" min="0" placeholder="15"></div>
+                  <div class="form-group"><label class="form-label">Professional / Consultancy</label><input class="form-control" id="st-tds-consultancy" type="number" step="0.01" min="0" placeholder="15"></div>
+                </div>
+                <div class="form-hint" style="margin:10px 0 8px">Corporate Income Tax</div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Applicable Rate %<span class="help-tip" data-tip="Standard rate is 25%, but manufacturing/production businesses often qualify for a lower rate depending on registration category (cottage/small/medium industry, Special Industry status). Confirm your actual rate with your accountant or registration certificate.">?</span></label>
+                    <input class="form-control" id="st-corp-tax-rate" type="number" step="0.01" min="0" placeholder="25">
+                  </div>
                 </div>
               </div>
               <button class="btn btn-primary" onclick="saveTaxSettings()">💾 Save Tax Settings</button>
@@ -2902,6 +2932,8 @@ function defaultDB() {
         purchaseAccount: '5010', inventoryAccount: '1042', cogsAccount: '5010',
         salaryExpenseAccount: '5020', tdsPayableAccount: '2060',
         tdsRates: { rentCompany:0.10, contractorVAT:0.015, contractorNoVAT:0.15, consultancy:0.15 },
+        ssfEmployeeRate: 0.11, ssfEmployerRate: 0.20,   // statutory rates — government-set, adjust in Settings ▸ Nepal Tax & VAT when they change
+        corporateTaxRate: 0.25,                          // your applicable rate may differ — confirm with your accountant/registration category
         overdueInterestRatePct: 0,
         tdsApplicableCategories: ['Rent','Contractor','Professional Fees']
       },
@@ -3062,6 +3094,14 @@ function loadDB() {
         tdsApplicableCategories: ['Rent','Contractor','Professional Fees']
         };
       }
+      // GAP FIXED: SSF %, TDS %, and corporate tax rate were hardcoded in the calculation logic
+      // itself — when the government changes these (as it does periodically via the Finance Act),
+      // there was no way to update the app without editing code. Now stored in settings and
+      // editable from Settings ▸ Nepal Tax & VAT; this guard backfills the fields onto any
+      // install that already had acctMappings before these existed, so upgrades don't lose them.
+      if (db.settings.acctMappings.ssfEmployeeRate === undefined) db.settings.acctMappings.ssfEmployeeRate = 0.11;
+      if (db.settings.acctMappings.ssfEmployerRate === undefined) db.settings.acctMappings.ssfEmployerRate = 0.20;
+      if (db.settings.acctMappings.corporateTaxRate === undefined) db.settings.acctMappings.corporateTaxRate = 0.25;
       // BUG FIXED — this is the actual root cause of the $4,250 orphan-entry imbalance found by
       // the Integrity Checker: seedChartOfAccounts() only ever ran when chartOfAccounts was
       // completely empty (a brand-new install). Any account added to the code's defaults *after*
@@ -4031,6 +4071,25 @@ function confirmCorrectInvoice() {
     const cn = { id:uid(), noteNumber, type:'credit', refType:'sale', refId, originalAmount:original, correctedAmount:newAmt, adjustmentAmount:diff, reason, note, date:today(), createdAt:now(), createdBy:session.username };
     db.correctionNotes.push(cn);
     postCreditNoteJournal(cn, sale);
+    // BUG FIXED: a Credit Note against a still-outstanding credit sale reduced the GL Accounts
+    // Receivable balance (via postCreditNoteJournal) but never touched the subsidiary
+    // db.creditSales record's own dueAmount/totalAmount — the control account and its subsidiary
+    // ledger went out of sync the moment a correction touched an unpaid credit sale. Concretely:
+    // Receivables Aging (computeReceivablesAging) kept reporting the pre-correction amount forever,
+    // the Customer Ledger view never showed the correction at all, and Due Ledger's "Collect"
+    // button (openDuePayment) let staff collect up to the stale, too-high due amount — a real
+    // overcollection risk. Mirror the same due-reduction saveDuePayment already does for cash
+    // collections, capped so a note can never push a due below zero even if it was entered against
+    // an amount larger than what's actually still outstanding.
+    const linkedCredit = (db.creditSales||[]).find(c => c.saleId === sale.id);
+    if (linkedCredit && linkedCredit.dueAmount > 0) {
+      const applied = Math.min(diff, linkedCredit.dueAmount);
+      linkedCredit.dueAmount = +(linkedCredit.dueAmount - applied).toFixed(2);
+      linkedCredit.totalAmount = +(linkedCredit.totalAmount - applied).toFixed(2);
+      linkedCredit.status = linkedCredit.dueAmount <= 0.004 ? 'settled' : 'outstanding';
+    }
+    sale.total = +(sale.total - diff).toFixed(2);
+    if (sale.dueAmount != null) sale.dueAmount = Math.max(0, +(sale.dueAmount - diff).toFixed(2));
     audit('Sale','Correction Issued', sale.id, sale.receiptNumber, fmt(original), fmt(newAmt) + (reason?` — ${reason}`:'') + (note?` (${note})`:''));
     toast(`Credit Note ${noteNumber} created`,'success');
   } else {
@@ -4040,6 +4099,12 @@ function confirmCorrectInvoice() {
     const dn = { id:uid(), noteNumber, type:'debit', refType:'supplier-invoice', refId, originalAmount:original, correctedAmount:newAmt, adjustmentAmount:diff, reason, note, date:today(), createdAt:now(), createdBy:session.username };
     db.correctionNotes.push(dn);
     postDebitNoteJournal(dn, inv);
+    // BUG FIXED: same control-account/subsidiary-ledger split as the Credit Note side — this
+    // reduced GL Accounts Payable but left inv.amount (what openSupplierPaymentModal,
+    // saveSupplierPayment, and computePayablesAging all read the "amount owed" from) untouched.
+    // Payables Aging would keep overstating the supplier balance, and the Pay screen would let
+    // staff pay the pre-correction amount. Apply the same reduction here.
+    inv.amount = +(inv.amount - diff).toFixed(2);
     audit('Purchase','Correction Issued', inv.id, inv.invoiceNumber, fmt(original), fmt(newAmt) + (reason?` — ${reason}`:'') + (note?` (${note})`:''));
     toast(`Debit Note ${noteNumber} created`,'success');
   }
@@ -4062,7 +4127,27 @@ function postCreditNoteJournal(cn, sale) {
   const lines = [ { accountCode: salesCode, debit: netPortion, credit: 0 } ];
   if (taxPortion > 0) lines.push({ accountCode: db.settings.acctMappings.vatOutputAccount, debit: taxPortion, credit: 0 });
   lines.push({ accountCode: creditAccount, debit: 0, credit: cn.adjustmentAmount });
-  return postJournalEntry({ date: cn.date, voucherKind:'Journal', refType:'credit-note', refId: cn.id, reference: cn.noteNumber, description: `Credit Note ${cn.noteNumber} — ${cn.reason}`, lines });
+  const je = postJournalEntry({ date: cn.date, voucherKind:'Journal', refType:'credit-note', refId: cn.id, reference: cn.noteNumber, description: `Credit Note ${cn.noteNumber} — ${cn.reason}`, lines });
+
+  // BUG FIXED: this used to only reverse Sales Revenue/VAT/Cash-AR. When the reason is goods
+  // actually coming back, the original COGS entry (Dr COGS / Cr Inventory, posted at sale time)
+  // was never touched — so Inventory stayed permanently understated and COGS permanently
+  // overstated after every goods-return correction, even though the revenue side balanced fine.
+  // Reverse the same proportion of the original sale's COGS back into Inventory here.
+  if (cn.reason === 'Customer returned goods') {
+    const cogsEntry = (db.journalEntries||[]).find(j => !j.isVoid && j.refType==='cogs' && j.refId===sale.id);
+    const originalCost = cogsEntry ? cogsEntry.lines.reduce((a,l)=>a+(l.debit||0),0) : 0;
+    if (originalCost > 0 && original > 0) {
+      const costPortion = +(originalCost * (cn.adjustmentAmount/original)).toFixed(2);
+      if (costPortion > 0) {
+        postJournalEntry({ date: cn.date, voucherKind:'Journal', refType:'credit-note-cogs', refId: cn.id, reference: cn.noteNumber, description: `Inventory restored — Credit Note ${cn.noteNumber}`, lines: [
+          { accountCode: db.settings.acctMappings.inventoryAccount, debit: costPortion, credit: 0 },
+          { accountCode: db.settings.acctMappings.cogsAccount, debit: 0, credit: costPortion }
+        ]});
+      }
+    }
+  }
+  return je;
 }
 
 // Purchase correction: reduces what you owe the supplier and reduces whichever asset account
@@ -4646,23 +4731,52 @@ function computeCashFlow(from, to) {
   const invCodes = ['1040','1041','1042'];
   const changeInInventory = invCodes.reduce((a,c)=>a+accountBalanceAsOf(c,toDate)-accountBalanceAsOf(c,priorDate),0);
   const changeInAP = accountBalanceAsOf(apCode, toDate) - accountBalanceAsOf(apCode, priorDate);
-  const operating = netProfit + depreciation - changeInAR - changeInInventory + changeInAP;
 
-  // Investing: net cash spent buying fixed assets this period (negative = cash out)
+  // BUG FIXED (two compounding issues):
+  // 1) "Equipment purchased" was computed as the NET debit-minus-credit on fixed asset accounts —
+  //    but depreciation is posted as a CREDIT straight to the same asset account (net-book-value
+  //    method, no separate accumulated-depreciation contra account). That netted depreciation out
+  //    of "purchases", understating cash actually spent — while Operating separately added
+  //    depreciation back too, double-counting its cash effect in opposite directions.
+  // 2) Only Equity accounts fed Financing and only AR/Inventory/AP fed Operating — any movement in
+  //    Loans, TDS/VAT Payable, SSF Payable, Salary Payable, or Advance from Customers went nowhere,
+  //    so Operating+Investing+Financing could silently disagree with the real Opening→Closing cash
+  //    change whenever any of those moved, with nothing flagging it (unlike Trial Balance's own
+  //    balanced/out-of-balance check).
+  // Fixed: Investing now uses gross purchase debits only (depreciation credits excluded). Loans
+  // are swept into Financing, and every other remaining balance sheet account is swept into
+  // Operating as "Other Working Capital Changes" — and the statement now checks itself the same
+  // way Trial Balance does, showing a "Reconciling Difference" line if anything still doesn't tie
+  // out, instead of presenting a Net Change figure that could quietly be wrong.
   const fixedAssetCodes = ['1110','1120','1130','1140'];
-  const assetPurchases = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && fixedAssetCodes.includes(l.accountCode)).reduce((a,l)=>a+l.debit-l.credit,0);
+  const loanCodes = ['2050','2110'];
+  const cashCodes = ['1010','1020','1021','1022'];
+  const equityCodes = (db.chartOfAccounts||[]).filter(a=>a.type==='equity').map(a=>a.code);
+  const namedCodes = new Set([...cashCodes, ...fixedAssetCodes, arCode, ...invCodes, apCode, ...loanCodes, ...equityCodes]);
+  const chg = code => accountBalanceAsOf(code, toDate) - accountBalanceAsOf(code, priorDate);
+  const otherAssetCodes = (db.chartOfAccounts||[]).filter(a=>a.type==='asset' && !namedCodes.has(a.code)).map(a=>a.code);
+  const otherLiabilityCodes = (db.chartOfAccounts||[]).filter(a=>a.type==='liability' && !namedCodes.has(a.code)).map(a=>a.code);
+  const changeInOtherWorkingCapital = otherLiabilityCodes.reduce((a,c)=>a+chg(c),0) - otherAssetCodes.reduce((a,c)=>a+chg(c),0);
+
+  const operating = netProfit + depreciation - changeInAR - changeInInventory + changeInAP + changeInOtherWorkingCapital;
+
+  // Investing: gross cash spent buying fixed assets this period (debit side only — depreciation
+  // credits to the same account are excluded so they aren't counted twice).
+  const assetPurchases = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && fixedAssetCodes.includes(l.accountCode)).reduce((a,l)=>a+l.debit,0);
   const investing = -assetPurchases;
 
-  // Financing: net owner/partner capital movement this period (credit=invested in, debit=withdrawn)
-  const equityCodes = (db.chartOfAccounts||[]).filter(a=>a.type==='equity').map(a=>a.code);
-  const financing = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && equityCodes.includes(l.accountCode)).reduce((a,l)=>a+l.credit-l.debit,0);
+  // Financing: net owner/partner capital movement plus net loan drawdowns/repayments this period
+  const equityMovement = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && equityCodes.includes(l.accountCode)).reduce((a,l)=>a+l.credit-l.debit,0);
+  const loanMovement = loanCodes.reduce((a,c)=>a+chg(c),0);
+  const financing = equityMovement + loanMovement;
 
-  const netChange = operating + investing + financing;
-  const cashCodes = ['1010','1020','1021','1022'];
   const openingCash = cashCodes.reduce((a,c)=>a+accountBalanceAsOf(c,priorDate),0);
   const closingCash = cashCodes.reduce((a,c)=>a+accountBalanceAsOf(c,toDate),0);
+  const netChange = +(closingCash - openingCash).toFixed(2);   // ground truth — actual cash movement
+  const computedChange = +(operating + investing + financing).toFixed(2);
+  const reconcilingDifference = +(netChange - computedChange).toFixed(2);
 
-  return { netProfit, depreciation, changeInAR, changeInInventory, changeInAP, operating, investing, financing, netChange, openingCash, closingCash };
+  return { netProfit, depreciation, changeInAR, changeInInventory, changeInAP, changeInOtherWorkingCapital, operating, investing, loanMovement, equityMovement, financing, netChange, computedChange, reconcilingDifference, openingCash, closingCash };
 }
 
 /* ── Phase 6-D: Business Ownership (Single Owner or Partnership) ── */
@@ -8251,15 +8365,35 @@ function processPayroll() {
     // the same figure shown (and checkable) on the payroll screen before approving.
     const att = computeAttendanceDeductionAmount(e, month);
     const totalDeductions = Object.values(deductions).reduce((a,b)=>a+b,0) + att.amount;
-    const grossWage = (e.salary||0) + totalEarnings - totalDeductions;
+    // BUG FIXED: grossWage can legitimately go negative or near-zero (e.g. heavy unpaid-leave
+    // docking), but employeeSSF used to always be a flat 11% of BASE salary regardless of that —
+    // so netPay (floored at 0) and employeeSSF no longer added back up to grossWage. Since
+    // postPayrollJournal posts ONE combined entry for every employee in the month, that mismatch
+    // made the whole month's payroll journal entry unbalanced and silently rejected by
+    // postJournalEntry — salary expense/payable would vanish from Trial Balance/P&L/Balance Sheet
+    // while Payroll History still showed it as processed. Fix: clamp grossWage at 0 for ledger
+    // purposes (flagging it instead of quietly going negative) and cap the SSF actually withheld
+    // at what the paycheck can support, so netPay + employeeSSF always equals grossWage exactly —
+    // the entry can never fail its own balance check again.
+    let grossWage = (e.salary||0) + totalEarnings - totalDeductions;
+    const negativeGross = grossWage < 0;
+    if (negativeGross) grossWage = 0;
     const ssfEnrolled = e.ssfEnrolled !== false;
-    const employeeSSF = ssfEnrolled ? +((e.salary||0) * 0.11).toFixed(2) : 0;
-    const employerSSF = ssfEnrolled ? +((e.salary||0) * 0.20).toFixed(2) : 0;
-    const netPay = Math.max(0, grossWage - employeeSSF);
-    return { empId:e.id, empName:e.name, role:e.role, salary:e.salary||0, earnings, deductions, attendanceDeductionDays:att.days, attendanceDeduction:att.amount, totalEarnings, totalDeductions, grossWage, ssfEnrolled, employeeSSF, employerSSF, netPay, paid:false, paidDate:null, paidMethod:null };
+    const ssfEmpRate = db.settings.acctMappings.ssfEmployeeRate ?? 0.11;
+    const ssfErRate = db.settings.acctMappings.ssfEmployerRate ?? 0.20;
+    const uncappedEmployeeSSF = ssfEnrolled ? +((e.salary||0) * ssfEmpRate).toFixed(2) : 0;
+    const employeeSSF = Math.min(uncappedEmployeeSSF, grossWage);
+    const ssfShortfall = +(uncappedEmployeeSSF - employeeSSF).toFixed(2);
+    const employerSSF = ssfEnrolled ? +((e.salary||0) * ssfErRate).toFixed(2) : 0;
+    const netPay = +(grossWage - employeeSSF).toFixed(2);
+    return { empId:e.id, empName:e.name, role:e.role, salary:e.salary||0, earnings, deductions, attendanceDeductionDays:att.days, attendanceDeduction:att.amount, totalEarnings, totalDeductions, grossWage, negativeGross, ssfEnrolled, employeeSSF, ssfShortfall, employerSSF, netPay, paid:false, paidDate:null, paidMethod:null };
   });
   const totalPay = entries.reduce((a,x)=>a+x.netPay,0);
   const totalSSF = entries.reduce((a,x)=>a+x.employeeSSF+x.employerSSF,0);
+  const flagged = entries.filter(e=>e.negativeGross || e.ssfShortfall>0.004);
+  if (flagged.length) {
+    toast(`${flagged.length} employee(s) had deductions exceeding pay this month (SSF withheld was reduced to fit) — check ${flagged.map(f=>f.empName).join(', ')} before approving`,'warning');
+  }
   confirm(`Approve payroll for ${periodMonthLabel(month)}?\nNet to employees: ${fmt(totalPay)}\nSSF (employee+employer): ${fmt(totalSSF)}\n\nThis records what's owed — you'll mark each employee's salary (and the SSF deposit) as paid separately, whenever you actually pay them.`, ()=>{
     // Preserve any "already paid" status if this month is being reprocessed (e.g. correcting an amount)
     const prevPh = db.payrollHistory.find(ph=>ph.month===month);
@@ -8366,6 +8500,60 @@ function openMarkSSFDeposited(month) {
   saveDB();
   toast('SSF marked as deposited','success');
   renderSalaryHistory();
+}
+// GAP FIXED: TDS Payable (2060) and VAT Payable/Receivable (2020/1050) were credited/debited every
+// time TDS was withheld or VAT was collected/paid on a purchase — but unlike SSF Payable (which has
+// openMarkSSFDeposited above), there was no function anywhere in the app that ever cleared them.
+// Real deposits made to IRD in real life had nowhere to be recorded, so these liability balances on
+// the Balance Sheet would just grow forever and never reconcile to what's actually been filed and
+// paid — a real problem for a Balance Sheet meant to be shown to a tax office or auditor. These two
+// functions close that gap, following the exact same pattern as the SSF deposit above.
+function openMarkTDSDeposited() {
+  const outstanding = +accountBalanceAsOf('2060', today()).toFixed(2);
+  if (outstanding <= 0.004) { toast('No outstanding TDS Payable balance to deposit','warning'); return; }
+  const method = prompt(`Deposit withheld TDS to IRD?\nOutstanding TDS Payable: ${fmt(outstanding)}\nPaid via? Type "Cash" or "Bank"`, 'Bank');
+  if (!method) return;
+  const amtInput = prompt(`Amount actually deposited (usually the full outstanding balance):`, String(outstanding));
+  if (!amtInput) return;
+  const amount = Math.min(outstanding, Math.max(0, parseFloat(amtInput)||0));
+  if (amount <= 0) { toast('Enter a valid amount','error'); return; }
+  const normalizedMethod = method.trim().toLowerCase().startsWith('b') ? 'Bank Transfer' : 'Cash';
+  const cashCode = normalizedMethod === 'Bank Transfer' ? '1020' : '1010';
+  postJournalEntry({ date: today(), voucherKind:'Payment', refType:'tds-deposit', refId: today(), reference:`TDS-${today()}`, description:`TDS Deposit to IRD`, lines: [
+    { accountCode:'2060', debit: amount, credit:0 },
+    { accountCode: cashCode, debit:0, credit: amount }
+  ]});
+  db.taxDeposits = db.taxDeposits || [];
+  db.taxDeposits.push({ id:uid(), kind:'TDS', date:today(), amount, method:normalizedMethod, createdBy:session.username, createdAt:now() });
+  audit('Accounting','TDS Deposit', today(), `${fmt(amount)} (${normalizedMethod})`);
+  saveDB();
+  toast('TDS deposit recorded','success');
+}
+function openSettleVAT() {
+  const outputBal = +accountBalanceAsOf('2020', today()).toFixed(2);   // credit-normal
+  const inputBal = +accountBalanceAsOf('1050', today()).toFixed(2);    // debit-normal
+  const net = +(outputBal - inputBal).toFixed(2);
+  if (Math.abs(net) <= 0.004) { toast('No net VAT balance outstanding to settle','warning'); return; }
+  const isPayable = net > 0;
+  const method = prompt(`${isPayable?'Pay':'Record refund of'} net VAT to/from IRD?\nOutput VAT Payable: ${fmt(outputBal)} | Input VAT Receivable: ${fmt(inputBal)}\nNet ${isPayable?'Payable':'Refundable'}: ${fmt(Math.abs(net))}\nVia? Type "Cash" or "Bank"`, 'Bank');
+  if (!method) return;
+  const normalizedMethod = method.trim().toLowerCase().startsWith('b') ? 'Bank Transfer' : 'Cash';
+  const cashCode = normalizedMethod === 'Bank Transfer' ? '1020' : '1010';
+  // Clear both sides of the VAT accounts and settle the net difference in cash — whichever
+  // direction it runs. This intentionally clears the FULL outstanding balance on each account
+  // (not just the current period's registers) so 2020/1050 always return to zero after a filing,
+  // same as how a real VAT return closes out the period.
+  const lines = [];
+  if (outputBal > 0) lines.push({ accountCode:'2020', debit: outputBal, credit: 0 });
+  if (inputBal > 0) lines.push({ accountCode:'1050', debit: 0, credit: inputBal });
+  if (isPayable) lines.push({ accountCode: cashCode, debit: 0, credit: Math.abs(net) });
+  else lines.push({ accountCode: cashCode, debit: Math.abs(net), credit: 0 });
+  postJournalEntry({ date: today(), voucherKind:'Payment', refType:'vat-settlement', refId: today(), reference:`VAT-${today()}`, description:`VAT Return Settlement — Net ${isPayable?'Paid':'Refunded'}`, lines });
+  db.taxDeposits = db.taxDeposits || [];
+  db.taxDeposits.push({ id:uid(), kind:'VAT', date:today(), amount:Math.abs(net), direction:isPayable?'paid':'refunded', method:normalizedMethod, createdBy:session.username, createdAt:now() });
+  audit('Accounting','VAT Settlement', today(), `${fmt(Math.abs(net))} ${isPayable?'paid':'refunded'} (${normalizedMethod})`);
+  saveDB();
+  toast('VAT settlement recorded','success');
 }
 function renderSalaryHistory() {
   const empF = document.getElementById('sh-emp-filter')?.value?.toLowerCase()||'';
@@ -9600,6 +9788,7 @@ const REPORT_CATEGORIES = [
     {v:'correction-notes', label:'Credit & Debit Notes (Corrections)'},
     {v:'tax-deduction', label:'Tax Deduction Report (Payroll)'},
     {v:'tax-depreciation', label:'🏗️ Tax Depreciation Schedule (IRD Pool Method)'},
+    {v:'income-tax-estimate', label:'📈 Income Tax Estimate (Corporate)'},
     {v:'govt-submission', label:'Government Submission Summary (Net VAT Payable)'}
   ]}
 ];
@@ -9693,7 +9882,8 @@ const REPORT_TYPE_HELP = {
   'business-summary': 'Everything you\'d want to glance at before talking to a bank or auditor — profit, assets, cash, who owes what — on one page.',
   'expiring-soon': 'Anything you\'ve marked for expiry tracking, soonest first.',
   'non-moving-stock': 'Items sitting in stock that haven\'t sold in over 60 days.',
-  'ssf-register': 'What you owe the Social Security Fund this period — 11% from each employee, 20% from you.'
+  'ssf-register': 'What you owe the Social Security Fund this period — rate set in Settings ▸ Nepal Tax & VAT.',
+  'income-tax-estimate': 'Estimated corporate income tax for the period: accounting profit, swapped to IRD tax depreciation, less anything you flag as non-deductible, at your set rate. An estimate to work from — not a filed return.'
 };
 
 function onReportTypeChange() {
@@ -9703,6 +9893,9 @@ function onReportTypeChange() {
 
   const compareGroup = document.getElementById('rpt-pl-compare-group');
   if (compareGroup) compareGroup.style.display = (type==='profit-loss-ledger') ? '' : 'none';
+
+  const taxAdjustGroup = document.getElementById('rpt-tax-adjust-group');
+  if (taxAdjustGroup) taxAdjustGroup.style.display = (type==='income-tax-estimate') ? '' : 'none';
 
   const targetGroup = document.getElementById('rpt-ledger-target-group');
   const targetSelect = document.getElementById('rpt-ledger-target');
@@ -9898,6 +10091,7 @@ function generateReport() {
       ${row('Change in Accounts Receivable', -cf.changeInAR)}
       ${row('Change in Inventory', -cf.changeInInventory)}
       ${row('Change in Accounts Payable', cf.changeInAP)}
+      ${row('Change in Other Working Capital (VAT, TDS, SSF, Salary Payable, Advances, etc.)', cf.changeInOtherWorkingCapital)}
       <tr style="background:#f0f0f0">${row('Cash from Operating Activities', cf.operating, true).replace('<tr>','').replace('</tr>','')}</tr>
     </tbody></table>
     <h3 style="margin-top:14px">Investing Activities</h3>
@@ -9907,14 +10101,17 @@ function generateReport() {
     </tbody></table>
     <h3 style="margin-top:14px">Financing Activities</h3>
     <table><tbody>
-      ${row('Owner/Partner investment & withdrawals (net)', cf.financing)}
+      ${row('Owner/Partner investment & withdrawals (net)', cf.equityMovement)}
+      ${row('Loans drawn / repaid (net)', cf.loanMovement)}
       <tr style="background:#f0f0f0">${row('Cash from Financing Activities', cf.financing, true).replace('<tr>','').replace('</tr>','')}</tr>
     </tbody></table>
     <table style="margin-top:14px"><tbody>
+      ${Math.abs(cf.reconcilingDifference)>1 ? row('⚠ Reconciling Difference (see note below)', cf.reconcilingDifference) : ''}
       <tr style="background:#f0f0f0"><td><strong>NET CHANGE IN CASH</strong></td><td style="text-align:right"><strong>${fmt(cf.netChange)}</strong></td></tr>
       <tr><td>Opening Cash &amp; Bank Balance</td><td style="text-align:right" class="mono">${fmt(cf.openingCash)}</td></tr>
       <tr><td>Closing Cash &amp; Bank Balance</td><td style="text-align:right" class="mono">${fmt(cf.closingCash)}</td></tr>
-    </tbody></table>`;
+    </tbody></table>
+    ${Math.abs(cf.reconcilingDifference)>1 ? `<p style="margin-top:10px;font-weight:700;color:red">⚠ Operating + Investing + Financing (${fmt(cf.computedChange)}) doesn't match the actual cash movement (${fmt(cf.netChange)}) by ${fmt(cf.reconcilingDifference)} — this points to an account type not yet categorized above. The Net Change figure itself is still correct (it's taken directly from actual Cash/Bank balances); the breakdown above it is what's short.</p>` : '<p style="margin-top:10px;font-weight:700;color:green">✓ Reconciles — Operating + Investing + Financing matches the actual Opening→Closing cash movement exactly.</p>'}`;
   } else if (type==='owners-equity') {
     const oe = computeOwnersEquityStatement(from, to);
     if (oe.single) {
@@ -10150,20 +10347,24 @@ function generateReport() {
     <p style="font-size:13px;color:#777;margin-top:8px">Rows in red are Debit Notes (corrections) — already netted into the total above.</p>`;
   } else if (type==='tds-register') {
     const tds = computeTDSRegister(from, to);
+    const outstandingTDS = +accountBalanceAsOf('2060', to||today()).toFixed(2);
     bodyHtml = `<h2>TDS Register (Rent / Contractor / Professional)</h2>
     <p style="font-size:15px;color:#555;margin-bottom:12px">What you've withheld from rent-to-company, contractor, and professional fee payments — deposit deadline is the 25th of the following month.</p>
     <table><thead><tr><th>Date</th><th>Voucher #</th><th>Description</th><th style="text-align:right">TDS Withheld</th></tr></thead><tbody>
       ${tds.rows.length?tds.rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td class="mono">${esc(r.voucherNumber)}</td><td>${esc(r.description)}</td><td style="text-align:right" class="mono">${fmt(r.tdsAmount)}</td></tr>`).join(''):'<tr><td colspan="4">No TDS withheld in this period</td></tr>'}
-      <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL DUE TO IRD</strong></td><td style="text-align:right"><strong>${fmt(tds.total)}</strong></td></tr>
-    </tbody></table>`;
+      <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL DUE TO IRD (this period)</strong></td><td style="text-align:right"><strong>${fmt(tds.total)}</strong></td></tr>
+    </tbody></table>
+    <p style="font-size:15px;margin-top:12px">Outstanding TDS Payable on the books (all-time, undeposited): <strong>${fmt(outstandingTDS)}</strong> ${outstandingTDS>0.004?`<button class="btn btn-xs btn-primary" onclick="openMarkTDSDeposited()">Record Deposit to IRD</button>`:'<span class="badge badge-success">Nothing outstanding</span>'}</p>`;
   } else if (type==='ssf-register') {
     const payrolls = (db.payrollHistory||[]).filter(ph=>(ph.totalSSF||0)>0 && periodMonthOverlapsRange(ph.month, from, to));
     let rows = [];
     payrolls.forEach(ph => (ph.entries||[]).filter(e=>e.employeeSSF>0).forEach(e => rows.push({ month:ph.month, empName:e.empName, basic:e.salary, employeeSSF:e.employeeSSF, employerSSF:e.employerSSF, total:e.employeeSSF+e.employerSSF })));
     const totalDue = rows.reduce((a,r)=>a+r.total,0);
+    const ssfEmpPct = Math.round((db.settings.acctMappings.ssfEmployeeRate ?? 0.11)*100);
+    const ssfErPct = Math.round((db.settings.acctMappings.ssfEmployerRate ?? 0.20)*100);
     bodyHtml = `<h2>SSF Register — Social Security Fund</h2>
-    <p style="font-size:15px;color:#555;margin-bottom:12px">11% employee + 20% employer of basic salary, deposited monthly — this is what your SSF filing needs.</p>
-    <table><thead><tr><th>Month</th><th>Employee</th><th style="text-align:right">Basic Salary</th><th style="text-align:right">Employee (11%)</th><th style="text-align:right">Employer (20%)</th><th style="text-align:right">Total</th></tr></thead><tbody>
+    <p style="font-size:15px;color:#555;margin-bottom:12px">${ssfEmpPct}% employee + ${ssfErPct}% employer of basic salary, deposited monthly — this is what your SSF filing needs. Rates set in Settings ▸ Nepal Tax &amp; VAT.</p>
+    <table><thead><tr><th>Month</th><th>Employee</th><th style="text-align:right">Basic Salary</th><th style="text-align:right">Employee (${ssfEmpPct}%)</th><th style="text-align:right">Employer (${ssfErPct}%)</th><th style="text-align:right">Total</th></tr></thead><tbody>
       ${rows.length?rows.map(r=>`<tr><td>${esc(periodMonthLabel(r.month))}</td><td>${esc(r.empName)}</td><td style="text-align:right" class="mono">${fmt(r.basic)}</td><td style="text-align:right" class="mono">${fmt(r.employeeSSF)}</td><td style="text-align:right" class="mono">${fmt(r.employerSSF)}</td><td style="text-align:right" class="mono"><strong>${fmt(r.total)}</strong></td></tr>`).join(''):'<tr><td colspan="6">No SSF-enrolled payroll in this period</td></tr>'}
       <tr style="background:#f0f0f0"><td colspan="5"><strong>TOTAL SSF DUE</strong></td><td style="text-align:right"><strong>${fmt(totalDue)}</strong></td></tr>
     </tbody></table>`;
@@ -10187,6 +10388,32 @@ function generateReport() {
       <p><strong>Known limitation:</strong> Opening WDV for assets bought in an earlier fiscal year is approximated from book records (cost minus book depreciation to date) rather than a carried-forward tax-WDV ledger, since this is this schedule's first year of operation. From next fiscal year onward, each pool's own closing WDV becomes next year's true opening WDV automatically.</p>
       <p>Verify against your actual purchase invoices before filing — this is generated from recorded transactions only.</p>
     </div>`;
+  } else if (type==='income-tax-estimate') {
+    const pl = computePLPeriod(from, to);
+    const dep = computeNepalTaxDepreciation(to || today());
+    const bookDepRow = pl.expense.find(r=>r.acc.code==='5090');
+    const bookDep = bookDepRow ? bookDepRow.amount : 0;
+    const disallowed = Math.max(0, parseFloat(document.getElementById('rpt-tax-disallowed')?.value)||0);
+    const taxableIncome = Math.max(0, pl.netProfit + bookDep - dep.totalDepreciation + disallowed);
+    const rate = db.settings.acctMappings.corporateTaxRate ?? 0.25;
+    const estimatedTax = +(taxableIncome * rate).toFixed(2);
+    bodyHtml = `<h2>📈 Income Tax Estimate (Corporate)</h2>
+    <p style="font-size:15px;color:#555;margin-bottom:12px">An estimate built from recorded transactions — not a filed return. Confirm your applicable rate and any disallowed expenses with your accountant before using this figure.</p>
+    <table><thead><tr><th>Particulars</th><th style="text-align:right">Amount</th></tr></thead><tbody>
+      <tr><td>Net Profit per Books (this period)</td><td class="mono" style="text-align:right">${fmt(pl.netProfit)}</td></tr>
+      <tr><td>+ Book Depreciation (added back)</td><td class="mono" style="text-align:right">${fmt(bookDep)}</td></tr>
+      <tr><td>− IRD Tax Depreciation (Schedule 2, FY ${nepaliFiscalYearLabel(dep.yearEnd)})</td><td class="mono" style="text-align:right">(${fmt(dep.totalDepreciation)})</td></tr>
+      <tr><td>+ Disallowed / Non-Deductible Expenses (as entered)</td><td class="mono" style="text-align:right">${fmt(disallowed)}</td></tr>
+      <tr style="background:#f0f0f0"><td><strong>Estimated Taxable Income</strong></td><td class="mono" style="text-align:right"><strong>${fmt(taxableIncome)}</strong></td></tr>
+      <tr><td>Applicable Rate (Settings ▸ Nepal Tax &amp; VAT)</td><td class="mono" style="text-align:right">${(rate*100).toFixed(2)}%</td></tr>
+      <tr style="background:#f0f0f0"><td><strong>Estimated Income Tax</strong></td><td class="mono" style="text-align:right"><strong>${fmt(estimatedTax)}</strong></td></tr>
+    </tbody></table>
+    <div style="margin-top:14px;font-size:14px;color:#666">
+      <p><strong>Why the tax depreciation swap:</strong> your P&amp;L above uses straight-line depreciation for management purposes, but IRD only accepts the Schedule 2 pool/WDV method for tax purposes — so book depreciation is added back and the IRD figure is used instead.</p>
+      <p><strong>What isn't captured automatically:</strong> disallowed expenses (personal costs run through the business, fines/penalties, unsupported costs, donations above the allowed limit) aren't flagged by the app — enter what you know of above. Tax-exempt income, carried-forward losses, and any incentive/rebate for your specific industry classification also aren't applied here.</p>
+      <p><strong>Advance tax:</strong> Nepal requires advance tax in three installments (by Poush end, Chaitra end, Ashad end) — this report gives you a period estimate to plan around, but doesn't track installments paid.</p>
+      <p>This is a planning estimate only — have your accountant confirm the final figure before filing.</p>
+    </div>`;
   } else if (type==='tax-deduction') {
     bodyHtml = `<h2>Tax Deduction Report</h2>
     <p style="font-size:17px;margin-bottom:12px">Employee tax deductions for the selected period.</p>
@@ -10194,20 +10421,32 @@ function generateReport() {
       ${db.payrollHistory.flatMap(p=>(p.entries||[]).filter(e=>e.deductions?.Tax>0).map(e=>`<tr><td>${esc(e.empName)}</td><td>${esc(periodMonthLabel(p.month))}</td><td>${fmt(e.deductions.Tax)}</td></tr>`)).join('')||'<tr><td colspan="3">No tax deductions recorded</td></tr>'}
     </tbody></table>`;
   } else if (type==='govt-submission') {
-    const periodSalesG = db.sales.filter(x=>(!from||x.date>=from)&&(!to||x.date<=to));
-    const vatCollected = periodSalesG.reduce((a,x)=>a+(x.taxAmount||0),0);
-    const taxableSales = periodSalesG.reduce((a,x)=>a+(x.subtotal||0),0);
-    const purchasesG = db.accounting.filter(a=>a.type==='expense'&&(a.category==='Purchase'||a.category==='Supplies')&&(!from||a.date>=from)&&(!to||a.date<=to));
-    const vatPaidOnPurchase = purchasesG.reduce((a,p)=>a+(p.vatAmount||0),0);
+    // BUG FIXED: this used to compute VAT completely independently of the ledger and the VAT
+    // Sales/Purchase Registers above — pulling raw db.sales (never netting Credit Notes) for
+    // output VAT, and summing a `vatAmount` field off db.accounting supplier-payment records for
+    // input VAT. That field is never actually set anywhere on those records, so Input VAT Paid
+    // was silently ALWAYS ZERO — meaning this report, the one specifically meant for filing with
+    // IRD, systematically overstated Net VAT Payable by the full input VAT for every period, and
+    // disagreed with the correctly-computed VAT Sales/Purchase Registers in this same report list
+    // for the same period. Purchases were also being taken from cash actually paid to suppliers
+    // rather than from invoices received — wrong basis for invoice-basis VAT, and it missed
+    // unpaid invoices entirely. Fixed: reuse the same ledger-based registers everything else in
+    // this report list already uses, so every VAT figure in the app reconciles to the same source.
+    const salesReg = computeVATSalesRegister(from, to);
+    const purchaseReg = computeVATPurchaseRegister(from, to);
+    const outputBal = +accountBalanceAsOf('2020', to||today()).toFixed(2);
+    const inputBal = +accountBalanceAsOf('1050', to||today()).toFixed(2);
+    const netOutstanding = +(outputBal-inputBal).toFixed(2);
     bodyHtml = `<h2>Government Submission Summary</h2>
     <p style="font-size:17px;margin-bottom:12px">Summary formatted for periodic submission to the Inland Revenue Department (IRD). PAN: ${esc(s.panNumber||'N/A')} | VAT Registration: ${esc(s.vatNumber||'N/A')} | Fiscal Period: ${from?fmtDate(from):'—'} to ${to?fmtDate(to):'—'}</p>
     <table><thead><tr><th>Particulars</th><th>Amount</th></tr></thead><tbody>
-      <tr><td>Total Taxable Sales</td><td class="mono amt-revenue">${fmt(taxableSales)}</td></tr>
-      <tr><td>Output VAT Collected</td><td class="mono amt-balance">${fmt(vatCollected)}</td></tr>
-      <tr><td>Total Purchases (Input)</td><td class="mono amt-purchase">${fmt(purchasesG.reduce((a,p)=>a+p.amount,0))}</td></tr>
-      <tr><td>Input VAT Paid</td><td class="mono amt-purchase">${fmt(vatPaidOnPurchase)}</td></tr>
-      <tr style="background:#f0f0f0"><td><strong>Net VAT Payable / (Refundable)</strong></td><td class="mono"><strong>${fmt(vatCollected-vatPaidOnPurchase)}</strong></td></tr>
+      <tr><td>Total Taxable Sales (net of Credit Notes)</td><td class="mono amt-revenue">${fmt(salesReg.totalTaxable)}</td></tr>
+      <tr><td>Output VAT Collected</td><td class="mono amt-balance">${fmt(salesReg.totalVAT)}</td></tr>
+      <tr><td>Total Purchases (net of Debit Notes)</td><td class="mono amt-purchase">${fmt(purchaseReg.totalTaxable)}</td></tr>
+      <tr><td>Input VAT Paid</td><td class="mono amt-purchase">${fmt(purchaseReg.totalVAT)}</td></tr>
+      <tr style="background:#f0f0f0"><td><strong>Net VAT Payable / (Refundable) — this period</strong></td><td class="mono"><strong>${fmt(salesReg.totalVAT-purchaseReg.totalVAT)}</strong></td></tr>
     </tbody></table>
+    <p style="font-size:15px;margin-top:12px">Outstanding on the books (all-time, unsettled): Output VAT ${fmt(outputBal)} − Input VAT ${fmt(inputBal)} = <strong>${fmt(Math.abs(netOutstanding))} ${netOutstanding>=0?'payable':'refundable'}</strong> ${Math.abs(netOutstanding)>0.004?`<button class="btn btn-xs btn-primary" onclick="openSettleVAT()">Record Settlement with IRD</button>`:'<span class="badge badge-success">Nothing outstanding</span>'}</p>
     <p style="font-size:15px;color:#666;margin-top:10px">This summary is generated from recorded transactions only. Verify against original tax invoices before submission — Claude/this system does not file returns on your behalf.</p>`;
   } else if (type==='annual-report') {
     const yearFrom = from || nepaliFiscalYearStartDate(today());
@@ -11898,8 +12137,14 @@ function confirmMakeNow() {
     consumed.push({ materialId:m.id, materialName:m.name, qty:needed, unit:m.unit, itemType:it.itemType||'material' });
     db.stockHistory.push({ id:uid(), recordId:m.id, recordName:m.name, type:'production_consumption', qty:-needed, balanceAfter:m.stock, date:today(), ref:batchNumber, createdAt:now() });
   });
+  // BUG FIXED: same issue as Complete Production — if qty came out to 0 (spoiled/failed batch),
+  // this used to still fold the full material cost into the WEIGHTED AVERAGE of existing stock
+  // (inflating the cost basis, and therefore future COGS, of units that batch had nothing to do
+  // with) and still capitalize it into the Inventory ledger account with no new units to back it.
+  // A failed batch is a real loss — it now posts to Inventory Adjustment (Shrinkage/Correction)
+  // instead and leaves the existing stock's cost price untouched.
   const product = db.records.find(r=>r.id===bom.productId);
-  if (product) {
+  if (product && qty > 0) {
     // Keep the product's cost price accurate (weighted average) so COGS at time of sale
     // reflects what this batch actually cost, not a stale or default number.
     const existingValue = (product.stock||0) * (product.costPrice||0);
@@ -11917,10 +12162,12 @@ function confirmMakeNow() {
   // consumed product's value just vanished from account 1042 with nothing recorded. Both
   // components are posted now, so the full picture is auditable.
   if (totalCost > 0) {
-    const lines = [ { accountCode: db.settings.acctMappings.inventoryAccount, debit: totalCost, credit: 0 } ];
+    const lines = qty > 0
+      ? [ { accountCode: db.settings.acctMappings.inventoryAccount, debit: totalCost, credit: 0 } ]
+      : [ { accountCode: '5095', debit: totalCost, credit: 0 } ];   // zero yield — material cost is a loss, not inventory
     if (rawMaterialCost > 0) lines.push({ accountCode: '1040', debit: 0, credit: rawMaterialCost });
     if (productIngredientCost > 0) lines.push({ accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: productIngredientCost });
-    postJournalEntry({ date: today(), voucherKind:'Journal', refType:'production', refId: batchNumber, reference: batchNumber, description: `Production — ${bom.name}`, lines });
+    postJournalEntry({ date: today(), voucherKind:'Journal', refType:'production', refId: batchNumber, reference: batchNumber, description: qty > 0 ? `Production — ${bom.name}` : `Production — ${bom.name} — zero yield, materials lost`, lines });
   }
   db.productionBatches.push({ id:uid(), orderId:null, batchNumber, productId:bom.productId, qtyProduced:qty, materialsConsumed:consumed, cost:totalCost, date:today(), status:'completed', createdBy:session.username });
   audit('Production','Make Now',bom.id,`${bom.name} — ${qty} units produced`);
@@ -12166,6 +12413,14 @@ function confirmCompleteProduction() {
   // whole point of the redesign: cost per unit now reflects what actually happened (get more
   // than expected, cost/unit drops; get less, it rises), instead of a number computed from a
   // fixed ratio that was only ever a planning guess.
+  // BUG FIXED: if actualQty came out to 0 (a spoiled/failed batch — a real possibility for
+  // fermented pickles/chutneys), this function still consumed the raw materials AND still debited
+  // their full cost into the Inventory account — but with zero finished units created to back that
+  // value. The Inventory GL balance would silently sit higher than what the physical stock count
+  // times cost-per-unit actually supports, with no way to trace it back. A failed batch's material
+  // cost is a real loss, not an asset — so it now posts to Inventory Adjustment (Shrinkage/
+  // Correction) instead, the same account manual stock write-offs already use, hitting P&L where a
+  // spoilage loss belongs rather than sitting invisibly inside Inventory forever.
   const product = db.records.find(r=>r.id===bom.productId);
   if (product && actualQty > 0) {
     const existingValue = (product.stock||0) * (product.costPrice||0);
@@ -12181,10 +12436,12 @@ function confirmCompleteProduction() {
   // at all — the consumed product's value just vanished from account 1042 with nothing recorded.
   // Both components are posted now, so the full picture is auditable (same fix as Make Now).
   if (totalCost > 0) {
-    const lines = [ { accountCode: db.settings.acctMappings.inventoryAccount, debit: totalCost, credit: 0 } ];
+    const lines = actualQty > 0
+      ? [ { accountCode: db.settings.acctMappings.inventoryAccount, debit: totalCost, credit: 0 } ]
+      : [ { accountCode: '5095', debit: totalCost, credit: 0 } ];   // zero yield — material cost is a loss, not inventory
     if (rawMaterialCost > 0) lines.push({ accountCode: '1040', debit: 0, credit: rawMaterialCost });
     if (productIngredientCost > 0) lines.push({ accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: productIngredientCost });
-    postJournalEntry({ date: today(), voucherKind:'Journal', refType:'production', refId: batchNumber, reference: batchNumber, description: `Production — ${bom.name} (${order.orderNumber})`, lines });
+    postJournalEntry({ date: today(), voucherKind:'Journal', refType:'production', refId: batchNumber, reference: batchNumber, description: actualQty > 0 ? `Production — ${bom.name} (${order.orderNumber})` : `Production — ${bom.name} (${order.orderNumber}) — zero yield, materials lost`, lines });
   }
   const batch = { id:uid(), orderId:order.id, batchNumber, productId:bom.productId, qtyProduced:actualQty, materialsConsumed:consumed, cost:totalCost, date:today(), status:'completed', createdBy:session.username };
   db.productionBatches.push(batch);
@@ -12843,6 +13100,15 @@ function loadTaxSettings() {
   sv('st-pan', s.panNumber); sv('st-vat', s.vatNumber);
   sv('st-fiscal', s.fiscalYear||'BS');
   sv('st-vat-rate', s.pos?.defaultTax||13);
+  const am = s.acctMappings||{};
+  sv('st-ssf-employee', +((am.ssfEmployeeRate ?? 0.11)*100).toFixed(2));
+  sv('st-ssf-employer', +((am.ssfEmployerRate ?? 0.20)*100).toFixed(2));
+  const tr = am.tdsRates||{};
+  sv('st-tds-rentCompany', +((tr.rentCompany ?? 0.10)*100).toFixed(2));
+  sv('st-tds-contractorVAT', +((tr.contractorVAT ?? 0.015)*100).toFixed(2));
+  sv('st-tds-contractorNoVAT', +((tr.contractorNoVAT ?? 0.15)*100).toFixed(2));
+  sv('st-tds-consultancy', +((tr.consultancy ?? 0.15)*100).toFixed(2));
+  sv('st-corp-tax-rate', +((am.corporateTaxRate ?? 0.25)*100).toFixed(2));
   renderComplianceToggleList();
 }
 
@@ -12864,6 +13130,16 @@ function saveTaxSettings() {
   s.vatNumber = document.getElementById('st-vat')?.value?.trim()||'';
   s.fiscalYear = document.getElementById('st-fiscal')?.value||'BS';
   s.pos.defaultTax = parseFloat(document.getElementById('st-vat-rate')?.value)||13;
+  const pct = (id, fallback) => { const v = parseFloat(document.getElementById(id)?.value); return (isNaN(v)||v<0) ? fallback : v/100; };
+  if (!s.acctMappings) s.acctMappings = {};
+  s.acctMappings.ssfEmployeeRate = pct('st-ssf-employee', 0.11);
+  s.acctMappings.ssfEmployerRate = pct('st-ssf-employer', 0.20);
+  if (!s.acctMappings.tdsRates) s.acctMappings.tdsRates = {};
+  s.acctMappings.tdsRates.rentCompany = pct('st-tds-rentCompany', 0.10);
+  s.acctMappings.tdsRates.contractorVAT = pct('st-tds-contractorVAT', 0.015);
+  s.acctMappings.tdsRates.contractorNoVAT = pct('st-tds-contractorNoVAT', 0.15);
+  s.acctMappings.tdsRates.consultancy = pct('st-tds-consultancy', 0.15);
+  s.acctMappings.corporateTaxRate = pct('st-corp-tax-rate', 0.25);
   if (!s.complianceReports) s.complianceReports = {};
   document.querySelectorAll('#compliance-toggle-list input[data-compliance-type]').forEach(chk => {
     s.complianceReports[chk.dataset.complianceType] = chk.checked;

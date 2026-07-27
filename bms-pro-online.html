@@ -4408,7 +4408,7 @@ function renderReconMatches() {
     rows.push(`<tr><td>${bankCell}</td><td>${bookCell}</td><td>${statusCell}</td><td>${actionCell}</td></tr>`);
   });
   st.bookLines.filter(bl=>!bl.consumed).forEach(bl => {
-    rows.push(`<tr style="background:#fff8e1"><td>—</td><td>${fmtDate(bl.date)}<br>${esc(bl.voucherNumber)} — ${esc(bl.description)}<br><strong class="mono">${fmt(bl.debit||bl.credit)}</strong></td><td><span class="badge badge-warning">⚠ Not yet in bank</span></td><td class="form-hint">Likely still clearing (e.g. an unpresented cheque) — no action needed unless it's unusually old.</td></tr>`);
+    rows.push(`<tr style="background:#fff8e1;color:#5c4a12"><td>—</td><td>${fmtDate(bl.date)}<br>${esc(bl.voucherNumber)} — ${esc(bl.description)}<br><strong class="mono">${fmt(bl.debit||bl.credit)}</strong></td><td><span class="badge badge-warning">⚠ Not yet in bank</span></td><td class="form-hint" style="color:#5c4a12">Likely still clearing (e.g. an unpresented cheque) — no action needed unless it's unusually old.</td></tr>`);
   });
   document.getElementById('recon-match-tbody').innerHTML = rows.join('');
   renderReconSummary();
@@ -4428,7 +4428,7 @@ function renderReconSummary() {
       <tr><td>Balance per your Books (Bank Account, today)</td><td style="text-align:right" class="mono">${fmt(bookBalance)}</td></tr>
       <tr><td>Items on your statement not yet in your books</td><td style="text-align:right" class="mono">${bankUnmatchedNet>=0?'+':''}${fmt(bankUnmatchedNet)}</td></tr>
       <tr><td>Items in your books not yet cleared by the bank</td><td style="text-align:right" class="mono">${-bookUnmatchedNet>=0?'+':''}${fmt(-bookUnmatchedNet)}</td></tr>
-      <tr style="background:#f0f0f0"><td><strong>Adjusted Balance</strong></td><td style="text-align:right"><strong>${fmt(adjusted)}</strong></td></tr>
+      <tr style="background:#f0f0f0;color:#1a1a1a"><td><strong>Adjusted Balance</strong></td><td style="text-align:right"><strong>${fmt(adjusted)}</strong></td></tr>
       <tr><td>Balance per Bank Statement (as entered)</td><td style="text-align:right" class="mono">${fmt(stated)}</td></tr>
     </tbody></table>
     <p style="margin-top:10px;font-weight:700;color:${reconciled?'green':'red'}">${reconciled?'✓ Reconciled':'⚠ Difference of '+fmt(Math.abs(adjusted-stated))+' — check for a missed or duplicate entry'}</p>`;
@@ -7986,8 +7986,8 @@ function renderAccounting() {
   if (banner) {
     const check = runAccountingIntegrityCheck();
     banner.innerHTML = check.clean ? '' : `
-      <div style="background:#fff3f3;border:1px solid var(--danger);border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px">
-        <div>⚠️ <strong>Accounting Integrity Checker found issues</strong> — ${check.orphanLines.length?`${check.orphanLines.length} orphan entr${check.orphanLines.length===1?'y':'ies'}`:''}${check.orphanLines.length&&check.duplicateGroups.length?', ':''}${check.duplicateGroups.length?`${check.duplicateGroups.length} duplicate posting${check.duplicateGroups.length===1?'':'s'}`:''}${Math.abs(check.difference)>=0.01?` — ledger off by ${fmt(Math.abs(check.difference))}`:''}.</div>
+      <div style="background:#fff3f3;border:1px solid var(--danger);border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;color:#7a1f1f">
+        <div style="color:#7a1f1f">⚠️ <strong>Accounting Integrity Checker found issues</strong> — ${check.orphanLines.length?`${check.orphanLines.length} orphan entr${check.orphanLines.length===1?'y':'ies'}`:''}${check.orphanLines.length&&check.duplicateGroups.length?', ':''}${check.duplicateGroups.length?`${check.duplicateGroups.length} duplicate posting${check.duplicateGroups.length===1?'':'s'}`:''}${Math.abs(check.difference)>=0.01?` — ledger off by ${fmt(Math.abs(check.difference))}`:''}.</div>
         <button class="btn btn-danger btn-sm" onclick="openAccountingIntegrityReport()" style="flex-shrink:0">🔍 Investigate</button>
       </div>`;
   }

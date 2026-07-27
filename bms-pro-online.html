@@ -851,7 +851,7 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="topbar-actions">
         <div class="live-clock" id="live-clock"></div>
         <button class="btn-icon" onclick="toggleAdvSearch()" title="Advanced Search">🎚️</button>
-        <div class="dropdown" style="position:relative" title="Online sync status — tap to configure, long-press to force sync now">
+        <div class="dropdown" style="position:relative" title="Tap to view sync status and settings">
           <button class="btn-icon" onclick="openModal('sync-setup-modal-overlay');syncRenderSetupModal()" oncontextmenu="event.preventDefault();forceSyncNow()" style="display:flex;align-items:center;gap:6px;width:auto;padding:0 10px;font-size:15px;white-space:nowrap">
             <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:#9CA3AF;display:inline-block;flex-shrink:0"></span>
             <span id="sync-label">Offline mode</span>
@@ -5235,7 +5235,7 @@ function syncSetStatus(state, text) {
   const dot = document.getElementById('sync-dot');
   const lbl = document.getElementById('sync-label');
   if (!dot || !lbl) return;
-  const colors = { offline:'#9CA3AF', online:'#22C55E', syncing:'#F59E0B', pending:'#EF4444', error:'#EF4444' };
+  const colors = { offline:'#9CA3AF', online:'#22C55E', syncing:'#F59E0B', pending:'#F59E0B', error:'#EF4444' };
   dot.style.background = colors[state] || '#9CA3AF';
   lbl.textContent = text || state;
 }
@@ -5411,22 +5411,37 @@ function syncRenderSetupModal() {
     return;
   }
 
+  const statusText = !syncConfigured() ? 'Not connected — working offline only'
+    : !SYNC.token ? 'Connected to server, but not signed in — log in below with your password (not fingerprint) once to finish linking this device.'
+    : SYNC.pending ? 'Connected — saving your latest changes…'
+    : SYNC.online ? 'Connected — everything is synced ✓'
+    : 'Connected, but no internet right now';
+  const statusColor = !syncConfigured() ? 'var(--text-muted)' : (!SYNC.token || (!SYNC.online && !SYNC.pending)) ? '#F59E0B' : SYNC.pending ? '#F59E0B' : '#22C55E';
+
   body.innerHTML = `
+    <div style="font-size:16px;font-weight:600;color:${statusColor};padding:10px 12px;background:var(--elevated);border-radius:8px;margin-bottom:14px">
+      ${statusText}
+    </div>
     <div class="form-group">
       <label class="form-label">Server Address</label>
       <input class="form-control" id="sync-url-input" placeholder="https://your-app-name.onrender.com" value="${esc(SYNC.apiBase)}">
-      <div class="form-hint">This is the web address of your backend server (you'll get this after deployment).</div>
+      <div class="form-hint">This is the web address of your backend server (you'll get this after deployment). Most people set this once and never touch it again.</div>
     </div>
     <div id="sync-setup-msg" style="font-size:17px;margin:10px 0;min-height:18px"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-      <button class="btn btn-primary btn-sm" onclick="syncSetupConnect()">🔌 Save & Connect</button>
-      <button class="btn btn-secondary btn-sm" onclick="syncSetupBootstrap()">⬆️ Upload Current Data (first time only)</button>
-      <button class="btn btn-secondary btn-sm" onclick="syncSetupDisconnect()">🔌 Disconnect / Offline Only</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-primary btn-sm" onclick="syncSetupConnect()">🔌 Connect</button>
+      ${SYNC.token ? `<button class="btn btn-secondary btn-sm" onclick="forceSyncNow().then(()=>syncRenderSetupModal())">🔄 Sync Now</button>` : ''}
     </div>
-    <div style="font-size:15px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:10px;margin-bottom:14px">
-      Status: <b>${syncConfigured() ? (SYNC.online ? 'Connected' : 'Configured, not reachable right now') : 'Offline mode'}</b><br>
-      Use <b>"Upload Current Data"</b> only ONCE, on the very first device you connect — it sends this device's existing data to the brand-new server. Every other device should just use "Save & Connect" and sign in normally.
-    </div>
+    <details style="margin-bottom:14px">
+      <summary style="cursor:pointer;color:var(--text-muted);font-size:14px">Advanced options (only needed for special situations)</summary>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn btn-secondary btn-sm" onclick="syncSetupBootstrap()">⬆️ Upload Current Data (brand-new server, first device only)</button>
+        <button class="btn btn-secondary btn-sm" onclick="syncSetupDisconnect()">🔌 Disconnect / Offline Only</button>
+      </div>
+      <div style="font-size:13px;color:var(--text-dim);margin-top:8px">
+        Only use "Upload Current Data" once, on the very first device, right after setting up a brand-new empty server. Every other device just connects and signs in normally — no need to touch this.
+      </div>
+    </details>
     <div class="form-group" style="border-top:1px solid var(--border);padding-top:12px">
       <label class="form-label">👆 Fingerprint Unlock (this device)</label>
       <div class="form-hint" style="margin-bottom:8px">Lets you sign back in on THIS device using your fingerprint/face unlock instead of typing your password. This is per-device — it must be set up again on any other phone or computer.</div>
@@ -6030,6 +6045,9 @@ async function unlockWithBiometric(username) {
     document.getElementById('app').style.display = 'flex';
     initApp();
     startSyncLoop();
+    if (syncConfigured() && !SYNC.token) {
+      setTimeout(() => toast('Online sync isn\'t linked on this device yet — log out and sign in once with your password to turn it on.', 'warning'), 800);
+    }
     return true;
   } catch (e) {
     // User cancelled, fingerprint didn't match, or the OS dialog timed out —

@@ -947,7 +947,7 @@ textarea.form-control{resize:vertical;min-height:80px}
             <div class="chart-bar-wrap" id="revenue-chart"></div>
           </div>
           <div class="card">
-            <div class="card-header"><div class="card-title">📈 Month vs Last Month</div></div>
+            <div class="card-header"><div class="card-title">📈 Month vs Last Month <span style="font-weight:400;color:var(--text-muted);font-size:12px">(excl. VAT)</span></div></div>
             <div id="mom-compare"></div>
           </div>
         </div>
@@ -3944,16 +3944,23 @@ function computeBalanceSheet(asOf) {
   const date = asOf || today();
   const build = type => (db.chartOfAccounts||[]).filter(a=>a.type===type).map(acc=>({ acc, balance: accountBalanceAsOf(acc.code, date) })).filter(r=>Math.abs(r.balance)>0.004);
   const assets = build('asset'), liabilities = build('liability'), equity = build('equity');
+  // Equity must include ALL accumulated profit/loss since the business began, not just the
+  // current fiscal year — this app has no formal year-end "closing entry" that rolls prior
+  // years' profit into a permanent Retained Earnings account, so without this, any income/
+  // expense activity from before the current fiscal year would be present in Assets but
+  // silently missing from Equity, breaking the Assets = Liabilities + Equity identity.
+  const sinceInception = computePLPeriod(null, date);
   const yearStart = nepaliFiscalYearStartDate(date);
   const ytd = computePLPeriod(yearStart, date);
+  const priorYearsEarnings = +(sinceInception.netProfit - ytd.netProfit).toFixed(2);
   const totalAssets = assets.reduce((a,r)=>a+r.balance,0);
   const totalLiabilities = liabilities.reduce((a,r)=>a+r.balance,0);
-  const totalEquity = equity.reduce((a,r)=>a+r.balance,0) + ytd.netProfit;
+  const totalEquity = equity.reduce((a,r)=>a+r.balance,0) + sinceInception.netProfit;
   let earningsSplit = null;
   if (db.settings.ownershipType === 'partnership' && (db.settings.partners||[]).length) {
     earningsSplit = db.settings.partners.map(p => ({ name:p.name, sharePct:p.sharePct, amount: +(ytd.netProfit * (p.sharePct/100)).toFixed(2) }));
   }
-  return { assets, liabilities, equity, currentYearEarnings: ytd.netProfit, earningsSplit, totalAssets, totalLiabilities, totalEquity, balanced: Math.abs(totalAssets - (totalLiabilities+totalEquity)) < 1 };
+  return { assets, liabilities, equity, currentYearEarnings: ytd.netProfit, priorYearsEarnings, earningsSplit, totalAssets, totalLiabilities, totalEquity, balanced: Math.abs(totalAssets - (totalLiabilities+totalEquity)) < 1 };
 }
 
 // ── 4. Day Book ──
@@ -5111,30 +5118,35 @@ function refreshDashboardKPIs() {
 
   const todaySales   = db.sales.filter(s => s.date === t);
   const monthSales   = db.sales.filter(s => s.date && s.date.startsWith(monthPrefix));
-  const totalRevToday  = todaySales.reduce((a,s) => a + s.total, 0);
-  const totalRevMonth  = monthSales.reduce((a,s) => a + s.total, 0);
-  // Expense totals — pulled from db.accounting, which is the single place
-  // EVERY expense lands regardless of source: Payroll processing pushes
-  // Salary entries here, Supplier Payments push raw-material/Purchase
-  // entries here, and any manual entry (Utilities, Rent, Tax, Other, etc.)
-  // is added here too. So filtering by type==='expense' already covers
-  // salary + raw material + everything else — nothing extra to wire up.
-  const todayExpenses  = db.accounting.filter(a => a.type === 'expense' && a.date === t);
-  const monthExpenses  = db.accounting.filter(a => a.type === 'expense' && a.date && a.date.startsWith(monthPrefix));
-  const totalExpToday  = todayExpenses.reduce((a,x) => a + x.amount, 0);
-  const totalExpMonth  = monthExpenses.reduce((a,x) => a + x.amount, 0);
-  const totalIncome  = db.accounting.filter(a => a.type === 'income').reduce((a,x) => a + x.amount, 0);
-  const totalExp     = db.accounting.filter(a => a.type === 'expense').reduce((a,x) => a + x.amount, 0);
-  const netBalance   = totalIncome - totalExp;
+  // Revenue and Expense now pulled from the real ledger, same source as the P&L Statement and
+  // Balance Sheet, instead of the old db.sales/db.accounting tallies — those overstated revenue
+  // by including VAT collected (not actually your income) and understated expenses by only
+  // counting them when paid rather than when incurred (e.g. an unpaid supplier bill wouldn't
+  // show up here yet, even though it's a real expense already sitting in your books).
+  const todayPL  = computePLPeriod(t, t);
+  const monthPL  = computePLPeriod(monthPrefix + '-01', t);
+  const totalRevToday  = todayPL.totalIncome;
+  const totalRevMonth  = monthPL.totalIncome;
+  const totalExpToday  = todayPL.totalExpense;
+  const totalExpMonth  = monthPL.totalExpense;
+  // Net Balance MUST reflect actual accounting profit/loss, not a separate tally — db.accounting
+  // undercounts credit sales (only records cash collected on the spot, missing the rest that's
+  // still owed) and overcounts cash sales (includes VAT collected, which isn't income, it's owed
+  // to the government). Pulling from the real ledger keeps this number always consistent with
+  // the P&L Statement and Balance Sheet, instead of silently disagreeing with them.
+  const netBalance   = computePLPeriod(null, t).netProfit;
+  // Actual number of expense entries logged today — more useful for a daily glance than a
+  // category count, since most days only touch 1-2 categories anyway.
+  const todayExpenseEntries = db.accounting.filter(a => a.type === 'expense' && a.date === t).length;
   const lowStockCnt  = db.records.filter(r => r.stock <= (r.lowStockThreshold || db.settings.lowStockThreshold || 10)).length;
   const outstandingSales = (db.creditSales||[]).filter(c => c.status === 'outstanding');
   const outstandingDue   = outstandingSales.reduce((a,c) => a + (c.dueAmount||0), 0);
 
   kpiGrid.innerHTML = `
-    <div class="kpi-card" style="cursor:pointer" onclick="scrollToRecentSales()" title="View recent sales"><div class="kpi-icon">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue</div><div class="kpi-value amt-revenue">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="scrollToRecentSales()" title="View recent sales"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">Month Revenue</div><div class="kpi-value amt-revenue">${fmtWhole(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="goToExpenseLedger()" title="Open Accounting → Expenses"><div class="kpi-icon">💸</div><div class="kpi-body"><div class="kpi-label">Today's Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpToday)}</div><div class="kpi-change">${todayExpenses.length} entries today</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="goToExpenseLedger()" title="Open Accounting → Expenses"><div class="kpi-icon">🧾</div><div class="kpi-body"><div class="kpi-label">Month Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpMonth)}</div><div class="kpi-change">${monthExpenses.length} entries · salary, raw material &amp; other</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="scrollToRecentSales()" title="View recent sales"><div class="kpi-icon">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue <span style="font-weight:400;color:var(--text-muted);font-size:12px">(excl. VAT)</span></div><div class="kpi-value amt-revenue">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="scrollToRecentSales()" title="View recent sales"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">Month Revenue <span style="font-weight:400;color:var(--text-muted);font-size:12px">(excl. VAT)</span></div><div class="kpi-value amt-revenue">${fmtWhole(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="goToExpenseLedger()" title="Open Accounting → Expenses"><div class="kpi-icon">💸</div><div class="kpi-body"><div class="kpi-label">Today's Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpToday)}</div><div class="kpi-change">${todayExpenseEntries} ${todayExpenseEntries===1?'entry':'entries'} today</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="goToExpenseLedger()" title="Open Accounting → Expenses"><div class="kpi-icon">🧾</div><div class="kpi-body"><div class="kpi-label">Month Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpMonth)}</div><div class="kpi-change">${monthPL.expense.length} categories · salary, raw material &amp; other</div></div></div>
     <div class="kpi-card" style="cursor:pointer" onclick="openModule('accounting')" title="Open Accounting"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value ${netBalance>=0?'amt-revenue':'amt-expense'}">${fmtWhole(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div></div>
     <div class="kpi-card" style="cursor:pointer" onclick="goToDueLedger()" title="Open Due Ledger"><div class="kpi-icon">💳</div><div class="kpi-body"><div class="kpi-label">Outstanding Due</div><div class="kpi-value amt-expense">${fmtWhole(outstandingDue)}</div><div class="kpi-change">${outstandingSales.length} unpaid credit sales</div></div></div>
     <div class="kpi-card" style="cursor:pointer" onclick="openModule('records')" title="Open ${esc(db.settings.labels.records||'Records')}"><div class="kpi-icon">📦</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.records||'Records')}</div><div class="kpi-value">${db.records.length}</div><div class="kpi-change">In inventory</div></div></div>
@@ -7048,8 +7060,13 @@ function renderDashboard() {
   const thisM = today().slice(0,7);
   const lmDate = new Date(); lmDate.setDate(1); lmDate.setMonth(lmDate.getMonth()-1);
   const lastMStr = lmDate.getFullYear()+'-'+String(lmDate.getMonth()+1).padStart(2,'0');
-  const thisRev = db.sales.filter(s=>s.date&&s.date.startsWith(thisM)).reduce((a,x)=>a+x.total,0);
-  const lastRev = db.sales.filter(s=>s.date&&s.date.startsWith(lastMStr)).reduce((a,x)=>a+x.total,0);
+  // Revenue here means the same thing as "Revenue" everywhere else in the app now —
+  // net of VAT, pulled from the ledger — so this comparison matches the KPI cards above.
+  const thisMEnd = today();
+  const lastMEnd = new Date(lmDate.getFullYear(), lmDate.getMonth()+1, 0);
+  const lastMEndStr = lastMEnd.getFullYear()+'-'+String(lastMEnd.getMonth()+1).padStart(2,'0')+'-'+String(lastMEnd.getDate()).padStart(2,'0');
+  const thisRev = computePLPeriod(thisM+'-01', thisMEnd).totalIncome;
+  const lastRev = computePLPeriod(lastMStr+'-01', lastMEndStr).totalIncome;
   const pct = lastRev ? Math.round((thisRev-lastRev)/lastRev*100) : (thisRev?100:0);
   document.getElementById('mom-compare').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:12px;padding-top:8px">
@@ -10046,6 +10063,7 @@ function generateReport() {
     <table><tbody><tr style="background:#f0f0f0"><td><strong>TOTAL LIABILITIES</strong></td><td style="text-align:right"><strong>${fmt(bs.totalLiabilities)}</strong></td></tr></tbody></table>
     <h3 style="margin-top:16px">Equity</h3>${section('', bs.equity)}
     <table><tbody>
+      <tr><td>Retained Earnings (all prior years)</td><td style="text-align:right" class="mono">${fmt(bs.priorYearsEarnings)}</td></tr>
       <tr><td>Current Year Earnings (auto-calculated, this year so far)</td><td style="text-align:right" class="mono">${fmt(bs.currentYearEarnings)}</td></tr>
       ${bs.earningsSplit ? bs.earningsSplit.map(p=>`<tr><td style="padding-left:24px;color:#777">— ${esc(p.name)}'s share (${p.sharePct}%)</td><td style="text-align:right" class="mono">${fmt(p.amount)}</td></tr>`).join('') : ''}
       <tr style="background:#f0f0f0"><td><strong>TOTAL EQUITY</strong></td><td style="text-align:right"><strong>${fmt(bs.totalEquity)}</strong></td></tr>
@@ -13831,8 +13849,7 @@ function initCustomerScreen() {
     const activeStaticQR = staticQRs[0] || null;
     let qrHtml = '';
     if (dynQR) {
-      qrHtml = `<div id="cs-dynamic-qr" style="display:inline-block"></div>
-        <div class="cs-qr-label" style="color:${accent}">${esc(dynQR.label||'Scan to Pay')}</div>
+      qrHtml = `<div class="cs-qr-label" style="color:${accent}">${esc(dynQR.label||'Scan to Pay')}</div>
         ${dynQR.payeeName?`<div class="cs-qr-sub">${esc(dynQR.payeeName)}</div>`:''}
         <div style="font-size:11px;color:#16a34a;margin-top:2px">✓ Amount auto-embedded</div>`;
     } else if (activeStaticQR) {

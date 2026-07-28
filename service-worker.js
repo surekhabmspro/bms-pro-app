@@ -30,7 +30,7 @@
    can't keep serving a stale copy of this very file from their own HTTP
    cache and silently skip the update. ════════════════════════════════ */
 
-const CACHE_VERSION = 'bms-pro-shell-v7';
+const CACHE_VERSION = 'bms-pro-shell-v8';
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -87,19 +87,25 @@ self.addEventListener('fetch', event => {
 async function shellFirst(req) {
   const cache = await caches.open(CACHE_VERSION);
   const key = stripQuery(req.url);
+
+  // Network-first: whenever there's internet, always show the version that's
+  // actually deployed right now — no more "open the app twice before a fix
+  // shows up." The cache is now purely a fallback for when there's truly no
+  // connection, not something shown instead of the real thing.
+  try {
+    const fresh = await fetch(req);
+    if (fresh && fresh.ok) {
+      cache.put(key, fresh.clone());
+      return fresh;
+    }
+  } catch (e) {
+    // No internet right now — fall through to whatever was cached last.
+  }
+
   const cached = await cache.match(key) || await cache.match(req);
-
-  // Always try to refresh in the background so next time (online or
-  // offline) has the latest version — never lets this block the
-  // response that's about to be shown.
-  const refresh = fetch(req).then(res => {
-    if (res && res.ok) cache.put(key, res.clone());
-    return res;
-  }).catch(() => null);
-
   if (cached) return cached;
-  const fresh = await refresh;
-  return fresh || new Response(
+
+  return new Response(
     `<!doctype html><html><body style="font-family:sans-serif;background:#121019;color:#F4F2FC;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:20px">
       <div><h2>Offline — first load not complete yet</h2><p>This device hasn't finished its first successful online load. Please connect to the internet once, open the app, and it will then work offline from then on.</p></div>
     </body></html>`,

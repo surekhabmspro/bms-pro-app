@@ -3315,6 +3315,17 @@ function runAccountingIntegrityCheck(asOf) {
     code: a.code, name: a.name, type: a.type || '(blank)', balance: accountBalanceAsOf(a.code, date)
   })).filter(a => Math.abs(a.balance) > 0.004);
 
+  // (5) Full account balance breakdown — every account, every type, with its actual balance and
+  // its Normal Balance flag. This is the ground truth: if Assets ≠ Liabilities + Equity but every
+  // check above comes back clean, the cause has to be visible somewhere in this list — e.g. an
+  // account whose Normal Balance flag is wrong (not exactly 'debit' or 'credit'), which silently
+  // flips its sign in every calculation without tripping any of the checks above.
+  const allAccountBalances = (db.chartOfAccounts||[]).map(a => ({
+    code: a.code, name: a.name, type: a.type, normalBalance: a.normalBalance,
+    balance: accountBalanceAsOf(a.code, date)
+  })).filter(a => Math.abs(a.balance) > 0.004);
+  const invalidNormalBalance = allAccountBalances.filter(a => a.normalBalance !== 'debit' && a.normalBalance !== 'credit');
+
   const tb = computeTrialBalance(null, date);
   const bs = computeBalanceSheet(date);
   const bsDiff = +(bs.totalAssets - (bs.totalLiabilities + bs.totalEquity)).toFixed(2);
@@ -3332,8 +3343,8 @@ function runAccountingIntegrityCheck(asOf) {
     totalDebits: +rawDebit.toFixed(2), totalCredits: +rawCredit.toFixed(2), difference: +(rawDebit-rawCredit).toFixed(2),
     trialBalanceMatchesRawLedger: Math.abs(tb.totalDebit - rawDebit) < 0.01 && Math.abs(tb.totalCredit - rawCredit) < 0.01,
     totalAssets: bs.totalAssets, totalLiabilities: bs.totalLiabilities, totalEquity: bs.totalEquity, balanceSheetDiff: bsDiff,
-    clean: orphanLines.length===0 && duplicateGroups.length===0 && unbalancedEntries.length===0 && misclassifiedAccounts.length===0 && Math.abs(rawDebit-rawCredit)<0.01 && Math.abs(bsDiff)<1,
-    orphanLines, duplicateGroups, unbalancedEntries, futureDatedEntries, misclassifiedAccounts
+    clean: orphanLines.length===0 && duplicateGroups.length===0 && unbalancedEntries.length===0 && misclassifiedAccounts.length===0 && invalidNormalBalance.length===0 && Math.abs(rawDebit-rawCredit)<0.01 && Math.abs(bsDiff)<1,
+    orphanLines, duplicateGroups, unbalancedEntries, futureDatedEntries, misclassifiedAccounts, invalidNormalBalance, allAccountBalances
   };
 }
 
@@ -10248,6 +10259,13 @@ function generateReport() {
     ${check.unbalancedEntries.length ? `<table><thead><tr><th>Voucher</th><th>Date</th><th>Description</th></tr></thead><tbody>${check.unbalancedEntries.map(e=>`<tr><td class="mono">${esc(e.voucherNumber)}</td><td>${fmtDate(e.date)}</td><td>${esc(e.description)}</td></tr>`).join('')}</tbody></table><p style="color:red">These likely came from a restored backup or import that bypassed normal entry — review manually.</p>` : '<p style="color:green">✓ None found.</p>'}
     <h3 style="margin-top:18px">Misclassified Accounts ${check.misclassifiedAccounts.length?`(${check.misclassifiedAccounts.length})`:''}<span class="help-tip" data-tip="Every account must be typed as exactly Asset, Liability, Equity, Income, or Expense to be counted anywhere. An account with a blank or nonstandard type still posts fine, so the ledger stays balanced — but its balance silently disappears from the Balance Sheet, since it doesn't land in Assets, Liabilities, or Equity.">?</span></h3>
     ${check.misclassifiedAccounts.length ? `<table><thead><tr><th>Code</th><th>Account Name</th><th>Current Type</th><th>Balance</th></tr></thead><tbody>${check.misclassifiedAccounts.map(a=>`<tr><td class="mono">${esc(a.code)}</td><td>${esc(a.name)}</td><td style="color:red">${esc(a.type)}</td><td>${fmt(a.balance)}</td></tr>`).join('')}</tbody></table><p style="color:red">Go to Chart of Accounts (Admin) and set each of these to the correct type — Asset, Liability, Equity, Income, or Expense — then re-run this check.</p>` : '<p style="color:green">✓ None found — every account is properly typed.</p>'}
+    <h3 style="margin-top:18px">Invalid Normal Balance Flag ${check.invalidNormalBalance.length?`(${check.invalidNormalBalance.length})`:''}<span class="help-tip" data-tip="Every account must be flagged exactly 'debit' or 'credit' as its Normal Balance. This flag controls the +/- sign used everywhere a balance is calculated — if it's blank or misspelled, the account's balance gets counted backwards without tripping any other check.">?</span></h3>
+    ${check.invalidNormalBalance.length ? `<table><thead><tr><th>Code</th><th>Account Name</th><th>Type</th><th>Normal Balance (as stored)</th><th>Balance</th></tr></thead><tbody>${check.invalidNormalBalance.map(a=>`<tr><td class="mono">${esc(a.code)}</td><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td style="color:red">${esc(a.normalBalance||'(blank)')}</td><td>${fmt(a.balance)}</td></tr>`).join('')}</tbody></table><p style="color:red">This is very likely the cause of any Assets ≠ Liabilities + Equity gap — correct each account's Normal Balance in Chart of Accounts (Admin), then re-run this check.</p>` : '<p style="color:green">✓ None found — every account has a valid Normal Balance flag.</p>'}
+    <h3 style="margin-top:18px">Full Account Balances (as of ${fmtDate(check.asOf)})<span class="help-tip" data-tip="Every account with any activity, grouped by type, so the actual numbers behind Assets/Liabilities/Equity are visible rather than just the totals.">?</span></h3>
+    <table><thead><tr><th>Code</th><th>Account Name</th><th>Type</th><th>Normal Bal.</th><th style="text-align:right">Balance</th></tr></thead><tbody>
+      ${['asset','liability','equity','income','expense'].map(t => check.allAccountBalances.filter(a=>a.type===t).map(a=>`<tr><td class="mono">${esc(a.code)}</td><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td>${esc(a.normalBalance||'(blank)')}</td><td style="text-align:right" class="mono">${fmt(a.balance)}</td></tr>`).join('')).join('')}
+      ${check.allAccountBalances.filter(a=>!['asset','liability','equity','income','expense'].includes(a.type)).map(a=>`<tr><td class="mono">${esc(a.code)}</td><td>${esc(a.name)}</td><td style="color:red">${esc(a.type||'(blank)')}</td><td>${esc(a.normalBalance||'(blank)')}</td><td style="text-align:right" class="mono">${fmt(a.balance)}</td></tr>`).join('')}
+    </tbody></table>
     <p style="margin-top:18px;font-weight:700;color:${check.clean?'green':'red'}">${check.clean?'✓ Books are fully balanced and internally consistent':'⚠ Issues found above — correct them (Admin) and re-run this check'}</p>`;
   } else if (type==='sales') {
     const retail = periodSales.filter(x=>x.customerType!=='Wholesale');

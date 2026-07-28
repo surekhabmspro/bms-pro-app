@@ -3304,6 +3304,17 @@ function runAccountingIntegrityCheck(asOf) {
   // that difference unexplained.
   const futureDatedEntries = activeEntries.filter(j => j.date > date).map(j=>({ voucherNumber:j.voucherNumber, date:j.date, description:j.description, amount: (j.lines||[]).reduce((a,l)=>a+(l.debit||0),0) }));
 
+  // (4) Misclassified accounts — every account MUST be exactly one of these five types to be
+  // counted anywhere. An account with a typo'd, blank, or otherwise nonstandard type still posts
+  // fine (so the ledger stays balanced, and Trial Balance still matches), but its balance won't
+  // land in Assets, Liabilities, Equity, Income, OR Expense — it just silently vanishes from the
+  // Balance Sheet identity. This is the single most common way "Assets ≠ Liabilities + Equity"
+  // happens even when every other check above comes back clean.
+  const recognizedTypes = ['asset','liability','equity','income','expense'];
+  const misclassifiedAccounts = (db.chartOfAccounts||[]).filter(a => !recognizedTypes.includes(a.type)).map(a => ({
+    code: a.code, name: a.name, type: a.type || '(blank)', balance: accountBalanceAsOf(a.code, date)
+  })).filter(a => Math.abs(a.balance) > 0.004);
+
   const tb = computeTrialBalance(null, date);
   const bs = computeBalanceSheet(date);
   const bsDiff = +(bs.totalAssets - (bs.totalLiabilities + bs.totalEquity)).toFixed(2);
@@ -3321,8 +3332,8 @@ function runAccountingIntegrityCheck(asOf) {
     totalDebits: +rawDebit.toFixed(2), totalCredits: +rawCredit.toFixed(2), difference: +(rawDebit-rawCredit).toFixed(2),
     trialBalanceMatchesRawLedger: Math.abs(tb.totalDebit - rawDebit) < 0.01 && Math.abs(tb.totalCredit - rawCredit) < 0.01,
     totalAssets: bs.totalAssets, totalLiabilities: bs.totalLiabilities, totalEquity: bs.totalEquity, balanceSheetDiff: bsDiff,
-    clean: orphanLines.length===0 && duplicateGroups.length===0 && unbalancedEntries.length===0 && Math.abs(rawDebit-rawCredit)<0.01 && Math.abs(bsDiff)<1,
-    orphanLines, duplicateGroups, unbalancedEntries, futureDatedEntries
+    clean: orphanLines.length===0 && duplicateGroups.length===0 && unbalancedEntries.length===0 && misclassifiedAccounts.length===0 && Math.abs(rawDebit-rawCredit)<0.01 && Math.abs(bsDiff)<1,
+    orphanLines, duplicateGroups, unbalancedEntries, futureDatedEntries, misclassifiedAccounts
   };
 }
 
@@ -8004,7 +8015,7 @@ function renderAccounting() {
     const check = runAccountingIntegrityCheck();
     banner.innerHTML = check.clean ? '' : `
       <div style="background:#fff3f3;border:1px solid var(--danger);border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;color:#7a1f1f">
-        <div style="color:#7a1f1f">⚠️ <strong>Accounting Integrity Checker found issues</strong> — ${check.orphanLines.length?`${check.orphanLines.length} orphan entr${check.orphanLines.length===1?'y':'ies'}`:''}${check.orphanLines.length&&check.duplicateGroups.length?', ':''}${check.duplicateGroups.length?`${check.duplicateGroups.length} duplicate posting${check.duplicateGroups.length===1?'':'s'}`:''}${Math.abs(check.difference)>=0.01?` — ledger off by ${fmt(Math.abs(check.difference))}`:''}.</div>
+        <div style="color:#7a1f1f">⚠️ <strong>Accounting Integrity Checker found issues</strong> — ${check.orphanLines.length?`${check.orphanLines.length} orphan entr${check.orphanLines.length===1?'y':'ies'}`:''}${check.orphanLines.length&&check.duplicateGroups.length?', ':''}${check.duplicateGroups.length?`${check.duplicateGroups.length} duplicate posting${check.duplicateGroups.length===1?'':'s'}`:''}${(check.orphanLines.length||check.duplicateGroups.length)&&check.misclassifiedAccounts.length?', ':''}${check.misclassifiedAccounts.length?`${check.misclassifiedAccounts.length} misclassified account${check.misclassifiedAccounts.length===1?'':'s'}`:''}${Math.abs(check.difference)>=0.01?` — ledger off by ${fmt(Math.abs(check.difference))}`:''}.</div>
         <button class="btn btn-danger btn-sm" onclick="openAccountingIntegrityReport()" style="flex-shrink:0">🔍 Investigate</button>
       </div>`;
   }
@@ -10235,6 +10246,8 @@ function generateReport() {
       </div>`).join('') : '<p style="color:green">✓ None found — every transaction has exactly one active journal entry.</p>'}
     <h3 style="margin-top:18px">Individually Unbalanced Entries ${check.unbalancedEntries.length?`(${check.unbalancedEntries.length})`:''}<span class="help-tip" data-tip="A single journal entry whose own debit and credit lines don't match — should be impossible through normal use, since every posting path refuses to save one of these.">?</span></h3>
     ${check.unbalancedEntries.length ? `<table><thead><tr><th>Voucher</th><th>Date</th><th>Description</th></tr></thead><tbody>${check.unbalancedEntries.map(e=>`<tr><td class="mono">${esc(e.voucherNumber)}</td><td>${fmtDate(e.date)}</td><td>${esc(e.description)}</td></tr>`).join('')}</tbody></table><p style="color:red">These likely came from a restored backup or import that bypassed normal entry — review manually.</p>` : '<p style="color:green">✓ None found.</p>'}
+    <h3 style="margin-top:18px">Misclassified Accounts ${check.misclassifiedAccounts.length?`(${check.misclassifiedAccounts.length})`:''}<span class="help-tip" data-tip="Every account must be typed as exactly Asset, Liability, Equity, Income, or Expense to be counted anywhere. An account with a blank or nonstandard type still posts fine, so the ledger stays balanced — but its balance silently disappears from the Balance Sheet, since it doesn't land in Assets, Liabilities, or Equity.">?</span></h3>
+    ${check.misclassifiedAccounts.length ? `<table><thead><tr><th>Code</th><th>Account Name</th><th>Current Type</th><th>Balance</th></tr></thead><tbody>${check.misclassifiedAccounts.map(a=>`<tr><td class="mono">${esc(a.code)}</td><td>${esc(a.name)}</td><td style="color:red">${esc(a.type)}</td><td>${fmt(a.balance)}</td></tr>`).join('')}</tbody></table><p style="color:red">Go to Chart of Accounts (Admin) and set each of these to the correct type — Asset, Liability, Equity, Income, or Expense — then re-run this check.</p>` : '<p style="color:green">✓ None found — every account is properly typed.</p>'}
     <p style="margin-top:18px;font-weight:700;color:${check.clean?'green':'red'}">${check.clean?'✓ Books are fully balanced and internally consistent':'⚠ Issues found above — correct them (Admin) and re-run this check'}</p>`;
   } else if (type==='sales') {
     const retail = periodSales.filter(x=>x.customerType!=='Wholesale');

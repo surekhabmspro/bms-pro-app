@@ -4036,9 +4036,14 @@ function computeCustomerLedger(key, from, to) {
   const rows = [];
   sales.forEach(c => rows.push({ date:c.date, voucherNumber: findVoucherFor('credit-sale', c.saleId)||findVoucherFor('opening-balance', c.id)||'—', description:`Credit Sale — ${c.receiptNumber}`, debit:c.totalAmount, credit:0 }));
   payments.forEach(p => rows.push({ date:p.date, voucherNumber: findVoucherFor('due-settlement', p.creditId)||'—', description:`Payment received — ${p.receiptNumber}`, debit:0, credit:p.amount }));
-  const filtered = rows.filter(r=> (!from||r.date>=from) && (!to||r.date<=to)).sort((a,b)=>a.date.localeCompare(b.date));
-  let bal = 0; const withBal = filtered.map(r=>{ bal += r.debit - r.credit; return { ...r, runningBal: bal }; });
-  return { customerName, rows: withBal, closing: bal };
+  const sorted = rows.sort((a,b)=>a.date.localeCompare(b.date));
+  // Opening balance = everything before this period. Without this, filtering to a specific date
+  // range (e.g. "This Month") would silently drop any balance the customer already owed from
+  // before the period started, making it look like they owe less than they really do.
+  const opening = from ? sorted.filter(r=>r.date<from).reduce((a,r)=>a+r.debit-r.credit,0) : 0;
+  const filtered = sorted.filter(r=> (!from||r.date>=from) && (!to||r.date<=to));
+  let bal = opening; const withBal = filtered.map(r=>{ bal += r.debit - r.credit; return { ...r, runningBal: bal }; });
+  return { customerName, opening, rows: withBal, closing: bal };
 }
 
 // ── 5. Ledger Report — Mode B: one supplier (subsidiary of Accounts Payable) ──
@@ -4049,9 +4054,13 @@ function computeSupplierLedger(supplierId, from, to) {
   const rows = [];
   invoices.forEach(inv => rows.push({ date:inv.date, voucherNumber: findVoucherFor('supplier-invoice', inv.id)||'—', description:`Invoice ${inv.invoiceNumber}`, debit:0, credit:inv.amount }));
   payments.forEach(p => rows.push({ date:p.date, voucherNumber: findVoucherFor('supplier-payment', p.id)||'—', description:`Payment (${p.type})`, debit:p.amount, credit:0 }));
-  const filtered = rows.filter(r=> (!from||r.date>=from) && (!to||r.date<=to)).sort((a,b)=>a.date.localeCompare(b.date));
-  let bal = 0; const withBal = filtered.map(r=>{ bal += r.credit - r.debit; return { ...r, runningBal: bal }; });
-  return { supplierName: supplier?.name||'Unknown Supplier', rows: withBal, closing: bal };
+  const sorted = rows.sort((a,b)=>a.date.localeCompare(b.date));
+  // Same fix as the Customer Ledger above — carry forward what was already owed before the
+  // period, so a date filter can never make a genuine unpaid supplier balance disappear.
+  const opening = from ? sorted.filter(r=>r.date<from).reduce((a,r)=>a+r.credit-r.debit,0) : 0;
+  const filtered = sorted.filter(r=> (!from||r.date>=from) && (!to||r.date<=to));
+  let bal = opening; const withBal = filtered.map(r=>{ bal += r.credit - r.debit; return { ...r, runningBal: bal }; });
+  return { supplierName: supplier?.name||'Unknown Supplier', opening, rows: withBal, closing: bal };
 }
 
 function findVoucherFor(refType, refId) {
@@ -4235,7 +4244,12 @@ function computeVATPurchaseRegister(from, to) {
   const rows = entries.map(j => {
     const isReversal = j.refType === 'debit-note';
     const vatLine = j.lines.find(l=>l.accountCode===vatCode);
-    const purchaseLine = j.lines.find(l=>l.accountCode===db.settings.acctMappings.inventoryAccount);
+    // The taxable (purchase) line is whichever debit line ISN'T the VAT line — this correctly
+    // picks up fixed-asset and expense purchases too, not just inventory. Previously this only
+    // matched the Inventory account specifically, so any non-inventory purchase (a machine, a
+    // utility bill) would show its correct VAT amount but Rs0 as the taxable value next to it —
+    // understating the purchase value your VAT return needs to report.
+    const purchaseLine = j.lines.find(l => l.accountCode !== vatCode && (isReversal ? l.credit>0 : l.debit>0));
     const vat = vatLine ? (isReversal ? -(vatLine.credit||0) : (vatLine.debit||0)) : 0;
     const taxable = purchaseLine ? (isReversal ? -(purchaseLine.credit||0) : (purchaseLine.debit||0)) : 0;
     return { date:j.date, voucherNumber:j.voucherNumber, description:j.description, taxable, vat, isReversal };
@@ -4800,7 +4814,12 @@ function computeCashFlow(from, to) {
   const equityCodes = (db.chartOfAccounts||[]).filter(a=>a.type==='equity').map(a=>a.code);
   const namedCodes = new Set([...cashCodes, ...fixedAssetCodes, arCode, ...invCodes, apCode, ...loanCodes, ...equityCodes]);
   const chg = code => accountBalanceAsOf(code, toDate) - accountBalanceAsOf(code, priorDate);
-  const otherAssetCodes = (db.chartOfAccounts||[]).filter(a=>a.type==='asset' && !namedCodes.has(a.code)).map(a=>a.code);
+  const otherAssetCodes = (db.chartOfAccounts||[]).filter(a=>a.type==='asset' && a.normalBalance!=='credit' && !namedCodes.has(a.code)).map(a=>a.code);
+  // Contra-asset accounts (like Accumulated Depreciation — normalBalance 'credit' under an
+  // 'asset' type) are excluded above on purpose. Their movement is non-cash and is already fully
+  // captured by the "+depreciation" add-back a few lines up; sweeping them into Other Working
+  // Capital as well would double-count that same non-cash movement with the opposite sign,
+  // silently understating Operating cash flow by the depreciation total every period.
   const otherLiabilityCodes = (db.chartOfAccounts||[]).filter(a=>a.type==='liability' && !namedCodes.has(a.code)).map(a=>a.code);
   const changeInOtherWorkingCapital = otherLiabilityCodes.reduce((a,c)=>a+chg(c),0) - otherAssetCodes.reduce((a,c)=>a+chg(c),0);
 
@@ -10362,6 +10381,7 @@ function generateReport() {
       const sl = computeSupplierLedger(supplierId, from, to);
       bodyHtml = `<h2>Supplier Ledger: ${esc(sl.supplierName)}</h2>
       <table><thead><tr><th>Date</th><th>Voucher #</th><th>Description</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead><tbody>
+        ${Math.abs(sl.opening)>0.004 ? `<tr><td colspan="5"><strong>Opening Balance (before this period)</strong></td><td style="text-align:right" class="mono"><strong>${fmt(sl.opening)}</strong></td></tr>` : ''}
         ${sl.rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td class="mono">${esc(r.voucherNumber)}</td><td>${esc(r.description)}</td><td style="text-align:right" class="mono">${r.debit?fmt(r.debit):''}</td><td style="text-align:right" class="mono">${r.credit?fmt(r.credit):''}</td><td style="text-align:right" class="mono">${fmt(r.runningBal)}</td></tr>`).join('') || '<tr><td colspan="6">No activity</td></tr>'}
         <tr style="background:#f0f0f0"><td colspan="5"><strong>${sl.closing>0?'You owe them':'Settled'}</strong></td><td style="text-align:right"><strong>${fmt(sl.closing)}</strong></td></tr>
       </tbody></table>`;
@@ -10376,6 +10396,7 @@ function generateReport() {
       const cl = computeCustomerLedger(customerName, from, to);
       bodyHtml = `<h2>Customer Ledger: ${esc(cl.customerName)}</h2>
       <table><thead><tr><th>Date</th><th>Voucher #</th><th>Description</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead><tbody>
+        ${Math.abs(cl.opening)>0.004 ? `<tr><td colspan="5"><strong>Opening Balance (before this period)</strong></td><td style="text-align:right" class="mono"><strong>${fmt(cl.opening)}</strong></td></tr>` : ''}
         ${cl.rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td class="mono">${esc(r.voucherNumber)}</td><td>${esc(r.description)}</td><td style="text-align:right" class="mono">${r.debit?fmt(r.debit):''}</td><td style="text-align:right" class="mono">${r.credit?fmt(r.credit):''}</td><td style="text-align:right" class="mono">${fmt(r.runningBal)}</td></tr>`).join('') || '<tr><td colspan="6">No activity</td></tr>'}
         <tr style="background:#f0f0f0"><td colspan="5"><strong>${cl.closing>0?'They owe you':'Settled'}</strong></td><td style="text-align:right"><strong>${fmt(cl.closing)}</strong></td></tr>
       </tbody></table>`;

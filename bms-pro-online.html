@@ -3948,23 +3948,40 @@ function computeTrialBalance(from, to) {
 }
 
 // ── 2. Profit & Loss ──
+// Every account's own balance is always shown using ITS OWN Normal Balance convention (so e.g.
+// Accumulated Depreciation displays as a normal positive credit balance). But a CONTRA account —
+// one deliberately flagged with the opposite Normal Balance from its section, like Accumulated
+// Depreciation (credit) sitting under Assets (debit-normal), or Owner's Drawings (debit) sitting
+// under Equity (credit-normal) — exists specifically to REDUCE that section's total. Simply
+// adding every account's own balance into the section total (as this used to do) means a contra
+// account inflates the very total it exists to reduce — by double its true amount, since it
+// swings from "should subtract X" to "actually adds X". SECTION_NORMAL_BALANCE lets every total
+// calculation correctly flip the sign for contra accounts, while leaving each account's own
+// displayed balance untouched.
+const SECTION_NORMAL_BALANCE = { asset:'debit', liability:'credit', equity:'credit', income:'credit', expense:'debit' };
+
 function computePLPeriod(from, to) {
   const lines = ledgerLinesUpTo(to).filter(l => !from || l.date >= from);
   const build = type => (db.chartOfAccounts||[]).filter(a=>a.type===type).map(acc=>{
     const accLines = lines.filter(l=>l.accountCode===acc.code);
     const debit = accLines.reduce((a,l)=>a+l.debit,0), credit = accLines.reduce((a,l)=>a+l.credit,0);
     const amount = acc.normalBalance==='credit' ? credit-debit : debit-credit;
-    return { acc, amount };
+    const contribution = acc.normalBalance === SECTION_NORMAL_BALANCE[type] ? amount : -amount;
+    return { acc, amount, contribution };
   }).filter(r=>Math.abs(r.amount)>0.004);
   const income = build('income'), expense = build('expense');
-  const totalIncome = income.reduce((a,r)=>a+r.amount,0), totalExpense = expense.reduce((a,r)=>a+r.amount,0);
+  const totalIncome = income.reduce((a,r)=>a+r.contribution,0), totalExpense = expense.reduce((a,r)=>a+r.contribution,0);
   return { income, expense, totalIncome, totalExpense, netProfit: totalIncome-totalExpense };
 }
 
 // ── 3. Balance Sheet ──
 function computeBalanceSheet(asOf) {
   const date = asOf || today();
-  const build = type => (db.chartOfAccounts||[]).filter(a=>a.type===type).map(acc=>({ acc, balance: accountBalanceAsOf(acc.code, date) })).filter(r=>Math.abs(r.balance)>0.004);
+  const build = type => (db.chartOfAccounts||[]).filter(a=>a.type===type).map(acc=>{
+    const balance = accountBalanceAsOf(acc.code, date);
+    const contribution = acc.normalBalance === SECTION_NORMAL_BALANCE[type] ? balance : -balance;
+    return { acc, balance, contribution };
+  }).filter(r=>Math.abs(r.balance)>0.004);
   const assets = build('asset'), liabilities = build('liability'), equity = build('equity');
   // Equity must include ALL accumulated profit/loss since the business began, not just the
   // current fiscal year — this app has no formal year-end "closing entry" that rolls prior
@@ -3975,9 +3992,9 @@ function computeBalanceSheet(asOf) {
   const yearStart = nepaliFiscalYearStartDate(date);
   const ytd = computePLPeriod(yearStart, date);
   const priorYearsEarnings = +(sinceInception.netProfit - ytd.netProfit).toFixed(2);
-  const totalAssets = assets.reduce((a,r)=>a+r.balance,0);
-  const totalLiabilities = liabilities.reduce((a,r)=>a+r.balance,0);
-  const totalEquity = equity.reduce((a,r)=>a+r.balance,0) + sinceInception.netProfit;
+  const totalAssets = assets.reduce((a,r)=>a+r.contribution,0);
+  const totalLiabilities = liabilities.reduce((a,r)=>a+r.contribution,0);
+  const totalEquity = equity.reduce((a,r)=>a+r.contribution,0) + sinceInception.netProfit;
   let earningsSplit = null;
   if (db.settings.ownershipType === 'partnership' && (db.settings.partners||[]).length) {
     earningsSplit = db.settings.partners.map(p => ({ name:p.name, sharePct:p.sharePct, amount: +(ytd.netProfit * (p.sharePct/100)).toFixed(2) }));

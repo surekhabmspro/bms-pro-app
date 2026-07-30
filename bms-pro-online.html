@@ -1790,7 +1790,7 @@ textarea.form-control{resize:vertical;min-height:80px}
                 <div class="card-header"><div class="card-title">📊 VAT Reports</div></div>
                 <div class="form-hint" style="margin-bottom:8px">Full VAT & Tax reports now live in the Reports module under "Compliance & Regulatory Reports" for richer filtering, multi-page printing, and signatures. These buttons jump there directly.</div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
-                  <button class="btn btn-secondary btn-sm" onclick="generateVATReport()">📋 VAT Summary Report</button>
+                  <button class="btn btn-secondary btn-sm" onclick="generateVATReport()">📋 Government Submission Summary</button>
                   <button class="btn btn-secondary btn-sm" onclick="generatePurchaseRegister()">📥 Purchase Register</button>
                   <button class="btn btn-secondary btn-sm" onclick="generateSalesRegister()">📤 Sales Register</button>
                   <button class="btn btn-secondary btn-sm" onclick="generateTaxInvoiceList()">🧾 Tax Invoice List</button>
@@ -1940,6 +1940,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="ent-email" placeholder="email@example.com"></div>
       </div>
       <div class="form-group"><label class="form-label">Address</label><input class="form-control" id="ent-address" placeholder="Street address, City, Country"></div>
+      <div class="form-group"><label class="form-label">PAN Number<span class="help-tip" data-tip="Required by law on the printed Tax Invoice for any sale above NPR 10,000 to a registered customer. Leave blank for walk-in/retail customers where it doesn't apply.">?</span></label><input class="form-control" id="ent-pan" placeholder="9-digit PAN, if registered"></div>
       <div class="form-group"><label class="form-label">Notes</label><textarea class="form-control" id="ent-notes" rows="2" placeholder="Optional — any extra info about this customer"></textarea></div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('ent-modal-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveEntity()">💾 Save Customer</button></div>
@@ -2267,6 +2268,12 @@ textarea.form-control{resize:vertical;min-height:80px}
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
             <input type="checkbox" id="emp-ssf" checked>
             <span>Enrolled in SSF (Social Security Fund)<span class="help-tip" data-tip="Legally mandatory in Nepal for every employer regardless of size — 11% deducted from the employee's basic salary, plus 20% paid by you on top, deposited monthly. Uncheck only if this person is genuinely exempt.">?</span></span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="emp-attendance-deduction" checked>
+            <span>Deduct salary for Absent/Half-Day/Unpaid Leave<span class="help-tip" data-tip="On (default): missed days automatically reduce this month's pay, based on Attendance. Off: this employee is always paid their full fixed salary regardless of attendance — commonly used for permanent staff on a fixed monthly salary rather than a per-day arrangement.">?</span></span>
           </label>
         </div>
       </div>
@@ -7732,7 +7739,7 @@ function buildA4InvoiceHtml(sale) {
       <div class="inv-meta">
         <div class="inv-meta-col">
           <div><b>Invoice No:</b> ${esc(sale.receiptNumber)}</div>
-          <div><b>Date:</b> ${fmtDate(sale.date)}</div>
+          <div><b>Date:</b> ${fmtDate(sale.date)}${bsEnabled()?` (${sale.date} AD)`:''}</div>
           <div><b>Payment Method:</b> ${esc(sale.paymentMethod||'—')}</div>
           <div><b>Salesperson:</b> ${esc(sellerName)}</div>
         </div>
@@ -7740,6 +7747,7 @@ function buildA4InvoiceHtml(sale) {
           <div><b>Bill To:</b> ${esc(sale.customerName||'Walk-in Customer')}</div>
           ${customer?.address?`<div>${esc(customer.address)}</div>`:''}
           ${customer?.phone?`<div>Tel: ${esc(customer.phone)}</div>`:''}
+          ${customer?.pan?`<div>PAN: ${esc(customer.pan)}</div>`:(sale.total>10000?`<div style="color:#b91c1c">⚠ Buyer PAN required (sale above NPR 10,000) — add it on this customer's profile</div>`:'')}
         </div>
       </div>
       <table class="inv-table">
@@ -7934,6 +7942,7 @@ function openEntityModal(id=null) {
   document.getElementById('ent-phone').value = e?.phone||'';
   document.getElementById('ent-email').value = e?.email||'';
   document.getElementById('ent-address').value = e?.address||'';
+  document.getElementById('ent-pan').value = e?.pan||'';
   document.getElementById('ent-notes').value = e?.notes||'';
   openModal('ent-modal-overlay');
   attachSuggest('ent-cat', db.settings.categories.entities||[]);
@@ -7966,7 +7975,7 @@ function saveEntity() {
   const name = document.getElementById('ent-name').value.trim();
   if (!name) { toast('Name is required','error'); return; }
   if (isDuplicateName(db.entities, name, entEditId)) { toast(`A customer named "${name}" already exists`,'error'); return; }
-  const data = { name, category: document.getElementById('ent-cat').value.trim(), phone: document.getElementById('ent-phone').value.trim(), email: document.getElementById('ent-email').value.trim(), address: document.getElementById('ent-address').value.trim(), notes: document.getElementById('ent-notes').value.trim() };
+  const data = { name, category: document.getElementById('ent-cat').value.trim(), phone: document.getElementById('ent-phone').value.trim(), email: document.getElementById('ent-email').value.trim(), address: document.getElementById('ent-address').value.trim(), pan: document.getElementById('ent-pan').value.trim(), notes: document.getElementById('ent-notes').value.trim() };
   if (entEditId) {
     Object.assign(db.entities.find(e=>e.id===entEditId), data); audit('Entities','Edit',entEditId,name);
   } else {
@@ -8318,6 +8327,7 @@ function openEmployeeModal(id=null) {
   document.getElementById('emp-pay-mode').value = e?.payMode||'monthly';
   document.getElementById('emp-salary-note').value = e?.salaryNote||'';
   document.getElementById('emp-ssf').checked = e?.ssfEnrolled !== false;
+  document.getElementById('emp-attendance-deduction').checked = e?.attendanceDeductionEnabled !== false;
   document.getElementById('emp-notes').value = e?.notes||'';
   document.getElementById('emp-emergency').value = e?.emergencyContact||'';
   setEmpTab('personal', document.querySelector('#emp-modal-overlay .tabs .tab'));
@@ -8341,6 +8351,7 @@ function saveEmployee() {
     bankAccount: document.getElementById('emp-bank').value.trim(), salary: parseFloat(document.getElementById('emp-salary').value)||0,
     payMode: document.getElementById('emp-pay-mode').value, salaryNote: document.getElementById('emp-salary-note').value.trim(),
     ssfEnrolled: document.getElementById('emp-ssf').checked,
+    attendanceDeductionEnabled: document.getElementById('emp-attendance-deduction').checked,
     notes: document.getElementById('emp-notes').value.trim(), emergencyContact: document.getElementById('emp-emergency').value.trim()
   };
   if (empEditId) {
@@ -8385,6 +8396,9 @@ function computeAttendanceDeductionDays(empId, month) {
 }
 
 function computeAttendanceDeductionAmount(emp, month) {
+  // Some employees (typically permanent staff on a fixed monthly salary) should always be paid
+  // in full regardless of attendance — this preference is per-employee, set in their profile.
+  if (emp.attendanceDeductionEnabled === false) return { days: 0, amount: 0 };
   const days = computeAttendanceDeductionDays(emp.id, month);
   // Real day-count for this specific period month (28-32 for a BS month, 28-31 for AD) — not a
   // fixed AD assumption, so a daily rate is fair regardless of which calendar is active.
@@ -8400,7 +8414,7 @@ function renderPayrollTable() {
   const extraEarnings = sc.earnings.slice(1);
   const deductions = sc.deductions;
   document.getElementById('payroll-table-wrap').innerHTML = `
-    <div class="form-hint" style="margin-bottom:8px">"Attendance Deduction" is calculated automatically from the Attendance tab (Absent + Half Day + approved Unpaid Leave) — it isn't typed in here. Check Attendance first if a number looks off.</div>
+    <div class="form-hint" style="margin-bottom:8px">"Attendance Deduction" is calculated automatically from the Attendance tab (Absent + Half Day + approved Unpaid Leave) — it isn't typed in here. Check Attendance first if a number looks off. Employees marked exempt in their profile (Edit → Salary tab) always show "Exempt" here and are paid in full regardless of attendance.</div>
     <div class="table-wrap"><table>
       <thead><tr>
         <th>Employee</th><th>Basic</th>
@@ -8413,13 +8427,23 @@ function renderPayrollTable() {
         const ph = db.payrollHistory.find(p=>p.month===month&&p.entries?.find(x=>x.empId===e.id));
         const entry = ph?.entries?.find(x=>x.empId===e.id);
         const att = computeAttendanceDeductionAmount(e, month);
+        // BUG FIXED: this initial render used to show Net Pay as simply Salary minus Attendance
+        // Deduction, completely ignoring any saved Bonus/extra-earnings or Advance/Tax deductions
+        // — until the admin manually touched an input field (which triggers updateNetPayRow, the
+        // ONLY place that used the correct full formula). So the very first thing an admin sees
+        // when opening Payroll each month could already be wrong, even though the actual amount
+        // processed on approval was always correct (processPayroll reads the same inputs
+        // directly). Compute it the same way here so what's shown on load already matches.
+        const extraTotal = extraEarnings.reduce((a,earn)=>a+(entry?.earnings?.[earn]||0),0);
+        const dedTotal = deductions.reduce((a,ded)=>a+(entry?.deductions?.[ded]||0),0);
+        const netPay = Math.max(0, (e.salary||0) + extraTotal - dedTotal - att.amount);
         return `<tr>
           <td style="font-weight:500">${esc(e.name)}<div style="font-size:14px;color:var(--text-muted)">${esc(e.role||'')}</div></td>
           <td class="mono amt-neutral">${fmt(e.salary||0)}</td>
           ${extraEarnings.map(earn=>`<td><input type="number" value="${entry?.earnings?.[earn]||0}" id="earn-${e.id}-${earn.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
           ${deductions.map(ded=>`<td><input type="number" value="${entry?.deductions?.[ded]||0}" id="ded-${e.id}-${ded.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
-          <td class="mono text-danger" title="${att.days} day(s) unpaid this month">${fmt(att.amount)}</td>
-          <td class="mono font-bold" id="net-${e.id}">${fmt(Math.max(0,e.salary||0)-att.amount)}</td>
+          <td class="mono text-danger" title="${e.attendanceDeductionEnabled===false?'This employee is exempt — always paid in full regardless of attendance':`${att.days} day(s) unpaid this month`}">${e.attendanceDeductionEnabled===false?'<span style="color:var(--text-muted)">Exempt</span>':fmt(att.amount)}</td>
+          <td class="mono font-bold" id="net-${e.id}">${fmt(netPay)}</td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>`;
@@ -10432,9 +10456,9 @@ function generateReport() {
     <table><thead><tr><th>Timestamp</th><th>User</th><th>Module</th><th>Action</th><th>Record</th></tr></thead><tbody>
       ${logs.slice(-500).reverse().map(a=>`<tr><td class="mono" style="font-size:14px">${(a.timestamp||'').replace('T',' ').slice(0,19)}</td><td>${esc(a.username||'—')}</td><td>${esc(a.module||'—')}</td><td>${esc(a.action||'—')}</td><td>${esc(a.recordName||a.recordId||'—')}</td></tr>`).join('')}
     </tbody></table>`;
-  } else if (type==='vat-summary' || type==='vat-sales') {
+  } else if (type==='vat-sales') {
     const reg = computeVATSalesRegister(from, to);
-    bodyHtml = `<h2>${type==='vat-summary'?'Monthly VAT Summary':'VAT Sales Register (Bikri Khata)'}</h2>
+    bodyHtml = `<h2>VAT Sales Register (Bikri Khata)</h2>
     <p style="font-size:17px;margin-bottom:12px">PAN: ${esc(s.panNumber||'N/A')} | VAT Reg: ${esc(s.vatNumber||'N/A')} | Rate: ${s.pos?.defaultTax||13}%</p>
     <table><thead><tr><th>Date</th><th>Voucher #</th><th>Description</th><th style="text-align:right">Taxable Amt</th><th style="text-align:right">VAT</th><th style="text-align:right">Total</th></tr></thead><tbody>
       ${reg.rows.length?reg.rows.map(r=>`<tr${r.isReversal?' style="color:#b00"':''}><td>${fmtDate(r.date)}</td><td class="mono">${esc(r.voucherNumber)}</td><td>${esc(r.description)}</td><td style="text-align:right" class="mono">${fmt(r.taxable)}</td><td style="text-align:right" class="mono">${fmt(r.vat)}</td><td style="text-align:right" class="mono">${fmt(r.taxable+r.vat)}</td></tr>`).join(''):'<tr><td colspan="6">No taxable sales in period</td></tr>'}
@@ -12495,6 +12519,15 @@ function confirmCompleteProduction() {
   if (!order) return;
   const bom = db.boms.find(b=>b.id===order.bomId);
   if (!bom) return;
+  // Re-check stock right now, not just when this screen was opened — something else (another
+  // order, a stock adjustment) could have consumed material in between, and confirming here
+  // used to go ahead and subtract anyway, letting stock run negative with no warning.
+  for (const it of bom.items) {
+    const store = it.itemType==='product' ? db.records : db.rawMaterials;
+    const m = store.find(x=>x.id===it.materialId);
+    const needed = it.qty * order.batches;
+    if (!m || m.stock < needed) { toast(`Insufficient stock: ${m?.name||'ingredient'} (need ${needed.toFixed(2)}, have ${m?.stock||0}) — stock changed since this screen opened`,'error'); return; }
+  }
   const actualQty = parseFloat(document.getElementById('cp-actual-qty').value);
   if (isNaN(actualQty) || actualQty < 0) { toast('Enter the actual quantity produced','error'); return; }
   const batches = order.batches;
@@ -13256,7 +13289,12 @@ function saveTaxSettings() {
 
 function generateVATReport() {
   openModule('reports');
-  setTimeout(()=>{ selectReportCategory('tax'); document.getElementById('rpt-type').value='vat-summary'; generateReport(); }, 50);
+  // BUG FIXED: this used to point at the orphaned 'vat-summary' report type, which was never
+  // actually a summary — it silently showed the same thing as the Sales Register alone, missing
+  // Purchases, Input VAT, and the Net Payable figure entirely. Anyone clicking this button
+  // wanting a single combined view (the whole point of a "summary") got an incomplete one with
+  // no indication anything was missing. Point it at the real combined summary instead.
+  setTimeout(()=>{ selectReportCategory('tax'); document.getElementById('rpt-type').value='govt-submission'; generateReport(); }, 50);
 }
 
 function generateSalesRegister() {

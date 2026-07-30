@@ -221,15 +221,23 @@ a{color:var(--accent);text-decoration:none}
 .kpi-value{font-size:29px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1.15;white-space:nowrap;overflow:hidden;display:block;width:100%;letter-spacing:-0.01em}
 .kpi-label{font-size:13px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi-change{font-size:13px;margin-top:5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.kpi-icon{font-size:22px;width:42px;height:42px;flex-shrink:0;border-radius:12px;background:var(--accent-grad);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px var(--accent-glow)}
-/* Cycle a small palette across successive KPI cards so a dashboard row
-   reads as intentionally colorful rather than one repeated icon color. */
-.kpi-grid .kpi-card:nth-of-type(4n+2) .kpi-icon{background:linear-gradient(135deg,var(--teal),#0891B2);box-shadow:0 4px 14px var(--teal-dim)}
-.kpi-grid .kpi-card:nth-of-type(4n+2)::after{background:linear-gradient(135deg,var(--teal),#0891B2)}
-.kpi-grid .kpi-card:nth-of-type(4n+3) .kpi-icon{background:linear-gradient(135deg,#F59E0B,#EA580C);box-shadow:0 4px 14px rgba(245,158,11,.30)}
-.kpi-grid .kpi-card:nth-of-type(4n+3)::after{background:linear-gradient(135deg,#F59E0B,#EA580C)}
-.kpi-grid .kpi-card:nth-of-type(4n+4) .kpi-icon{background:linear-gradient(135deg,#3B82F6,#1D4ED8);box-shadow:0 4px 14px rgba(59,130,246,.30)}
-.kpi-grid .kpi-card:nth-of-type(4n+4)::after{background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
+.kpi-icon{font-size:22px;width:42px;height:42px;flex-shrink:0;border-radius:12px;background:var(--accent-grad);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px var(--accent-glow);position:relative}
+/* Icon color now means something rather than just cycling by position: green where money is
+   coming in, rose where it's going out, amber where something needs attention, blue for plain
+   reference info. A dashboard row full of unrelated rainbow colors looks decorated; a row where
+   the color is a signal you can read at a glance is actually useful. */
+.kpi-icon-revenue{background:linear-gradient(135deg,#10B981,#059669)!important;box-shadow:0 4px 14px rgba(16,185,129,.35)!important}
+.kpi-card:has(.kpi-icon-revenue)::after{background:linear-gradient(135deg,#10B981,#059669)}
+.kpi-icon-expense{background:linear-gradient(135deg,#F43F5E,#E11D48)!important;box-shadow:0 4px 14px rgba(244,63,94,.35)!important}
+.kpi-card:has(.kpi-icon-expense)::after{background:linear-gradient(135deg,#F43F5E,#E11D48)}
+.kpi-icon-neutral{background:linear-gradient(135deg,#3B82F6,#1D4ED8)!important;box-shadow:0 4px 14px rgba(59,130,246,.35)!important}
+.kpi-card:has(.kpi-icon-neutral)::after{background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
+.kpi-icon-warning{background:linear-gradient(135deg,#F59E0B,#D97706)!important;box-shadow:0 4px 14px rgba(245,158,11,.35)!important}
+.kpi-card:has(.kpi-icon-warning)::after{background:linear-gradient(135deg,#F59E0B,#D97706)}
+/* A small filled "pin" on the icon's corner — only appears when a card actually needs eyes on
+   it (unpaid dues, items below reorder point). This is a real signal, not a permanent decoration:
+   an empty pin would be more confusing than no pin at all, so it's added conditionally in markup. */
+.kpi-pin{position:absolute;top:10px;right:10px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#F43F5E;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--surface);font-family:'JetBrains Mono',monospace;z-index:2}
 /* ══ TOP PRODUCTS LIST ══ */
 .top-prod-row{display:flex;align-items:center;gap:10px;padding:8px 4px}
 .top-prod-rank{width:22px;height:22px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -491,7 +499,10 @@ textarea.form-control{resize:vertical;min-height:80px}
 .report-group-heading{font-size:16px;font-weight:700;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--border,#e2e2e2);display:flex;align-items:center;gap:6px}
 .report-cat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all var(--transition)}
 .report-cat-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.15)}
-.report-cat-icon{font-size:31px;margin-bottom:8px}
+.report-cat-icon{font-size:26px;margin-bottom:10px;width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--accent-grad);box-shadow:0 4px 14px var(--accent-glow)}
+.report-cat-icon[data-hue="money"]{background:linear-gradient(135deg,#10B981,#059669);box-shadow:0 4px 14px rgba(16,185,129,.30)}
+.report-cat-icon[data-hue="ledger"]{background:linear-gradient(135deg,#3B82F6,#1D4ED8);box-shadow:0 4px 14px rgba(59,130,246,.30)}
+.report-cat-icon[data-hue="tax"]{background:linear-gradient(135deg,#8B5CF6,#6D28D9);box-shadow:0 4px 14px rgba(139,92,246,.30)}
 .report-cat-title{font-weight:700;font-size:18px;margin-bottom:4px}
 .report-cat-desc{font-size:15px;color:var(--text-muted)}
 /* Multi-page printable report: each .report-page forces a page break in print */
@@ -619,6 +630,15 @@ textarea.form-control{resize:vertical;min-height:80px}
   .kpi-grid{grid-template-columns:1fr 1fr!important}
   .kpi-card{padding:12px;gap:8px;min-height:84px}
   .kpi-icon{display:none}
+  /* Icon is hidden on mobile to leave room for the amount to display fully — but the color
+     signal shouldn't disappear along with it, so it moves to a slim left-edge stripe on the
+     card instead. Costs almost no horizontal space, unlike the icon box. */
+  .kpi-card{border-left:3px solid transparent}
+  .kpi-card:has(.kpi-icon-revenue){border-left-color:#10B981}
+  .kpi-card:has(.kpi-icon-expense){border-left-color:#F43F5E}
+  .kpi-card:has(.kpi-icon-neutral){border-left-color:#3B82F6}
+  .kpi-card:has(.kpi-icon-warning){border-left-color:#F59E0B}
+  .kpi-pin{top:6px;right:6px;min-width:15px;height:15px;font-size:9px}
   .kpi-label{white-space:normal;font-size:12px;line-height:1.25;margin-bottom:4px}
   .kpi-value{font-size:20px}
   .kpi-change{white-space:normal;font-size:11.5px}
@@ -974,6 +994,11 @@ textarea.form-control{resize:vertical;min-height:80px}
       </div>
       <!-- POS -->
       <div class="module-view" id="view-pos">
+        <div class="tabs" id="sales-tabs">
+          <div class="tab active" onclick="setSalesTab('billing',this)">🛒 Billing</div>
+          <div class="tab" onclick="setSalesTab('orders',this)">📝 Sales Orders</div>
+        </div>
+        <div id="sales-billing">
         <div id="pos-wrap">
           <div class="pos-products" id="pos-products">
             <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
@@ -1047,6 +1072,14 @@ textarea.form-control{resize:vertical;min-height:80px}
               <button class="btn btn-primary w-full" id="checkout-btn" onclick="checkout()" style="margin-top:8px">✅ Checkout</button>
             </div>
           </div>
+        </div>
+        </div>
+        <div id="sales-orders" style="display:none">
+          <div class="filter-bar"><button class="btn btn-primary btn-sm" onclick="openSOModal()">+ New Sales Order</button></div>
+          <table>
+            <thead><tr><th>SO #</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="so-tbody"></tbody>
+          </table>
         </div>
       </div>
       <!-- RECORDS / PRODUCTS -->
@@ -1318,24 +1351,24 @@ textarea.form-control{resize:vertical;min-height:80px}
             <div class="card-header"><div class="card-title">⚡ Quick Reports</div></div>
             <div class="form-hint" style="margin-bottom:10px;padding:0 4px">The questions you'll ask most often — pick one, choose your dates, done.</div>
             <div class="report-cat-grid">
-              <div class="report-cat-card" onclick="quickReport('financial-statements','profit-loss-ledger')"><div class="report-cat-icon">💰</div><div class="report-cat-title">Am I Making Money?</div></div>
-              <div class="report-cat-card" onclick="quickReport('financial-statements','balance-sheet')"><div class="report-cat-icon">🏦</div><div class="report-cat-title">What Do I Own &amp; Owe?</div></div>
-              <div class="report-cat-card" onclick="quickReport('ledger-tools','receivables-aging')"><div class="report-cat-icon">📥</div><div class="report-cat-title">Who Owes Me?</div></div>
-              <div class="report-cat-card" onclick="quickReport('ledger-tools','payables-aging')"><div class="report-cat-icon">📤</div><div class="report-cat-title">Who Do I Owe?</div></div>
-              <div class="report-cat-card" onclick="quickReport('financial-statements','business-summary')"><div class="report-cat-icon">🩺</div><div class="report-cat-title">Business Health Check</div></div>
+              <div class="report-cat-card" onclick="quickReport('financial-statements','profit-loss-ledger')"><div class="report-cat-icon" data-hue="money">💰</div><div class="report-cat-title">Am I Making Money?</div></div>
+              <div class="report-cat-card" onclick="quickReport('financial-statements','balance-sheet')"><div class="report-cat-icon" data-hue="money">🏦</div><div class="report-cat-title">What Do I Own &amp; Owe?</div></div>
+              <div class="report-cat-card" onclick="quickReport('ledger-tools','receivables-aging')"><div class="report-cat-icon" data-hue="ledger">📥</div><div class="report-cat-title">Who Owes Me?</div></div>
+              <div class="report-cat-card" onclick="quickReport('ledger-tools','payables-aging')"><div class="report-cat-icon" data-hue="ledger">📤</div><div class="report-cat-title">Who Do I Owe?</div></div>
+              <div class="report-cat-card" onclick="quickReport('financial-statements','business-summary')"><div class="report-cat-icon" data-hue="money">🩺</div><div class="report-cat-title">Business Health Check</div></div>
             </div>
           </div>
           <div class="card mb-4" id="rpt-gov-panel" style="border:2px solid var(--primary,#2563eb)">
             <div class="card-header"><div class="card-title">🏛️ Government &amp; Tax Filing<span class="help-tip" data-tip="These are the reports the tax office actually asks for. This section always stays here, no matter how the rest of the app changes.">?</span></div></div>
             <div class="form-hint" style="margin-bottom:10px;padding:0 4px">Always here when you need to file — nothing above or below this ever moves it or hides it.</div>
             <div class="report-cat-grid">
-              <div class="report-cat-card" onclick="quickReport('tax','vat-sales')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">VAT Sales Register</div></div>
-              <div class="report-cat-card" onclick="quickReport('tax','vat-purchase')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">VAT Purchase Register</div></div>
-              <div class="report-cat-card" onclick="quickReport('tax','govt-submission')"><div class="report-cat-icon">📋</div><div class="report-cat-title">Net VAT Payable (Monthly Filing)</div></div>
-              <div class="report-cat-card" onclick="quickReport('tax','tds-register')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">TDS Register</div></div>
-              <div class="report-cat-card" onclick="quickReport('tax','ssf-register')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">SSF Register</div></div>
-              <div class="report-cat-card" onclick="quickReport('tax','tax-deduction')"><div class="report-cat-icon">🧾</div><div class="report-cat-title">Payroll Tax Deduction</div></div>
-              <div class="report-cat-card" onclick="quickReport('tax','tax-depreciation')"><div class="report-cat-icon">🏗️</div><div class="report-cat-title">Tax Depreciation Schedule</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','vat-sales')"><div class="report-cat-icon" data-hue="tax">🧾</div><div class="report-cat-title">VAT Sales Register</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','vat-purchase')"><div class="report-cat-icon" data-hue="tax">🧾</div><div class="report-cat-title">VAT Purchase Register</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','govt-submission')"><div class="report-cat-icon" data-hue="tax">📋</div><div class="report-cat-title">Net VAT Payable (Monthly Filing)</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','tds-register')"><div class="report-cat-icon" data-hue="tax">🧾</div><div class="report-cat-title">TDS Register</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','ssf-register')"><div class="report-cat-icon" data-hue="tax">🧾</div><div class="report-cat-title">SSF Register</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','tax-deduction')"><div class="report-cat-icon" data-hue="tax">🧾</div><div class="report-cat-title">Payroll Tax Deduction</div></div>
+              <div class="report-cat-card" onclick="quickReport('tax','tax-depreciation')"><div class="report-cat-icon" data-hue="tax">🏗️</div><div class="report-cat-title">Tax Depreciation Schedule</div></div>
             </div>
           </div>
           <div style="text-align:center;margin-bottom:16px">
@@ -2609,6 +2642,43 @@ textarea.form-control{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- Sales Order Modal -->
+<div class="modal-overlay" id="so-modal-overlay" onclick="closeModalOnOverlay(event,'so-modal-overlay')">
+  <div class="modal modal-lg">
+    <div class="modal-header"><div class="modal-title">New Sales Order</div><button class="modal-close" onclick="closeModal('so-modal-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Customer *</label><input class="form-control" id="sord-customer" placeholder="Customer name"></div>
+        <div class="form-group"><label class="form-label">Expected Delivery Date</label><input class="form-control" id="sord-expected" onfocus="openCalendar('sord-expected','standard')"></div>
+      </div>
+      <h3 style="font-size:17px;font-weight:700;margin:12px 0 8px">Items</h3>
+      <div id="sord-items-list"></div>
+      <button class="btn btn-secondary btn-sm" onclick="addSOItemRow()">+ Add Item</button>
+      <div style="text-align:right;margin-top:10px;font-weight:700" id="sord-total">Total: 0</div>
+      <div class="form-group" style="margin-top:12px"><label class="form-label">Notes</label><input class="form-control" id="sord-notes"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('so-modal-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveSO()">💾 Create Sales Order</button></div>
+  </div>
+</div>
+
+<!-- Sales Order Detail Modal -->
+<div class="modal-overlay" id="so-detail-overlay" onclick="closeModalOnOverlay(event,'so-detail-overlay')">
+  <div class="modal modal-lg">
+    <div class="modal-header"><div class="modal-title">Sales Order Detail</div><button class="modal-close" onclick="closeModal('so-detail-overlay')">✕</button></div>
+    <div class="modal-body" id="so-detail-body"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('so-detail-overlay')">Close</button></div>
+  </div>
+</div>
+
+<!-- Budget Settings Modal -->
+<div class="modal-overlay" id="budget-settings-overlay" onclick="closeModalOnOverlay(event,'budget-settings-overlay')">
+  <div class="modal modal-lg">
+    <div class="modal-header"><div class="modal-title">Set Monthly Budget Targets</div><button class="modal-close" onclick="closeModal('budget-settings-overlay')">✕</button></div>
+    <div class="modal-body" id="budget-settings-body"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('budget-settings-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveBudgetSettings()">💾 Save Targets</button></div>
+  </div>
+</div>
+
 <!-- Goods Received Modal -->
 <div class="modal-overlay" id="grn-modal-overlay" onclick="closeModalOnOverlay(event,'grn-modal-overlay')">
   <div class="modal modal-lg">
@@ -2869,6 +2939,8 @@ function defaultDB() {
     productionOrders: [], // {id, bomId, productId, batches, status, scheduledDate, actualQty(set on completion)}
     productionBatches: [], // {id, orderId, batchNumber, qtyProduced, materialsConsumed:[], cost, date, status}
     purchaseOrders: [],  // {id, poNumber, supplierId, items:[{materialId,name,qty,unit,rate}], status, date, expectedDate}
+    salesOrders: [],     // {id, soNumber, customerId, customerName, items:[{id,name,qty,unit,price}], status, date, expectedDate}
+    budgets: {},         // { [accountCode]: monthlyTargetAmount }
     goodsReceived: [],   // {id, poId, grnNumber, items:[{materialId,qtyReceived,qtyOrdered}], date, receivedBy}
     supplierInvoices: [], // {id, poId, grnId, invoiceNumber, supplierId, amount, dueDate, status, date}
     supplierPayments: [], // {id, invoiceId, supplierId, amount, method, date, notes}
@@ -3065,6 +3137,8 @@ function loadDB() {
       if (!db.productionOrders) db.productionOrders = [];
       if (!db.productionBatches) db.productionBatches = [];
       if (!db.purchaseOrders) db.purchaseOrders = [];
+      if (!db.salesOrders) db.salesOrders = [];
+      if (!db.budgets) db.budgets = {};
       if (!db.goodsReceived) db.goodsReceived = [];
       if (!db.supplierInvoices) db.supplierInvoices = [];
       if (!db.supplierPayments) db.supplierPayments = [];
@@ -4996,6 +5070,114 @@ function computeOwnersEquityStatement(from, to) {
   return { single:false, rows, totalProfit: netProfit };
 }
 
+/* ══ RATIO ANALYSIS ═══════════════════════════════════════════════════════
+   Every figure here is derived from the SAME already-fixed Balance Sheet and
+   P&L calculations used everywhere else — no separate/parallel arithmetic,
+   so these ratios can never silently drift out of sync with the statements
+   themselves. Current vs Non-current is inferred from the account code
+   ranges already baked into the default Chart of Accounts (10xx/20xx =
+   current, 11xx/21xx = fixed/long-term) rather than a new data field, since
+   there's no way in this app to create a custom account with a different
+   numbering scheme. ══════════════════════════════════════════════════════ */
+function isCurrentAccountCode(code) {
+  return code.startsWith('10') || code.startsWith('20');
+}
+
+function computeRatioAnalysis(from, to) {
+  const asOf = to || today();
+  const bs = computeBalanceSheet(asOf);
+  const pl = computePLPeriod(from||null, asOf);
+
+  const currentAssets = bs.assets.filter(r=>isCurrentAccountCode(r.acc.code)).reduce((a,r)=>a+r.contribution,0);
+  const fixedAssets = bs.totalAssets - currentAssets;
+  const currentLiabilities = bs.liabilities.filter(r=>isCurrentAccountCode(r.acc.code)).reduce((a,r)=>a+r.contribution,0);
+  const longTermLiabilities = bs.totalLiabilities - currentLiabilities;
+  const inventoryCodes = ['1040','1041','1042'];
+  const inventoryValue = bs.assets.filter(r=>inventoryCodes.includes(r.acc.code)).reduce((a,r)=>a+r.contribution,0);
+
+  const cogsCode = db.settings.acctMappings.cogsAccount;
+  const cogs = pl.expense.filter(r=>r.acc.code===cogsCode).reduce((a,r)=>a+r.amount,0);
+  const revenue = pl.totalIncome;
+  const grossProfit = revenue - cogs;
+
+  const currentRatio = currentLiabilities ? currentAssets/currentLiabilities : null;
+  const quickRatio = currentLiabilities ? (currentAssets-inventoryValue)/currentLiabilities : null;
+  const workingCapital = currentAssets - currentLiabilities;
+  const debtToEquity = bs.totalEquity ? bs.totalLiabilities/bs.totalEquity : null;
+  const debtRatio = bs.totalAssets ? bs.totalLiabilities/bs.totalAssets : null;
+  const grossMargin = revenue ? (grossProfit/revenue)*100 : null;
+  const netMargin = revenue ? (pl.netProfit/revenue)*100 : null;
+  const roa = bs.totalAssets ? (pl.netProfit/bs.totalAssets)*100 : null;
+  const roe = bs.totalEquity ? (pl.netProfit/bs.totalEquity)*100 : null;
+  const inventoryTurnover = inventoryValue ? cogs/inventoryValue : null;
+
+  return {
+    asOf, from: from||null, currentAssets, fixedAssets, currentLiabilities, longTermLiabilities, inventoryValue,
+    revenue, cogs, grossProfit, netProfit: pl.netProfit,
+    currentRatio, quickRatio, workingCapital, debtToEquity, debtRatio, grossMargin, netMargin, roa, roe, inventoryTurnover
+  };
+}
+
+/* ══ BUDGET VS ACTUAL ═════════════════════════════════════════════════════
+   Budgets are set once per category (Rent, Salary, Utilities, a Revenue
+   target, etc.) as a monthly amount — not re-entered every month. Each
+   month's Actual is pulled from the same ledger-based P&L used everywhere
+   else, so there's no separate bookkeeping step; you just set a target once
+   and this report compares it against whatever you've actually recorded
+   that month through normal use (sales, the Add Entry screen, payroll). ══ */
+function computeBudgetVsActual(monthAnchor) {
+  const anchor = monthAnchor || today();
+  const d = new Date(anchor);
+  const monthStart = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
+  const lastDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  const monthEnd = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(lastDay).padStart(2,'0');
+  const pl = computePLPeriod(monthStart, monthEnd);
+
+  const budgetedCodes = Object.keys(db.budgets||{}).filter(c=>db.budgets[c]>0);
+  const build = (rows, kind) => {
+    const codes = new Set([...rows.map(r=>r.acc.code), ...budgetedCodes.filter(c=>{
+      const acc = getAccountByCode(c); return acc && acc.type===kind;
+    })]);
+    return [...codes].map(code=>{
+      const acc = getAccountByCode(code);
+      const actualRow = rows.find(r=>r.acc.code===code);
+      const actual = actualRow ? actualRow.amount : 0;
+      const budgeted = (db.budgets||{})[code] || 0;
+      const variance = actual - budgeted;
+      const pctUsed = budgeted ? (actual/budgeted)*100 : null;
+      return { code, name: acc?.name||code, budgeted, actual, variance, pctUsed };
+    }).filter(r=>r.budgeted>0 || r.actual>0).sort((a,b)=>b.budgeted-a.budgeted);
+  };
+
+  return { monthStart, monthEnd, expenseRows: build(pl.expense,'expense'), incomeRows: build(pl.income,'income') };
+}
+
+function openBudgetSettingsModal() {
+  const expenseAccounts = db.chartOfAccounts.filter(a=>a.type==='expense');
+  const incomeAccounts = db.chartOfAccounts.filter(a=>a.type==='income');
+  const row = a => `<div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;align-items:center;margin-bottom:6px">
+    <span>${esc(a.name)}</span>
+    <input class="form-control" type="number" min="0" placeholder="0" value="${db.budgets?.[a.code]||''}" data-budget-code="${a.code}">
+  </div>`;
+  document.getElementById('budget-settings-body').innerHTML = `
+    <div class="form-hint" style="margin-bottom:12px">Set a monthly target for anything you want to track. Leave blank for categories you don't want to budget — they just won't show up in the comparison.</div>
+    <h3 style="font-size:16px;margin-bottom:8px">Revenue Target</h3>
+    ${incomeAccounts.map(row).join('')}
+    <h3 style="font-size:16px;margin:16px 0 8px">Expense Targets</h3>
+    ${expenseAccounts.map(row).join('')}`;
+  openModal('budget-settings-overlay');
+}
+function saveBudgetSettings() {
+  db.budgets = db.budgets || {};
+  document.querySelectorAll('[data-budget-code]').forEach(inp=>{
+    const v = parseFloat(inp.value);
+    if (v>0) db.budgets[inp.dataset.budgetCode] = v;
+    else delete db.budgets[inp.dataset.budgetCode];
+  });
+  saveDB(); closeModal('budget-settings-overlay'); toast('Budget targets saved','success');
+  if (document.getElementById('rpt-type')?.value==='budget-vs-actual') generateReport();
+}
+
 function postInterestCharge(customerName, amount) {
   confirm(`Charge ${fmt(amount)} interest to ${customerName}? This adds to what they owe you — it's not cash received yet.`, ()=>{
     const a = { id:uid(), type:'income', category:'Interest', description:`Interest charged — ${customerName}`, amount, date:today(), reference:'', createdAt:now() };
@@ -5208,14 +5390,14 @@ function refreshDashboardKPIs() {
   const outstandingDue   = outstandingSales.reduce((a,c) => a + (c.dueAmount||0), 0);
 
   kpiGrid.innerHTML = `
-    <div class="kpi-card" style="cursor:pointer" onclick="scrollToRecentSales()" title="View recent sales"><div class="kpi-icon">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue <span style="font-weight:400;color:var(--text-muted);font-size:12px">(excl. VAT)</span></div><div class="kpi-value amt-revenue">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="scrollToRecentSales()" title="View recent sales"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">Month Revenue <span style="font-weight:400;color:var(--text-muted);font-size:12px">(excl. VAT)</span></div><div class="kpi-value amt-revenue">${fmtWhole(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="goToExpenseLedger()" title="Open Accounting → Expenses"><div class="kpi-icon">💸</div><div class="kpi-body"><div class="kpi-label">Today's Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpToday)}</div><div class="kpi-change">${todayExpenseEntries} ${todayExpenseEntries===1?'entry':'entries'} today</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="goToExpenseLedger()" title="Open Accounting → Expenses"><div class="kpi-icon">🧾</div><div class="kpi-body"><div class="kpi-label">Month Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpMonth)}</div><div class="kpi-change">${monthPL.expense.length} categories · salary, raw material &amp; other</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="openModule('accounting')" title="Open Accounting"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value ${netBalance>=0?'amt-revenue':'amt-expense'}">${fmtWhole(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="goToDueLedger()" title="Open Due Ledger"><div class="kpi-icon">💳</div><div class="kpi-body"><div class="kpi-label">Outstanding Due</div><div class="kpi-value amt-expense">${fmtWhole(outstandingDue)}</div><div class="kpi-change">${outstandingSales.length} unpaid credit sales</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="openModule('records')" title="Open ${esc(db.settings.labels.records||'Records')}"><div class="kpi-icon">📦</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.records||'Records')}</div><div class="kpi-value">${db.records.length}</div><div class="kpi-change">In inventory</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="openModule('records')" title="Open ${esc(db.settings.labels.records||'Records')}"><div class="kpi-icon">⚠️</div><div class="kpi-body"><div class="kpi-label">Low Stock</div><div class="kpi-value" style="color:var(--warning)">${lowStockCnt}</div><div class="kpi-change">Items to reorder</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="scrollToRecentSales()" title="View recent sales"><div class="kpi-icon kpi-icon-revenue">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue <span style="font-weight:400;color:var(--text-muted);font-size:12px">(excl. VAT)</span></div><div class="kpi-value amt-revenue">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="scrollToRecentSales()" title="View recent sales"><div class="kpi-icon kpi-icon-revenue">📅</div><div class="kpi-body"><div class="kpi-label">Month Revenue <span style="font-weight:400;color:var(--text-muted);font-size:12px">(excl. VAT)</span></div><div class="kpi-value amt-revenue">${fmtWhole(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="goToExpenseLedger()" title="Open Accounting → Expenses"><div class="kpi-icon kpi-icon-expense">💸</div><div class="kpi-body"><div class="kpi-label">Today's Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpToday)}</div><div class="kpi-change">${todayExpenseEntries} ${todayExpenseEntries===1?'entry':'entries'} today</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="goToExpenseLedger()" title="Open Accounting → Expenses"><div class="kpi-icon kpi-icon-expense">🧾</div><div class="kpi-body"><div class="kpi-label">Month Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpMonth)}</div><div class="kpi-change">${monthPL.expense.length} categories · salary, raw material &amp; other</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="openModule('accounting')" title="Open Accounting"><div class="kpi-icon ${netBalance>=0?'kpi-icon-revenue':'kpi-icon-expense'}">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value ${netBalance>=0?'amt-revenue':'amt-expense'}">${fmtWhole(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="goToDueLedger()" title="Open Due Ledger">${outstandingSales.length?`<span class="kpi-pin">${outstandingSales.length>99?'99+':outstandingSales.length}</span>`:''}<div class="kpi-icon kpi-icon-warning">💳</div><div class="kpi-body"><div class="kpi-label">Outstanding Due</div><div class="kpi-value amt-expense">${fmtWhole(outstandingDue)}</div><div class="kpi-change">${outstandingSales.length} unpaid credit sales</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="openModule('records')" title="Open ${esc(db.settings.labels.records||'Records')}"><div class="kpi-icon kpi-icon-neutral">📦</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.records||'Records')}</div><div class="kpi-value">${db.records.length}</div><div class="kpi-change">In inventory</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="openModule('records')" title="Open ${esc(db.settings.labels.records||'Records')}">${lowStockCnt?`<span class="kpi-pin">${lowStockCnt>99?'99+':lowStockCnt}</span>`:''}<div class="kpi-icon kpi-icon-warning">⚠️</div><div class="kpi-body"><div class="kpi-label">Low Stock</div><div class="kpi-value" style="color:var(--warning)">${lowStockCnt}</div><div class="kpi-change">Items to reorder</div></div></div>
   `;
   setTimeout(fitKpiValues, 0);
 }
@@ -7469,6 +7651,7 @@ function completeCreditSale() {
     lastReceiptSale = sale;
     printReceipt();
   }
+  linkSaleToFulfilledSalesOrder(sale);
   clearCart();
   closeModal('credit-sale-overlay');
   updateNavBadges();
@@ -7524,6 +7707,7 @@ function completeSale(method) {
     lastReceiptSale = sale;
     printReceipt();
   }
+  linkSaleToFulfilledSalesOrder(sale);
   clearCart();
   updateNavBadges();
   generateNotifications();
@@ -9854,7 +10038,8 @@ function deleteRecord(type, id) {
 /* ══ REPORT CATEGORIES ══ */
 const REPORT_CATEGORIES = [
   { id:'sales', group:'business', icon:'🧾', title:'Sales Reports', desc:'Transactions, revenue, top products', types:[
-    {v:'sales', label:'Sales / Transaction Report'}
+    {v:'sales', label:'Sales / Transaction Report'},
+    {v:'sales-orders', label:'Sales Order Summary'}
   ]},
   { id:'purchase', group:'business', icon:'🛍️', title:'Purchase Reports', desc:'Purchase orders, GRN, supplier spend', types:[
     {v:'purchase-orders', label:'Purchase Order Summary'},
@@ -9887,6 +10072,8 @@ const REPORT_CATEGORIES = [
     {v:'cash-flow', label:'Cash Flow Statement'},
     {v:'owners-equity', label:"Owner's Equity / Partners' Capital"},
     {v:'business-summary', label:'Business Health Check (One-Page Summary)'},
+    {v:'ratio-analysis', label:'📊 Ratio Analysis'},
+    {v:'budget-vs-actual', label:'🎯 Budget vs Actual'},
     {v:'accounting-integrity', label:'🔍 Accounting Integrity Checker'},
     {v:'audit', label:'Audit & Compliance (Admin)'}
   ]},
@@ -9940,7 +10127,7 @@ function renderReportCategoryGrid() {
   const business = REPORT_CATEGORIES.filter(c=>c.group!=='official');
   const cardHtml = c => `
     <div class="report-cat-card" onclick="selectReportCategory('${c.id}')">
-      <div class="report-cat-icon">${c.icon}</div>
+      <div class="report-cat-icon" data-hue="${c.id==='financial-statements'?'money':c.id==='ledger-tools'?'ledger':c.id==='tax'?'tax':''}">${c.icon}</div>
       <div class="report-cat-title">${esc(c.title)}</div>
       <div class="report-cat-desc">${esc(c.desc)}</div>
     </div>`;
@@ -10288,6 +10475,76 @@ function generateReport() {
       <tr><td>Balance Sheet (Assets = Liabilities + Equity)</td><td style="text-align:right">${bs.balanced?'<span style="color:green">✓ Balanced</span>':'<span style="color:red">⚠ Out of balance</span>'}</td></tr>
     </tbody></table>
     ${(!tb.balanced||!bs.balanced)?`<p style="margin-top:10px"><button class="btn btn-danger btn-sm" onclick="openAccountingIntegrityReport()">🔍 Run Accounting Integrity Checker to find the exact cause</button></p>`:''}`;
+  } else if (type==='ratio-analysis') {
+    const r = computeRatioAnalysis(from, to||today());
+    const pct = v => v===null ? '—' : (v>=0?'':'-') + Math.abs(v).toFixed(1) + '%';
+    const num = v => v===null ? '—' : v.toFixed(2);
+    const dot = (ok,warn) => ok ? '🟢' : warn ? '🟡' : '🔴';
+    bodyHtml = `<h2>📊 Ratio Analysis</h2>
+    <p style="font-size:15px;color:#555">${periodLabel} — the same standard checks a bank or investor would run, calculated automatically from your books. No accounting knowledge needed to read these: each one has a plain-English meaning and a 🟢/🟡/🔴 signal below it. These are general rules of thumb, not a strict verdict — what's "normal" varies by industry, so watch the trend over time more than any single number.</p>
+
+    <h3 style="margin-top:18px">Can I pay my short-term bills?</h3>
+    <table><tbody>
+      <tr><td>Current Ratio</td><td style="text-align:right" class="mono">${num(r.currentRatio)}</td><td style="text-align:center">${r.currentRatio===null?'—':dot(r.currentRatio>=1.5, r.currentRatio>=1)}</td></tr>
+      <tr><td colspan="3" style="font-size:13px;color:#666">Current Assets ÷ Current Liabilities — how many rupees you have on hand or coming in soon for every rupee you owe soon. Above 1.5 is comfortable; below 1.0 means short-term bills could outrun short-term cash.</td></tr>
+      <tr><td>Quick Ratio (excludes stock)</td><td style="text-align:right" class="mono">${num(r.quickRatio)}</td><td style="text-align:center">${r.quickRatio===null?'—':dot(r.quickRatio>=1, r.quickRatio>=0.5)}</td></tr>
+      <tr><td colspan="3" style="font-size:13px;color:#666">Same idea, but leaves out Inventory — since stock takes time to sell and turn into cash, this is the stricter "can I pay right now" test.</td></tr>
+      <tr><td>Working Capital</td><td style="text-align:right" class="mono">${fmt(r.workingCapital)}</td><td style="text-align:center">${dot(r.workingCapital>0, r.workingCapital>=0)}</td></tr>
+      <tr><td colspan="3" style="font-size:13px;color:#666">Current Assets minus Current Liabilities, in actual rupees rather than a ratio — your short-term cushion.</td></tr>
+    </tbody></table>
+
+    <h3 style="margin-top:18px">How much do I rely on borrowed money?</h3>
+    <table><tbody>
+      <tr><td>Debt-to-Equity</td><td style="text-align:right" class="mono">${num(r.debtToEquity)}</td><td style="text-align:center">${r.debtToEquity===null?'—':dot(r.debtToEquity<=1, r.debtToEquity<=2)}</td></tr>
+      <tr><td colspan="3" style="font-size:13px;color:#666">Total Liabilities ÷ Total Equity — how much of the business is funded by debt versus your own money. Under 1.0 means you own more of the business than you owe; above 2.0 means you're leaning heavily on borrowing.</td></tr>
+      <tr><td>Debt Ratio</td><td style="text-align:right" class="mono">${r.debtRatio===null?'—':(r.debtRatio*100).toFixed(1)+'%'}</td><td style="text-align:center">${r.debtRatio===null?'—':dot(r.debtRatio<=0.5, r.debtRatio<=0.7)}</td></tr>
+      <tr><td colspan="3" style="font-size:13px;color:#666">What share of everything you own (Total Assets) is actually financed by liabilities rather than your own equity.</td></tr>
+    </tbody></table>
+
+    <h3 style="margin-top:18px">Am I actually making money?</h3>
+    <table><tbody>
+      <tr><td>Gross Profit Margin</td><td style="text-align:right" class="mono">${pct(r.grossMargin)}</td><td style="text-align:center">${r.grossMargin===null?'—':dot(r.grossMargin>=30, r.grossMargin>=15)}</td></tr>
+      <tr><td colspan="3" style="font-size:13px;color:#666">Out of every rupee of sales, how much is left after the direct cost of what you sold (before rent, salaries, etc.). A thin margin here means there's little room to absorb other costs.</td></tr>
+      <tr><td>Net Profit Margin</td><td style="text-align:right" class="mono">${pct(r.netMargin)}</td><td style="text-align:center">${r.netMargin===null?'—':dot(r.netMargin>=10, r.netMargin>=0)}</td></tr>
+      <tr><td colspan="3" style="font-size:13px;color:#666">Out of every rupee of sales, how much is actually left as real profit after every single expense. This is your true bottom line for the period.</td></tr>
+      <tr><td>Return on Assets</td><td style="text-align:right" class="mono">${pct(r.roa)}</td><td style="text-align:center">${r.roa===null?'—':dot(r.roa>=5, r.roa>=0)}</td></tr>
+      <tr><td colspan="3" style="font-size:13px;color:#666">How efficiently everything the business owns (cash, stock, machinery, etc.) is being used to generate profit.</td></tr>
+      <tr><td>Return on Equity</td><td style="text-align:right" class="mono">${pct(r.roe)}</td><td style="text-align:center">${r.roe===null?'—':dot(r.roe>=15, r.roe>=0)}</td></tr>
+      <tr><td colspan="3" style="font-size:13px;color:#666">The return you personally are getting on the money you (and any partners) have invested in the business.</td></tr>
+    </tbody></table>
+
+    <h3 style="margin-top:18px">How fast does stock move?</h3>
+    <table><tbody>
+      <tr><td>Inventory Turnover</td><td style="text-align:right" class="mono">${num(r.inventoryTurnover)}${r.inventoryTurnover!==null?'× per period':''}</td><td style="text-align:center">${r.inventoryTurnover===null?'—':dot(r.inventoryTurnover>=4, r.inventoryTurnover>=2)}</td></tr>
+      <tr><td colspan="3" style="font-size:13px;color:#666">How many times your current stock value would be sold through in a period this length, at your current pace of sales. Higher generally means less cash tied up sitting on shelves — though very high can also mean you're understocked and risking stockouts.</td></tr>
+    </tbody></table>`;
+  } else if (type==='budget-vs-actual') {
+    const anchor = to || today();
+    const b = computeBudgetVsActual(anchor);
+    const anchorLabel = new Date(anchor).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    const row = (r,isExpense) => {
+      const overBudget = isExpense ? r.actual > r.budgeted : r.actual < r.budgeted;
+      const statusColor = r.pctUsed===null ? '#888' : overBudget ? '#DC2626' : '#16A34A';
+      return `<tr>
+        <td>${esc(r.name)}</td>
+        <td style="text-align:right" class="mono">${fmt(r.budgeted)}</td>
+        <td style="text-align:right" class="mono">${fmt(r.actual)}</td>
+        <td style="text-align:right;color:${statusColor}" class="mono">${r.variance>=0?'+':''}${fmt(r.variance)}</td>
+        <td style="text-align:center">${r.pctUsed===null?'no target set':`<span style="color:${statusColor};font-weight:700">${r.pctUsed.toFixed(0)}%</span>`}</td>
+      </tr>`;
+    };
+    bodyHtml = `<h2>🎯 Budget vs Actual — ${anchorLabel}</h2>
+    <p style="font-size:15px;color:#555">Comparing what actually happened this month against the monthly targets you've set. Set or change targets any time — pick a different month using the report period above to see a past or future month.</p>
+    <p style="margin-bottom:12px"><button class="btn btn-secondary btn-sm" onclick="openBudgetSettingsModal()">✏️ Edit Budget Targets</button></p>
+    <h3>Revenue</h3>
+    <table><thead><tr><th>Category</th><th style="text-align:right">Target</th><th style="text-align:right">Actual</th><th style="text-align:right">Variance</th><th style="text-align:center">% of Target</th></tr></thead><tbody>
+      ${b.incomeRows.length?b.incomeRows.map(r=>row(r,false)).join(''):'<tr><td colspan="5">No revenue target set — tap "Edit Budget Targets" above to set one</td></tr>'}
+    </tbody></table>
+    <h3 style="margin-top:16px">Expenses</h3>
+    <table><thead><tr><th>Category</th><th style="text-align:right">Budgeted</th><th style="text-align:right">Actual</th><th style="text-align:right">Variance</th><th style="text-align:center">% of Budget Used</th></tr></thead><tbody>
+      ${b.expenseRows.length?b.expenseRows.map(r=>row(r,true)).join(''):'<tr><td colspan="5">No expense targets set yet — tap "Edit Budget Targets" above to set one for Rent, Salary, Utilities, or anything else you want to track</td></tr>'}
+    </tbody></table>
+    <p style="font-size:13px;color:#777;margin-top:10px">🟢 = on or under target &nbsp;|&nbsp; 🔴 = over budget (expenses) or below target (revenue) &nbsp;|&nbsp; A category with real activity but no target just shows "no target set" — nothing to worry about, it simply isn't being tracked against a goal yet.</p>`;
   } else if (type==='accounting-integrity') {
     const check = runAccountingIntegrityCheck(to||today());
     const isAdmin = session?.role === 'admin';
@@ -10339,6 +10596,12 @@ function generateReport() {
     const itemTotals = {}; periodSales.forEach(s=>s.items?.forEach(i=>{ itemTotals[i.name]=(itemTotals[i.name]||0)+(i.price*i.qty); }));
     const top10 = Object.entries(itemTotals).sort((a,b)=>b[1]-a[1]).slice(0,10);
     if (top10.length) bodyHtml += `<!-- LAST_SECTION --><h2>Top Products by Revenue</h2><table><thead><tr><th>Rank</th><th>Product</th><th>Revenue</th></tr></thead><tbody>${top10.map(([n,v],i)=>`<tr><td>${i+1}</td><td>${esc(n)}</td><td>${fmt(v)}</td></tr>`).join('')}</tbody></table>`;
+  } else if (type==='sales-orders') {
+    const sos2 = db.salesOrders.filter(s=>(!from||s.date>=from)&&(!to||s.date<=to));
+    bodyHtml = `<h2>Sales Order Summary</h2>
+    <table><thead><tr><th>SO #</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr></thead><tbody>
+      ${sos2.length?sos2.map(s=>{const tot=(s.items||[]).reduce((a,i)=>a+i.qty*i.price,0); return `<tr><td>${esc(s.soNumber)}</td><td>${esc(s.customerName)}</td><td>${(s.items||[]).length}</td><td>${fmt(tot)}</td><td>${esc(s.status)}</td><td>${fmtDate(s.date)}</td></tr>`;}).join(''):'<tr><td colspan="6">No sales orders in period</td></tr>'}
+    </tbody></table>`;
   } else if (type==='purchase-orders') {
     const pos2 = db.purchaseOrders.filter(p=>(!from||p.date>=from)&&(!to||p.date<=to));
     bodyHtml = `<h2>Purchase Order Summary</h2>
@@ -10737,6 +11000,7 @@ function exportReportCSV() {
   else if (type==='hr') data = db.employees;
   else if (type==='supplier-ledger') data = db.secondary;
   else if (type==='purchase-orders') data = db.purchaseOrders;
+  else if (type==='sales-orders') data = db.salesOrders;
   else if (type==='production-batches') data = db.productionBatches;
   else if (type==='due-ledger') data = db.creditSales;
   else data = db.accounting.filter(a=>(!from||a.date>=from)&&(!to||a.date<=to));
@@ -12754,6 +13018,192 @@ function viewPODetail(id) {
   const total = (po.items||[]).reduce((a,i)=>a+(i.qty*i.rate),0);
   toast(`${po.poNumber} — ${sp?.name||'?'} — ${fmt(total)} — ${po.status}`,'info');
 }
+
+/* ══ SALES ORDERS ════════════════════════════════════════════════════════
+   Mirrors the Purchase Order flow, but for the selling side. Deliberately
+   reuses the existing, already-audited POS checkout (completeSale /
+   completeCreditSale) to actually fulfill an order — rather than writing a
+   second, parallel sale-posting path that could drift out of sync with the
+   real one over time (exactly the kind of duplicated-logic bug this app has
+   had bitten by before). "Fulfill" simply loads the order's remaining items
+   into the normal POS cart and lets the existing checkout take it from
+   there; whatever's actually sold gets subtracted back off the order. ══ */
+function setSalesTab(tab, el) {
+  document.getElementById('sales-billing').style.display = tab==='billing' ? '' : 'none';
+  document.getElementById('sales-orders').style.display = tab==='orders' ? '' : 'none';
+  document.querySelectorAll('#sales-tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if (tab==='orders') renderSalesOrders();
+}
+
+function renderSalesOrders() {
+  const tbody = document.getElementById('so-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = db.salesOrders.length ? [...db.salesOrders].reverse().map(so=>{
+    const total = (so.items||[]).reduce((a,i)=>a+(i.qty*i.price),0);
+    return `<tr>
+      <td class="mono">${esc(so.soNumber)}</td>
+      <td>${esc(so.customerName)}</td>
+      <td>${(so.items||[]).length} item(s)</td>
+      <td class="mono amt-revenue">${fmt(total)}</td>
+      <td><span class="badge ${so.status==='Fulfilled'?'badge-success':so.status==='Partially Fulfilled'?'badge-warning':(so.status==='Cancelled'||so.status==='Closed')?'badge-muted':'badge-info'}">${esc(so.status)}</span></td>
+      <td>${fmtDate(so.date)}</td>
+      <td>
+        ${so.status!=='Fulfilled'&&so.status!=='Cancelled'&&so.status!=='Closed'?`<button class="btn btn-xs btn-success" onclick="fulfillSO('${so.id}')">🚚 Fulfill</button>`:''}
+        ${so.status==='Ordered'?`<button class="btn btn-xs btn-danger" onclick="cancelSO('${so.id}')">Cancel</button>`:''}
+        ${so.status==='Partially Fulfilled'?`<button class="btn btn-xs btn-secondary" onclick="closeSO('${so.id}')">Close (stop expecting rest)</button>`:''}
+        <button class="btn btn-xs btn-secondary btn-view" onclick="viewSODetail('${so.id}')">View</button>
+      </td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📝</div><div class="empty-title">No sales orders yet</div><button class="btn btn-primary btn-sm" onclick="openSOModal()">+ New Sales Order</button></div></td></tr>';
+}
+
+// Only safe to cancel outright before anything has been fulfilled — nothing has touched stock
+// or the ledger yet, so there's nothing to reverse. Once even one sale has been fulfilled
+// against it, use closeSO() instead, which leaves what was already sold untouched.
+function cancelSO(id) {
+  const so = db.salesOrders.find(s=>s.id===id);
+  if (!so) return;
+  if (so.status !== 'Ordered') { toast('Only an order with nothing fulfilled yet can be cancelled — use Close instead','error'); return; }
+  confirm(`Cancel ${so.soNumber}? Nothing has been fulfilled against this order yet, so nothing else is affected.`, ()=>{
+    so.status = 'Cancelled';
+    audit('Sales','Cancel SO',id,so.soNumber);
+    saveDB(); renderSalesOrders(); toast('Sales order cancelled','success');
+  });
+}
+
+// For an order that's partially fulfilled and never will be fully fulfilled (customer no longer
+// wants the rest, item discontinued, etc.) — closes it out without touching what's already sold.
+function closeSO(id) {
+  const so = db.salesOrders.find(s=>s.id===id);
+  if (!so) return;
+  if (so.status !== 'Partially Fulfilled') { toast('Only a partially fulfilled order can be closed this way','error'); return; }
+  confirm(`Close ${so.soNumber}? Whatever has already been sold against it stays exactly as recorded — this just stops it showing as awaiting the rest.`, ()=>{
+    so.status = 'Closed';
+    audit('Sales','Close SO',id,so.soNumber);
+    saveDB(); renderSalesOrders(); toast('Sales order closed','success');
+  });
+}
+
+function openSOModal() {
+  document.getElementById('sord-customer').value = '';
+  document.getElementById('sord-expected').value = '';
+  document.getElementById('sord-notes').value = '';
+  window._soItems = [{id:'',qty:0,price:null}];
+  renderSOItemsList();
+  openModal('so-modal-overlay');
+}
+
+function renderSOItemsList() {
+  const list = document.getElementById('sord-items-list');
+  const items = window._soItems || [];
+  list.innerHTML = items.length ? items.map((it,i)=>`
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;margin-bottom:6px">
+      <select class="form-control" onchange="updateSOItem(${i},'id',this.value)">
+        <option value="">Select product...</option>
+        ${db.records.map(r=>`<option value="${r.id}" ${it.id===r.id?'selected':''}>${esc(r.name)} (${esc(r.unit||'pcs')})</option>`).join('')}
+      </select>
+      <input class="form-control" type="number" placeholder="Qty" value="${it.qty||''}" oninput="updateSOItem(${i},'qty',this.value)">
+      <input class="form-control" type="number" placeholder="Rate" value="${it.price??''}" oninput="updateSOItem(${i},'price',this.value)">
+      <button class="btn btn-xs btn-danger" onclick="removeSOItem(${i})">✕</button>
+    </div>`).join('') : '<div class="text-muted text-sm">No items added.</div>';
+  updateSOTotal();
+}
+
+function addSOItemRow() { window._soItems = window._soItems||[]; window._soItems.push({id:'',qty:0,price:null}); renderSOItemsList(); }
+function updateSOItem(i,key,val) {
+  window._soItems[i][key] = key==='id' ? val : (val===''? null : (parseFloat(val)||0));
+  if (key==='id') {
+    // Auto-fill the product's current sale price as a starting suggestion, still editable —
+    // rebuilding the whole list only when the product changes (not on every Qty/Rate keystroke)
+    // keeps focus in the input the customer is actually typing into.
+    const r = db.records.find(x=>x.id===val);
+    window._soItems[i].price = getPriceForItem(r) || 0;
+    renderSOItemsList();
+  } else {
+    updateSOTotal();
+  }
+}
+function removeSOItem(i) { window._soItems.splice(i,1); renderSOItemsList(); }
+function updateSOTotal() {
+  const items = window._soItems||[];
+  const total = items.reduce((a,i)=>a+(i.qty*(i.price||0)),0);
+  const el = document.getElementById('sord-total');
+  if (el) el.textContent = 'Total: ' + fmt(total);
+}
+
+function saveSO() {
+  const customerName = document.getElementById('sord-customer').value.trim();
+  if (!customerName) { toast('Enter a customer name','error'); return; }
+  const items = (window._soItems||[]).filter(i=>i.id && i.qty>0);
+  if (!items.length) { toast('Add at least one item','error'); return; }
+  items.forEach(i=>{ const r=db.records.find(x=>x.id===i.id); i.name=r?.name||''; i.unit=r?.unit||'pcs'; i.price=i.price||0; });
+  const customerId = resolveOrCreateCustomerId(customerName);
+  const so = {
+    id:uid(), soNumber:'SO-'+Date.now().toString(36).toUpperCase(), customerId, customerName, items,
+    status:'Ordered', date:today(), expectedDate:document.getElementById('sord-expected').value,
+    notes:document.getElementById('sord-notes').value.trim(), createdAt:now(), createdBy:session.username
+  };
+  db.salesOrders.push(so);
+  audit('Sales','Create SO',so.id,so.soNumber);
+  saveDB(); closeModal('so-modal-overlay'); renderSalesOrders(); toast('Sales order created','success');
+}
+
+function viewSODetail(id) {
+  const so = db.salesOrders.find(x=>x.id===id);
+  if (!so) return;
+  const total = (so.items||[]).reduce((a,i)=>a+(i.qty*i.price),0);
+  document.getElementById('so-detail-body').innerHTML = `
+    <div style="margin-bottom:10px"><strong>${esc(so.soNumber)}</strong> — ${esc(so.customerName)}<br>
+    <span class="text-muted text-sm">Ordered ${fmtDate(so.date)}${so.expectedDate?` · Expected ${fmtDate(so.expectedDate)}`:''} · Status: ${esc(so.status)}</span></div>
+    <table><thead><tr><th>Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead><tbody>
+      ${(so.items||[]).map(i=>`<tr><td>${esc(i.name)}</td><td style="text-align:right">${i.qty} ${esc(i.unit||'')}</td><td style="text-align:right">${fmt(i.price)}</td><td style="text-align:right">${fmt(i.qty*i.price)}</td></tr>`).join('')}
+    </tbody></table>
+    <div style="text-align:right;margin-top:8px;font-weight:700">Total: ${fmt(total)}</div>
+    ${so.notes?`<div class="form-hint" style="margin-top:8px">${esc(so.notes)}</div>`:''}`;
+  openModal('so-detail-overlay');
+}
+
+// "Fulfilling" a Sales Order doesn't post anything to stock or the ledger itself — it hands off
+// to the real POS checkout, which already correctly handles stock, VAT, COGS, and credit sales.
+// The order's remaining quantities are only reduced once that checkout actually completes (see
+// the hook near the end of completeSale/completeCreditSale), so a Sales Order can never get
+// marked fulfilled without a real, fully-posted sale behind it.
+function fulfillSO(id) {
+  const so = db.salesOrders.find(x=>x.id===id);
+  if (!so) return;
+  if (cart.length) { confirm('This will replace what\'s currently in the Billing cart with this order\'s items — continue?', ()=>{ loadSOIntoCart(so); }); }
+  else loadSOIntoCart(so);
+}
+function loadSOIntoCart(so) {
+  const alreadySold = so._fulfilledQty || {};
+  cart = (so.items||[]).map(i=>{
+    const remaining = i.qty - (alreadySold[i.id]||0);
+    return remaining>0 ? { id:i.id, name:i.name, price:i.price, qty:remaining, unit:i.unit||'pcs' } : null;
+  }).filter(Boolean);
+  window._fulfillingSOId = so.id;
+  document.getElementById('pos-customer-input').value = so.customerName;
+  renderCart();
+  setSalesTab('billing', document.querySelector('#sales-tabs .tab'));
+  closeModal('so-detail-overlay');
+  toast(`Loaded ${so.soNumber} into the cart — review quantities, then checkout as normal`,'info');
+}
+// Called right before the cart is cleared at the end of a successful checkout — links the sale
+// back to the order it came from and updates what's left still owed to the customer.
+function linkSaleToFulfilledSalesOrder(sale) {
+  const soId = window._fulfillingSOId;
+  if (!soId) return;
+  const so = db.salesOrders.find(s=>s.id===soId);
+  window._fulfillingSOId = null;
+  if (!so) return;
+  so._fulfilledQty = so._fulfilledQty || {};
+  sale.items.forEach(item => { so._fulfilledQty[item.id] = (so._fulfilledQty[item.id]||0) + item.qty; });
+  sale.soId = so.id;
+  const fullyDone = (so.items||[]).every(i => (so._fulfilledQty[i.id]||0) >= i.qty);
+  so.status = fullyDone ? 'Fulfilled' : 'Partially Fulfilled';
+  audit('Sales','Fulfill SO',so.id,`${so.soNumber} — ${sale.receiptNumber}`);
+}
+/* ══ END SALES ORDERS ══ */
 
 /* ── Goods Received (GRN) ── */
 function openGRNModal(poId) {

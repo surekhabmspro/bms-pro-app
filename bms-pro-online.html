@@ -2918,6 +2918,8 @@ let sortState = {};
 let pageState = {};
 let wizardData = {};
 let wizardStep = 1;
+let wizardMode = 'local'; // 'local' = first-time device setup (original behavior)
+                          // 'newCompany' = admin creating an additional company from within the app
 let currentQRPayment = {};
 let currentArchiveTab = 'customers';
 let currentHRTab = 'employees';
@@ -5759,22 +5761,24 @@ function syncRenderSetupModal() {
 async function loadCompanySwitcher() {
   const el = document.getElementById('company-switch-section');
   if (!el) return;
+  const newCompanyBtn = `<button class="btn btn-secondary btn-sm" onclick="startNewCompanyWizard()" style="margin-top:6px">+ New Company</button>`;
   try {
     const resp = await fetch(SYNC.apiBase + '/api/companies/mine', {
       headers: { Authorization: 'Bearer ' + SYNC.token }
     });
     const out = await resp.json();
-    if (!resp.ok || !Array.isArray(out.companies)) { el.innerHTML = ''; return; }
+    if (!resp.ok || !Array.isArray(out.companies)) { el.innerHTML = newCompanyBtn; return; }
     const others = out.companies.filter(c => c.id !== SYNC.companyId);
-    if (!others.length) { el.innerHTML = ''; return; }
+    if (!others.length) { el.innerHTML = newCompanyBtn; return; }
     el.innerHTML = `
       <label class="form-label">🏢 Switch Company</label>
       <div class="form-hint" style="margin-bottom:8px">Currently: <b>${esc(SYNC.companyName || 'this company')}</b>. This login also has access to:</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${others.map(c => `<button class="btn btn-secondary btn-sm" onclick="switchCompany('${esc(c.id)}','${esc(c.name)}')">${esc(c.name)}</button>`).join('')}
-      </div>`;
+      </div>
+      ${newCompanyBtn}`;
   } catch (e) {
-    el.innerHTML = '';
+    el.innerHTML = newCompanyBtn;
   }
 }
 
@@ -6109,13 +6113,23 @@ const secQuestions = [
   "Custom question..."
 ];
 
-function initWizard() {
+function initWizard(mode) {
+  wizardMode = mode || 'local';
   wizardStep = 1;
   wizardData = {};
   renderWizardStep();
   const wo = document.getElementById('wizard-overlay');
   wo.style.display = 'flex';
   wo.classList.add('show');
+}
+
+// Entry point for "+ New Company" (admin, already inside the app). Creating
+// a company never touches this device's current session or cached data —
+// it only registers a brand-new, completely empty company on the server.
+function startNewCompanyWizard() {
+  if (session?.role !== 'admin') { toast('Admin only', 'error'); return; }
+  if (!syncConfigured() || !SYNC.token) { toast('Connect to your server first (Sync Setup) before creating a company.', 'error'); return; }
+  initWizard('newCompany');
 }
 
 function hideWizard() {
@@ -6275,6 +6289,47 @@ async function finishWizard() {
     masterRecoveryKey: wizardData.recoveryKey,
     status: 'active', createdDate: now(), lastLogin: null
   };
+
+  if (wizardMode === 'newCompany') {
+    // Build a completely separate, clean database for the new company —
+    // this NEVER touches the global `db` variable, so the admin's current
+    // company session and data on this device are untouched either way.
+    const freshDb = defaultDB();
+    freshDb.users = [admin];
+    freshDb.settings.orgName = wizardData.orgName;
+    freshDb.settings.orgTag = wizardData.orgTag || 'Business Management System';
+    freshDb.settings.logoInit = wizardData.logoInit;
+    freshDb.settings.phone = wizardData.phone;
+    freshDb.settings.email = wizardData.email;
+    freshDb.settings.address = wizardData.address;
+    freshDb.settings.currency = wizardData.currency;
+    freshDb.settings.currencyCode = wizardData.currencyCode;
+    freshDb.settings.dateFormat = wizardData.dateFormat;
+    freshDb.settings.accentColor = wizardData.accentColor || '#6366F1';
+
+    try {
+      const resp = await fetch(SYNC.apiBase + '/api/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SYNC.token },
+        body: JSON.stringify({ name: wizardData.orgName, data: freshDb })
+      });
+      const out = await resp.json();
+      if (!resp.ok) {
+        toast('Could not create company: ' + (out.error || 'server error'), 'error');
+        if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = '🚀 Finish'; }
+        return;
+      }
+      hideWizard();
+      toast(`"${wizardData.orgName}" created. Use Switch Company (Sync Setup) to sign in there as "${wizardData.username}".`, 'success', 'Company Created');
+      loadCompanySwitcher(); // refresh the list in case Sync Setup is still open
+    } catch (e) {
+      toast('Could not reach server to create the company.', 'error');
+      if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = '🚀 Finish'; }
+    }
+    return;
+  }
+
+  // Original behavior: first-time setup of THIS device's own company.
   db.users = [admin];
   db.settings.orgName = wizardData.orgName;
   db.settings.orgTag = wizardData.orgTag || 'Business Management System';

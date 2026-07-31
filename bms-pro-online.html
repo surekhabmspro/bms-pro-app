@@ -5434,6 +5434,8 @@ const SYNC = {
   apiBase: safeGet('bms_api_base') || DEFAULT_API_BASE,
   token: safeGet('bms_auth_token') || '',
   role: safeGet('bms_auth_role') || '',
+  companyId: safeGet('bms_company_id') || '',
+  companyName: safeGet('bms_company_name') || '',
   version: parseInt(safeGet('bms_sync_version') || '0', 10) || 0,
   pending: safeGet('bms_sync_pending') === '1',
   pushTimer: null,
@@ -5468,15 +5470,22 @@ function syncSetApiBase(url) {
 }
 
 function syncClearAuth() {
-  SYNC.token = ''; SYNC.role = '';
+  SYNC.token = ''; SYNC.role = ''; SYNC.companyId = ''; SYNC.companyName = '';
   safeRemove('bms_auth_token');
   safeRemove('bms_auth_role');
+  safeRemove('bms_company_id');
+  safeRemove('bms_company_name');
 }
 
-function syncSaveAuth(token, role) {
+function syncSaveAuth(token, role, company) {
   SYNC.token = token; SYNC.role = role;
   safeSet('bms_auth_token', token);
   safeSet('bms_auth_role', role);
+  if (company && company.id) {
+    SYNC.companyId = company.id; SYNC.companyName = company.name || '';
+    safeSet('bms_company_id', company.id);
+    safeSet('bms_company_name', company.name || '');
+  }
 }
 
 function syncSetVersion(v) {
@@ -5517,8 +5526,14 @@ async function syncLogin(username, password) {
     });
     const out = await resp.json();
     if (!resp.ok) return { ok: false, error: out.error || 'Login failed' };
-    syncSaveAuth(out.token, out.user.role);
-    return { ok: true, user: out.user };
+    if (out.multipleCompanies) {
+      // This account exists in more than one company. The picker UI to
+      // choose one doesn't exist yet (that's a later step) — fail cleanly
+      // with a clear message rather than crashing on a missing token.
+      return { ok: false, error: 'This account has access to multiple companies — company selection isn\'t set up in this app version yet.', multipleCompanies: true, companies: out.companies };
+    }
+    syncSaveAuth(out.token, out.user.role, out.company);
+    return { ok: true, user: out.user, company: out.company };
   } catch (e) {
     return { ok: false, error: 'Could not reach server' };
   }

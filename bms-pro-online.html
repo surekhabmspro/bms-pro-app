@@ -5756,29 +5756,43 @@ function syncRenderSetupModal() {
   renderBiometricStatus();
 }
 
-// ── SWITCH COMPANY — only shown if this login also has an active account
-// in at least one other company (see server's /api/companies/mine) ──
+// ── COMPANIES — list every company this login administers, with switch,
+// rename, and delete actions. Always shown to admins (even with just one
+// company) so "+ New Company" is always reachable. ──
 async function loadCompanySwitcher() {
   const el = document.getElementById('company-switch-section');
   if (!el) return;
-  const newCompanyBtn = `<button class="btn btn-secondary btn-sm" onclick="startNewCompanyWizard()" style="margin-top:6px">+ New Company</button>`;
+  const newCompanyBtn = `<button class="btn btn-secondary btn-sm" onclick="startNewCompanyWizard()" style="margin-top:8px">+ New Company</button>`;
   try {
     const resp = await fetch(SYNC.apiBase + '/api/companies/mine', {
       headers: { Authorization: 'Bearer ' + SYNC.token }
     });
     const out = await resp.json();
-    if (!resp.ok || !Array.isArray(out.companies)) { el.innerHTML = newCompanyBtn; return; }
-    const others = out.companies.filter(c => c.id !== SYNC.companyId);
-    if (!others.length) { el.innerHTML = newCompanyBtn; return; }
+    if (!resp.ok || !Array.isArray(out.companies) || !out.companies.length) {
+      el.innerHTML = `<label class="form-label">🏢 Companies</label>${newCompanyBtn}`;
+      return;
+    }
+    const canDelete = out.companies.length > 1;
+    const rows = out.companies.map(c => {
+      const isCurrent = c.id === SYNC.companyId;
+      return `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--elevated);border-radius:8px;margin-bottom:6px">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name)}</div>
+            ${isCurrent ? `<div style="font-size:12px;color:var(--accent)">● Currently signed in here</div>` : ''}
+          </div>
+          ${!isCurrent ? `<button class="btn btn-secondary btn-sm" onclick="switchCompany('${esc(c.id)}','${esc(c.name)}')">Switch</button>` : ''}
+          <button class="btn btn-secondary btn-sm" onclick="renameCompany('${esc(c.id)}','${esc(c.name)}')" title="Rename">✏️</button>
+          ${(!isCurrent && canDelete) ? `<button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="deleteCompany('${esc(c.id)}','${esc(c.name)}')" title="Delete">🗑️</button>` : ''}
+        </div>`;
+    }).join('');
     el.innerHTML = `
-      <label class="form-label">🏢 Switch Company</label>
-      <div class="form-hint" style="margin-bottom:8px">Currently: <b>${esc(SYNC.companyName || 'this company')}</b>. This login also has access to:</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${others.map(c => `<button class="btn btn-secondary btn-sm" onclick="switchCompany('${esc(c.id)}','${esc(c.name)}')">${esc(c.name)}</button>`).join('')}
-      </div>
+      <label class="form-label">🏢 Companies</label>
+      <div class="form-hint" style="margin-bottom:8px">Companies this login administers:</div>
+      ${rows}
       ${newCompanyBtn}`;
   } catch (e) {
-    el.innerHTML = newCompanyBtn;
+    el.innerHTML = `<label class="form-label">🏢 Companies</label>${newCompanyBtn}`;
   }
 }
 
@@ -5807,6 +5821,50 @@ async function switchCompany(companyId, companyName) {
       toast('Could not reach server to switch companies.', 'error');
     }
   });
+}
+
+async function renameCompany(companyId, currentName) {
+  const newName = prompt('Rename company:', currentName);
+  if (newName === null) return; // cancelled
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === currentName) return;
+  try {
+    const resp = await fetch(SYNC.apiBase + '/api/companies/' + companyId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SYNC.token },
+      body: JSON.stringify({ name: trimmed })
+    });
+    const out = await resp.json();
+    if (!resp.ok) { toast('Could not rename: ' + (out.error || ''), 'error'); return; }
+    if (companyId === SYNC.companyId) {
+      SYNC.companyName = trimmed;
+      safeSet('bms_company_name', trimmed);
+    }
+    toast('Renamed to "' + trimmed + '"', 'success');
+    loadCompanySwitcher();
+  } catch (e) {
+    toast('Could not reach server to rename.', 'error');
+  }
+}
+
+async function deleteCompany(companyId, companyName) {
+  confirm(
+    `⚠️ PERMANENTLY DELETE "${companyName}"? This erases all of its data (accounting, inventory, payroll, everything) and cannot be undone. Type the company name exactly to confirm.`,
+    async () => {
+      try {
+        const resp = await fetch(SYNC.apiBase + '/api/companies/' + companyId, {
+          method: 'DELETE', headers: { Authorization: 'Bearer ' + SYNC.token }
+        });
+        const out = await resp.json();
+        if (!resp.ok) { toast('Could not delete: ' + (out.error || ''), 'error'); return; }
+        toast(`"${companyName}" deleted.`, 'success');
+        loadCompanySwitcher();
+      } catch (e) {
+        toast('Could not reach server to delete.', 'error');
+      }
+    },
+    companyName
+  );
 }
 
 async function renderBiometricStatus() {

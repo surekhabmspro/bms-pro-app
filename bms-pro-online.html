@@ -3083,7 +3083,7 @@ function defaultDB() {
 
 function loadDB() {
   try {
-    const raw = safeGet(DB_KEY);
+    const raw = safeGet(scopedKey(DB_KEY));
     if (raw) {
       db = JSON.parse(raw);
       const def = defaultDB();
@@ -5289,7 +5289,7 @@ function saveDB() {
     return;
   }
   const json = JSON.stringify(db);
-  let ok = safeSet(DB_KEY, json);
+  let ok = safeSet(scopedKey(DB_KEY), json);
   if (!ok) {
     // Storage write failed (almost always: quota exceeded). Before giving
     // up, automatically shrink the parts of the database that are safe to
@@ -5301,7 +5301,7 @@ function saveDB() {
     if (db.auditLog && db.auditLog.length > 2000) { db.auditLog = db.auditLog.slice(-2000); trimmed = true; }
     if (db.deletedRecords && db.deletedRecords.length > 200) { db.deletedRecords = db.deletedRecords.slice(-200); trimmed = true; }
     if (db.searchHistory && db.searchHistory.length > 50) { db.searchHistory = db.searchHistory.slice(-50); trimmed = true; }
-    if (trimmed) safeSet(DB_KEY, JSON.stringify(db));
+    if (trimmed) safeSet(scopedKey(DB_KEY), JSON.stringify(db));
   }
   scheduleSync();
   clearTimeout(saveDB._refreshTimer);
@@ -5430,14 +5430,28 @@ async function hashPw(pw, s) {
 // different address via the Sync Setup screen keep using their saved one.
 const DEFAULT_API_BASE = 'https://bms-pro-backend-1.onrender.com';
 
+const DEFAULT_COMPANY_ID = 'main'; // matches the backend's original/default company id
+
+// Storage keys (the cached db blob, sync version/timestamp/pending flag) are
+// scoped per company so switching companies on one device never mixes
+// cached data. The original/default company keeps using the exact same
+// unscoped keys it always has, so nothing changes for anyone who only ever
+// uses one company.
+function scopedKey(base, companyIdOverride) {
+  const cid = companyIdOverride !== undefined ? companyIdOverride : SYNC.companyId;
+  return (cid && cid !== DEFAULT_COMPANY_ID) ? (base + '__' + cid) : base;
+}
+
+const _initialCompanyId = safeGet('bms_company_id') || '';
+
 const SYNC = {
   apiBase: safeGet('bms_api_base') || DEFAULT_API_BASE,
   token: safeGet('bms_auth_token') || '',
   role: safeGet('bms_auth_role') || '',
-  companyId: safeGet('bms_company_id') || '',
+  companyId: _initialCompanyId,
   companyName: safeGet('bms_company_name') || '',
-  version: parseInt(safeGet('bms_sync_version') || '0', 10) || 0,
-  pending: safeGet('bms_sync_pending') === '1',
+  version: parseInt(safeGet(scopedKey('bms_sync_version', _initialCompanyId)) || '0', 10) || 0,
+  pending: safeGet(scopedKey('bms_sync_pending', _initialCompanyId)) === '1',
   pushTimer: null,
   pullTimer: null,
   online: navigator.onLine
@@ -5450,7 +5464,7 @@ async function forceSyncNow() {
   if (!syncConfigured() || !SYNC.token) { toast('Sync not configured','warning'); return; }
   // Reset local version tracking so pull treats server data as always newer
   syncSetVersion(0);
-  safeRemove('bms_sync_ts');
+  safeRemove(scopedKey('bms_sync_ts'));
   toast('Syncing now…', 'info');
   const result = await syncPull({ force: true });
   if (result.ok) {
@@ -5490,12 +5504,12 @@ function syncSaveAuth(token, role, company) {
 
 function syncSetVersion(v) {
   SYNC.version = v;
-  safeSet('bms_sync_version', String(v));
+  safeSet(scopedKey('bms_sync_version'), String(v));
 }
 
 function syncSetPending(p) {
   SYNC.pending = p;
-  safeSet('bms_sync_pending', p ? '1' : '0');
+  safeSet(scopedKey('bms_sync_pending'), p ? '1' : '0');
 }
 
 // Small status pill in the topbar — updates icon + text only, never blocks UI.
@@ -5516,21 +5530,23 @@ function syncRefreshStatusDisplay() {
 }
 
 // ---- Server login (used as a fallback when a device has no local copy of
-// this user yet — e.g. admin's phone, supervisor's device, first time) ----
-async function syncLogin(username, password) {
+// this user yet — e.g. admin's phone, supervisor's device, first time).
+// Pass companyId when the person has already picked one from the company
+// picker (see lgShowCompanyPicker), to finish disambiguating a login that
+// exists in more than one company. ----
+async function syncLogin(username, password, companyId) {
   if (!syncConfigured()) return { ok: false, error: 'no-server' };
   try {
     const resp = await fetch(SYNC.apiBase + '/api/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify(companyId ? { username, password, companyId } : { username, password })
     });
     const out = await resp.json();
     if (!resp.ok) return { ok: false, error: out.error || 'Login failed' };
     if (out.multipleCompanies) {
-      // This account exists in more than one company. The picker UI to
-      // choose one doesn't exist yet (that's a later step) — fail cleanly
-      // with a clear message rather than crashing on a missing token.
-      return { ok: false, error: 'This account has access to multiple companies — company selection isn\'t set up in this app version yet.', multipleCompanies: true, companies: out.companies };
+      // This login exists in more than one company — let the caller show a
+      // picker and call syncLogin again with the chosen companyId.
+      return { ok: false, multipleCompanies: true, companies: out.companies || [] };
     }
     syncSaveAuth(out.token, out.user.role, out.company);
     return { ok: true, user: out.user, company: out.company };
@@ -5558,7 +5574,7 @@ async function syncPull(opts) {
     // Timestamp comparison catches cases the version check misses.
     const serverVersion = out.version || 0;
     const serverTs = out.updatedAt || out.timestamp || 0;
-    const localTs = parseInt(safeGet('bms_sync_ts') || '0', 10);
+    const localTs = parseInt(safeGet(scopedKey('bms_sync_ts')) || '0', 10);
     const hasNewData = (serverVersion !== SYNC.version) || (serverTs > localTs) || opts.force;
 
     if (hasNewData) {
@@ -5571,8 +5587,8 @@ async function syncPull(opts) {
       }
       db = out.data;
       syncSetVersion(serverVersion);
-      if (serverTs) safeSet('bms_sync_ts', String(serverTs));
-      safeSet(DB_KEY, JSON.stringify(db));
+      if (serverTs) safeSet(scopedKey('bms_sync_ts'), String(serverTs));
+      safeSet(scopedKey(DB_KEY), JSON.stringify(db));
       if (SYNC.pending) scheduleSync(1000);
       if (session && typeof openModule === 'function') {
         updateTopbar();
@@ -5612,7 +5628,7 @@ async function syncPush() {
     }
     if (!resp.ok) { syncSetPending(true); SYNC.online = resp.status !== 0; syncRefreshStatusDisplay(); return; }
     syncSetVersion(out.version);
-    if (out.updatedAt) safeSet('bms_sync_ts', String(out.updatedAt));
+    if (out.updatedAt) safeSet(scopedKey('bms_sync_ts'), String(out.updatedAt));
     syncSetPending(false);
     SYNC.online = true;
     syncRefreshStatusDisplay();
@@ -5696,6 +5712,7 @@ function syncRenderSetupModal() {
     <div style="font-size:16px;font-weight:600;color:${statusColor};padding:10px 12px;background:var(--elevated);border-radius:8px;margin-bottom:14px">
       ${statusText}
     </div>
+    <div id="company-switch-section" class="form-group" style="border-bottom:1px solid var(--border);padding-bottom:12px"></div>
     <div class="form-group">
       <label class="form-label">Server Address</label>
       <input class="form-control" id="sync-url-input" placeholder="https://your-app-name.onrender.com" value="${esc(SYNC.apiBase)}">
@@ -5733,7 +5750,59 @@ function syncRenderSetupModal() {
       <div id="backups-list" style="font-size:17px">Loading…</div>
     </div>`;
   if (syncConfigured()) loadBackupsList();
+  if (syncConfigured() && SYNC.token) loadCompanySwitcher();
   renderBiometricStatus();
+}
+
+// ── SWITCH COMPANY — only shown if this login also has an active account
+// in at least one other company (see server's /api/companies/mine) ──
+async function loadCompanySwitcher() {
+  const el = document.getElementById('company-switch-section');
+  if (!el) return;
+  try {
+    const resp = await fetch(SYNC.apiBase + '/api/companies/mine', {
+      headers: { Authorization: 'Bearer ' + SYNC.token }
+    });
+    const out = await resp.json();
+    if (!resp.ok || !Array.isArray(out.companies)) { el.innerHTML = ''; return; }
+    const others = out.companies.filter(c => c.id !== SYNC.companyId);
+    if (!others.length) { el.innerHTML = ''; return; }
+    el.innerHTML = `
+      <label class="form-label">🏢 Switch Company</label>
+      <div class="form-hint" style="margin-bottom:8px">Currently: <b>${esc(SYNC.companyName || 'this company')}</b>. This login also has access to:</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${others.map(c => `<button class="btn btn-secondary btn-sm" onclick="switchCompany('${esc(c.id)}','${esc(c.name)}')">${esc(c.name)}</button>`).join('')}
+      </div>`;
+  } catch (e) {
+    el.innerHTML = '';
+  }
+}
+
+async function switchCompany(companyId, companyName) {
+  confirm(`Switch to "${companyName}"? You'll need to sign in again once its data loads.`, async () => {
+    if (SYNC.pending) await syncPush();
+    try {
+      const resp = await fetch(SYNC.apiBase + '/api/companies/' + companyId + '/switch', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + SYNC.token }
+      });
+      const out = await resp.json();
+      if (!resp.ok) { toast('Could not switch: ' + (out.error || ''), 'error'); return; }
+
+      session = null;
+      stopInactivityTimer();
+      syncSaveAuth(out.token, out.user.role, out.company);
+      const pulled = await syncPull({ force: true });
+
+      closeModal('sync-setup-modal-overlay');
+      document.getElementById('app').style.display = 'none';
+      initLoginScreen();
+
+      if (!pulled.ok) toast('Switched, but could not download that company\'s data — use "Sync Now" on the login screen.', 'warning');
+      else toast('Switched to ' + companyName + '. Please sign in.', 'success');
+    } catch (e) {
+      toast('Could not reach server to switch companies.', 'error');
+    }
+  });
 }
 
 async function renderBiometricStatus() {
@@ -6388,6 +6457,47 @@ function lgShowMain() {
   } else { lgRunCountdown(); }
 }
 
+// ── COMPANY PICKER — shown when a login exists in more than one company ──
+function lgShowCompanyPicker(companies, username, password) {
+  lgPickCompany._username = username;
+  lgPickCompany._password = password;
+  lgPickCompany._companies = companies;
+  lgEl().innerHTML = `
+    <div id="lg-err" class="lg-err"></div>
+    <div style="margin-bottom:14px;font-size:17px;color:var(--text-muted)">
+      This login has access to more than one company. Choose one to continue:
+    </div>
+    <div id="lg-company-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      ${companies.map(c => `<button class="lg-btn" style="background:var(--elevated);color:var(--text);border:1px solid var(--border)" onclick="lgPickCompany('${esc(c.id)}')">${esc(c.name)}</button>`).join('')}
+    </div>
+    <button class="lg-ghost" onclick="lgShowMain()">← Back</button>
+  `;
+}
+
+async function lgPickCompany(companyId) {
+  const un = lgPickCompany._username, pw = lgPickCompany._password;
+  const list = document.getElementById('lg-company-list');
+  if (list) list.querySelectorAll('button').forEach(b => b.disabled = true);
+  const result = await syncLogin(un, pw, companyId);
+  if (!result.ok) {
+    lgShowCompanyPicker(lgPickCompany._companies, un, pw);
+    lgSetErr('Could not sign in to that company — please try again.');
+    return;
+  }
+  const pulled = await syncPull({ force: true });
+  if (!pulled.ok) {
+    lgSetErr('Connected, but could not download data. Check your internet and try again.');
+    return;
+  }
+  // db now holds the chosen company's data — resume the normal login flow,
+  // which will find the user locally this time and create the session.
+  lgShowMain();
+  const unEl = document.getElementById('lg-un'), pwEl = document.getElementById('lg-pw');
+  if (unEl) unEl.value = un;
+  if (pwEl) pwEl.value = pw;
+  lgDoLogin();
+}
+
 function lgEye(id, btn) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -6419,6 +6529,11 @@ async function lgDoLogin() {
     }
     if (btn) { btn.disabled = true; btn.textContent = 'Connecting…'; }
     const result = await syncLogin(un, pw);
+    if (result.multipleCompanies) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+      lgShowCompanyPicker(result.companies, un, pw);
+      return;
+    }
     if (!result.ok) {
       if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
       lgFail(); lgSetErr('Incorrect username or password.'); return;
@@ -6656,7 +6771,7 @@ function lgShowSetupConfirm() {
 }
 
 function lgDoSetup() {
-  safeRemove(DB_KEY);
+  safeRemove(scopedKey(DB_KEY));
   db = defaultDB();
   const lo = document.getElementById('login-overlay');
   lo.classList.remove('show'); lo.style.display = 'none';
@@ -6667,10 +6782,10 @@ function lgDoSetup() {
 
 // ── DIAGNOSE ──
 function lgShowDiag() {
-  const raw = safeGet(DB_KEY);
+  const raw = safeGet(scopedKey(DB_KEY));
   let h = '';
   if (!raw) {
-    h = `<div style="color:var(--danger)">❌ No database found for key: <code>${DB_KEY}</code></div>`;
+    h = `<div style="color:var(--danger)">❌ No database found for key: <code>${scopedKey(DB_KEY)}</code></div>`;
   } else {
     try {
       const d = JSON.parse(raw);
@@ -11777,7 +11892,7 @@ async function systemReset() {
   const u = db.users.find(x=>x.id===session.id);
   if (!u || await hashPw(pw||'', u.passwordSalt) !== u.passwordHash) { toast('Incorrect password','error'); return; }
   confirm('⚠️ SYSTEM RESET: All data will be permanently deleted. Type "RESET" to confirm.', ()=>{
-    safeRemove(DB_KEY);
+    safeRemove(scopedKey(DB_KEY));
     toast('System reset complete. Reloading...','warning');
     setTimeout(()=>location.reload(), 1500);
   }, 'RESET');
@@ -14578,7 +14693,7 @@ function boot() {
     }
     // No server configured at all — this really is a standalone offline
     // install. Clear any partial/corrupt data and show the setup wizard.
-    safeRemove(DB_KEY);
+    safeRemove(scopedKey(DB_KEY));
     db = defaultDB();
     document.getElementById('wizard-overlay').classList.add('show');
     document.getElementById('wizard-overlay').style.display = '';

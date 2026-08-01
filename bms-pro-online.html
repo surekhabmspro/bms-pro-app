@@ -1180,7 +1180,7 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="table-wrap"><table><thead><tr><th>Invoice #</th><th>Supplier</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="sinv-tbody"></tbody></table></div>
         </div>
         <div id="purch-payments" style="display:none">
-          <div class="table-wrap"><table><thead><tr><th>Date</th><th>Supplier</th><th>Invoice</th><th>Amount</th><th>Method</th></tr></thead><tbody id="spay-tbody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Date</th><th>Supplier</th><th>Invoice</th><th>Amount</th><th>Method</th><th>Action</th></tr></thead><tbody id="spay-tbody"></tbody></table></div>
         </div>
       </div>
       <!-- TRANSACTIONS -->
@@ -1226,7 +1226,7 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="filter-bar">
             <input class="form-control" id="pay-search" placeholder="🔍 Search..." oninput="renderPaymentHistory()">
           </div>
-          <div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Receipt</th><th>Amount</th><th>Method</th><th>Notes</th></tr></thead><tbody id="pay-tbody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Receipt</th><th>Amount</th><th>Method</th><th>Notes</th><th>Action</th></tr></thead><tbody id="pay-tbody"></tbody></table></div>
         </div>
       </div>
       <!-- SECONDARY CONTACTS -->
@@ -3594,10 +3594,13 @@ function postCreditSaleJournal(sale, paidNow, dueAmount) {
   return postJournalEntry({ date: sale.date, voucherKind:'Sales', refType:'credit-sale', refId: sale.id, reference: sale.receiptNumber, description: `Credit Sale ${sale.receiptNumber}`, lines });
 }
 
-function postDueSettlementJournal(credit, amount, method) {
+function postDueSettlementJournal(credit, amount, method, paymentId) {
   const debitCode = resolvePaymentAccountCode(method);
   const lines = [ { accountCode: debitCode, debit: amount, credit: 0 }, { accountCode: db.settings.acctMappings.arAccount, debit: 0, credit: amount } ];
-  return postJournalEntry({ date: today(), voucherKind:'Receipt', refType:'due-settlement', refId: credit.id, reference: credit.receiptNumber, description: `Due Collection ${credit.receiptNumber} — ${credit.customerName}`, lines });
+  // refId is the individual PAYMENT's id (not the credit sale's id) so that if a customer makes
+  // several partial payments against the same credit sale, voiding one payment later can find and
+  // reverse exactly that payment's journal entry without touching the others.
+  return postJournalEntry({ date: today(), voucherKind:'Receipt', refType:'due-settlement', refId: paymentId || credit.id, reference: credit.receiptNumber, description: `Due Collection ${credit.receiptNumber} — ${credit.customerName}`, lines });
 }
 
 function postSupplierInvoiceJournal(invoice) {
@@ -5628,7 +5631,10 @@ async function syncPush() {
       scheduleSync(3000);
       return;
     }
-    if (!resp.ok) { syncSetPending(true); SYNC.online = resp.status !== 0; syncRefreshStatusDisplay(); return; }
+    if (!resp.ok) {
+      if (resp.status === 401) { syncClearAuth(); syncRefreshStatusDisplay(); return; }
+      syncSetPending(true); SYNC.online = resp.status !== 0; syncRefreshStatusDisplay(); return;
+    }
     syncSetVersion(out.version);
     if (out.updatedAt) safeSet(scopedKey('bms_sync_ts'), String(out.updatedAt));
     syncSetPending(false);
@@ -5750,10 +5756,100 @@ function syncRenderSetupModal() {
       <label class="form-label">Daily Cloud Backups</label>
       <div class="form-hint" style="margin-bottom:8px">A snapshot of your data is automatically saved on the server once per day, the first time anyone uses the app that day. You can restore any of the last 60 days if something goes wrong.</div>
       <div id="backups-list" style="font-size:17px">Loading…</div>
-    </div>`;
+    </div>
+    <div class="form-group" style="border-top:1px solid var(--border);padding-top:12px">
+      <label class="form-label">📥 Download Backup File</label>
+      <div class="form-hint" style="margin-bottom:8px">Saves a complete copy of this company's data as a file on this device — independent of the server, for extra safety (e.g. save it to Google Drive or email it to yourself). Do this occasionally, especially before any big change.</div>
+      <div id="backup-export-hint" style="font-size:13px;color:var(--text-dim);margin-bottom:8px"></div>
+      <button class="btn btn-secondary btn-sm" onclick="downloadBackupFile()">📥 Download Backup Now</button>
+    </div>
+    <div id="devices-section" class="form-group" style="border-top:1px solid var(--border);padding-top:12px"></div>`;
   if (syncConfigured()) loadBackupsList();
-  if (syncConfigured() && SYNC.token) loadCompanySwitcher();
+  if (syncConfigured() && SYNC.token) { loadCompanySwitcher(); loadDevicesList(); }
   renderBiometricStatus();
+  renderBackupExportHint();
+}
+
+function renderBackupExportHint() {
+  const el = document.getElementById('backup-export-hint');
+  if (!el) return;
+  const last = parseInt(safeGet(scopedKey('bms_last_backup_export')) || '0', 10);
+  if (!last) { el.textContent = "You haven't downloaded a backup file yet."; return; }
+  const days = Math.floor((Date.now() - last) / 86400000);
+  el.textContent = days === 0 ? 'Last downloaded today.' : `Last downloaded ${days} day${days === 1 ? '' : 's'} ago.`;
+}
+
+function downloadBackupFile() {
+  try {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      company: SYNC.companyName || db.settings.orgName || 'Company',
+      data: db
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = (db.settings.orgName || 'company').replace(/[^a-z0-9]+/gi, '_');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `${safeName}_backup_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    safeSet(scopedKey('bms_last_backup_export'), String(Date.now()));
+    renderBackupExportHint();
+    toast('Backup file downloaded — save it somewhere safe (Google Drive, email, etc.)', 'success');
+  } catch (e) {
+    toast('Could not create backup file: ' + e.message, 'error');
+  }
+}
+
+// ── DEVICES — admin-only. Every device currently signed in to this company,
+// with the ability to remotely sign one out. ──
+async function loadDevicesList() {
+  const el = document.getElementById('devices-section');
+  if (!el) return;
+  el.innerHTML = `<label class="form-label">📱 Signed-In Devices</label><div style="font-size:17px;color:var(--text-muted)">Loading…</div>`;
+  try {
+    const resp = await fetch(SYNC.apiBase + '/api/sessions', { headers: { Authorization: 'Bearer ' + SYNC.token } });
+    const out = await resp.json();
+    if (!resp.ok || !Array.isArray(out.sessions)) { el.innerHTML = ''; return; }
+    if (!out.sessions.length) {
+      el.innerHTML = `<label class="form-label">📱 Signed-In Devices</label><div class="form-hint">No tracked devices yet — devices show up here after their next sign-in.</div>`;
+      return;
+    }
+    const rows = out.sessions.map(s => {
+      const lastSeen = s.lastSeenAt ? new Date(s.lastSeenAt).toLocaleString() : '';
+      return `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--elevated);border-radius:8px;margin-bottom:6px">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.deviceLabel || 'Unknown device')} — ${esc(s.username)}</div>
+            <div style="font-size:12px;color:var(--text-dim)">${s.isCurrent ? '● This device — ' : ''}Last active: ${esc(lastSeen)}</div>
+          </div>
+          ${!s.isCurrent ? `<button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="revokeDevice('${esc(s.id)}')">Sign Out</button>` : ''}
+        </div>`;
+    }).join('');
+    el.innerHTML = `<label class="form-label">📱 Signed-In Devices</label><div class="form-hint" style="margin-bottom:8px">Everyone currently signed in to this company:</div>${rows}`;
+  } catch (e) {
+    el.innerHTML = '';
+  }
+}
+
+function revokeDevice(sessionId) {
+  confirm('Sign out this device? It will be signed out the next time it tries to sync.', async () => {
+    try {
+      const resp = await fetch(SYNC.apiBase + '/api/sessions/' + sessionId + '/revoke', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + SYNC.token }
+      });
+      const out = await resp.json();
+      if (!resp.ok) { toast('Could not sign out that device: ' + (out.error || ''), 'error'); return; }
+      toast('Device signed out.', 'success');
+      loadDevicesList();
+    } catch (e) {
+      toast('Could not reach server.', 'error');
+    }
+  });
 }
 
 // ── COMPANIES — list every company this login administers, with switch,
@@ -5971,6 +6067,12 @@ async function syncSetupBootstrap() {
 
 function syncSetupDisconnect() {
   confirm('Disconnect this device from online sync? Your local data stays exactly as it is — you can reconnect anytime.', () => {
+    // Best-effort: retire this device's session server-side so it drops off
+    // the admin's device list. If it fails (offline, etc.) we still proceed
+    // with disconnecting locally — that's the part the user actually asked for.
+    if (SYNC.token) {
+      fetch(SYNC.apiBase + '/api/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + SYNC.token } }).catch(() => {});
+    }
     syncSetApiBase('');
     syncClearAuth();
     if (SYNC.pullTimer) clearInterval(SYNC.pullTimer);
@@ -7858,7 +7960,7 @@ function completeCreditSale() {
   // Partial payment entry
   if (paidNow > 0) {
     db.payments.push({ id: uid(), saleId: sale.id, receiptNumber: receiptNum, customerName, customerId, amount: paidNow, date: today(), method: 'Cash', notes: 'Initial payment', createdAt: now() });
-    db.accounting.push({ id: uid(), type: 'income', category: 'Sales', description: `Partial Payment ${receiptNum}`, amount: paidNow, date: today(), reference: receiptNum, createdAt: now() });
+    db.accounting.push({ id: uid(), type: 'income', category: 'Sales', description: `Partial Payment ${receiptNum}`, amount: paidNow, date: today(), reference: receiptNum, createdAt: now(), source: 'sale', saleId: sale.id });
   }
 
   // Ledger: automatic double-entry (invisible) — Dr Cash/A-R, Cr Sales + VAT
@@ -7929,7 +8031,7 @@ function completeSale(method) {
   });
   
   // Record income
-  db.accounting.push({ id:uid(), type:'income', category:'Sales', description:`Sale ${receiptNum}`, amount:total, date:today(), reference:receiptNum, createdAt:now() });
+  db.accounting.push({ id:uid(), type:'income', category:'Sales', description:`Sale ${receiptNum}`, amount:total, date:today(), reference:receiptNum, createdAt:now(), source:'sale', saleId: sale.id });
 
   // Ledger: automatic double-entry (invisible) — Dr Cash/Bank/Wallet, Cr Sales + VAT
   postSaleJournal(sale);
@@ -8633,6 +8735,13 @@ function computeAcctTDSPreview() {
 }
 
 function openAccountingModal(id=null) {
+  if (id) {
+    const existing = db.accounting.find(x=>x.id===id);
+    if (existing?.source) {
+      routeAccountingCorrection(existing);
+      return;
+    }
+  }
   acctEditId = id;
   const a = id ? db.accounting.find(x=>x.id===id) : null;
   document.getElementById('acct-modal-title').textContent = id ? 'Edit Entry' : 'Add Entry';
@@ -8953,7 +9062,7 @@ function processPayroll() {
     // exact month before recording the corrected one, so a reprocess replaces rather than adds.
     db.accounting = (db.accounting||[]).filter(a => !(a.category==='Salary' && a.reference===`PAY-${month}`));
     voidJournalEntriesForRef('payroll', month, 'Superseded by payroll reprocess for '+month);
-    entries.forEach(e=>{ db.accounting.push({ id:uid(), type:'expense', category:'Salary', description:`Salary ${e.empName} - ${month}`, amount:e.netPay, date:today(), reference:`PAY-${month}`, createdAt:now() }); });
+    entries.forEach(e=>{ db.accounting.push({ id:uid(), type:'expense', category:'Salary', description:`Salary ${e.empName} - ${month}`, amount:e.netPay, date:today(), reference:`PAY-${month}`, createdAt:now(), source:'payroll' }); });
 
     // Ledger: automatic double-entry (invisible) — Dr Salary Expense + Employer SSF Contribution,
     // Cr Salary Payable (net, after employee SSF withheld) + SSF Payable (employee + employer share)
@@ -9021,7 +9130,7 @@ function cleanupPayrollDuplicates(month) {
   confirm(`Rebuild ${month}'s salary expense and journal entries from Payroll History? This removes the extra entries and reposts exactly one correct set.`, ()=>{
     db.accounting = (db.accounting||[]).filter(a=>!(a.category==='Salary'&&a.reference===`PAY-${month}`));
     voidJournalEntriesForRef('payroll', month, 'Cleaned up duplicate payroll entries');
-    ph.entries.forEach(e=>{ db.accounting.push({ id:uid(), type:'expense', category:'Salary', description:`Salary ${e.empName} - ${month}`, amount:e.netPay, date:today(), reference:`PAY-${month}`, createdAt:now() }); });
+    ph.entries.forEach(e=>{ db.accounting.push({ id:uid(), type:'expense', category:'Salary', description:`Salary ${e.empName} - ${month}`, amount:e.netPay, date:today(), reference:`PAY-${month}`, createdAt:now(), source:'payroll' }); });
     postPayrollJournal(month, ph.entries);
     audit('HR','Payroll Duplicate Cleanup',month,`Rebuilt from Payroll History`);
     saveDB(); toast(`${month} cleaned up`,'success'); openPayrollDuplicateCheck();
@@ -10247,7 +10356,10 @@ function restoreDeleted(id) {
   confirm(`Restore this ${r.type}?`, ()=>{
     const target = r.type==='record'?db.records:r.type==='entity'?db.entities:r.type==='transaction'?db.transactions:db.accounting;
     target.push(r.data);
-    if (r.type === 'accounting') postManualAccountingJournal(r.data);
+    // Auto-generated entries (Payroll/Sales/Due Collection/Supplier Payment) already have their
+    // real ledger impact from wherever they were created — only post a fresh journal entry here
+    // for genuinely manual entries, or this would double-count the restored amount.
+    if (r.type === 'accounting' && !(r.data.source && ACCT_SOURCE_LABELS[r.data.source])) postManualAccountingJournal(r.data);
     db.deletedRecords = db.deletedRecords.filter(x=>x.id!==id);
     audit('Archive','Restore',id,r.name);
     saveDB(); renderArchive(); toast('Record restored','success');
@@ -10258,12 +10370,90 @@ function restoreDeleted(id) {
    Archivable master records (products, customers, suppliers, employees, raw materials) are
    removed exclusively through Archive → Permanent Delete now; this soft-delete-to-Deleted-tab
    path remains only for the ledger types that don't have an Archive workflow. */
+const ACCT_SOURCE_LABELS = {
+  payroll: 'Payroll — to correct it, reprocess that month\'s payroll (or use Payroll → Duplicate Check if numbers look off) instead of deleting it here.',
+  sale: 'a Sale — void or correct it from the Sales/POS section instead of deleting it here.',
+  'due-settlement': 'a Due Collection — correct it from the customer\'s account instead of deleting it here.',
+  'supplier-payment': 'a Supplier Payment — correct it from the Supplier/Purchases section instead of deleting it here.'
+};
+
+function voidSaleViaDelete(saleId) {
+  const sale = db.sales.find(s => s.id === saleId);
+  if (!sale) { toast('Could not find the original sale to void.', 'error'); return; }
+  confirm(`Void this sale (${fmt(sale.total)})? This reverses it from your books completely. This cannot be undone.`, () => {
+    window._correctRefType = 'sale';
+    window._correctRefId = saleId;
+    window._correctOriginal = sale.total;
+    document.getElementById('correct-new-amount').value = '0';
+    document.getElementById('correct-reason').innerHTML = `<option value="Entry deleted">Entry deleted</option>`;
+    document.getElementById('correct-reason').value = 'Entry deleted';
+    document.getElementById('correct-note').value = 'Voided via Delete';
+    confirmCorrectInvoice();
+  });
+}
+
+function voidPayrollMonth(month) {
+  db.accounting = (db.accounting || []).filter(a => !(a.category === 'Salary' && a.reference === `PAY-${month}`));
+  voidJournalEntriesForRef('payroll', month, 'Payroll voided via Delete');
+  db.payrollHistory = (db.payrollHistory || []).filter(ph => ph.month !== month);
+  audit('HR', 'Payroll Voided', month, `Payroll for ${month} voided`);
+  saveDB();
+  toast(`Payroll for ${month} voided.`, 'success');
+  renderAccounting();
+  if (typeof renderSalaryHistory === 'function') renderSalaryHistory();
+}
+
+function routeAccountingCorrection(item) {
+  if (item.source === 'sale') {
+    const sale = item.saleId ? db.sales.find(s => s.id === item.saleId) : db.sales.find(s => s.receiptNumber === item.reference);
+    if (!sale) { toast('Could not find the original sale to correct — it may have been removed.', 'error'); return; }
+    voidSaleViaDelete(sale.id);
+    return;
+  }
+  if (item.source === 'due-settlement') {
+    if (!item.paymentId) { toast('Could not find the linked payment to void.', 'error'); return; }
+    voidDuePayment(item.paymentId);
+    return;
+  }
+  if (item.source === 'supplier-payment') {
+    if (!item.paymentId) { toast('Could not find the linked payment to void.', 'error'); return; }
+    voidSupplierPayment(item.paymentId);
+    return;
+  }
+  if (item.source === 'payroll') {
+    const month = (item.reference || '').replace('PAY-', '');
+    const ph = (db.payrollHistory || []).find(p => p.month === month);
+    if (ph && ph.entries.length <= 1) {
+      // Only one employee was on that month's payroll — this entry IS the whole month, so it
+      // can be safely voided in one tap with no ambiguity about who else might be affected.
+      confirm(`Void ${item.description} entirely? This reverses the whole month's payroll (just this one employee). This cannot be undone.`, () => voidPayrollMonth(month));
+      return;
+    }
+    // Multiple employees share this month's payroll — voiding is only safe at the whole-month
+    // level, and we don't want to guess whether you meant "remove this one person" (which needs
+    // you to mark them inactive first) or "redo the whole month". Take you straight there instead.
+    openModule('hr');
+    const tabBtn = document.querySelector('#hr-tabs .tab[onclick*="payroll"]');
+    if (tabBtn) setHRTab('payroll', tabBtn);
+    const monthInput = document.getElementById('pay-month');
+    if (monthInput) monthInput.value = month;
+    renderPayrollTable();
+    toast(`Opened Payroll for ${month}. This month has other employees too, so: mark ${item.description.replace('Salary ','').split(' - ')[0]} inactive, then tap "Process Payroll" to remove just them.`, 'info');
+    return;
+  }
+  toast('This entry was created automatically and can\'t be deleted directly.', 'error');
+}
+
 function deleteRecord(type, id) {
   const stores = { transaction: db.transactions, accounting: db.accounting };
   const store = stores[type];
   if (!store) return;
   const item = store.find(x=>x.id===id);
   if (!item) return;
+  if (type === 'accounting' && item.source) {
+    routeAccountingCorrection(item);
+    return;
+  }
   confirm(`Delete this ${type}? This action can be undone from Archive → Deleted.`, ()=>{
     db.deletedRecords.push({ id:uid(), type, name:item.name||item.description||id, data:{...item}, deletedAt:now(), deletedBy:session.username });
     const idx = store.findIndex(x=>x.id===id); store.splice(idx,1);
@@ -12143,17 +12333,46 @@ function saveDuePayment() {
   c.paidAmount += amount;
   c.dueAmount -= amount;
   c.status = c.dueAmount <= 0 ? 'settled' : 'outstanding';
-  db.payments.push({ id:uid(), saleId:c.saleId, creditId:c.id, receiptNumber:c.receiptNumber, customerName:c.customerName, customerId:c.customerId||'', amount, method, notes, date:today(), createdAt:now(), createdBy:session.username });
-  db.accounting.push({ id:uid(), type:'income', category:'Sales', description:`Due Collection ${c.receiptNumber} — ${c.customerName}`, amount, date:today(), reference:c.receiptNumber, createdAt:now() });
+  const payment = { id:uid(), saleId:c.saleId, creditId:c.id, receiptNumber:c.receiptNumber, customerName:c.customerName, customerId:c.customerId||'', amount, method, notes, date:today(), createdAt:now(), createdBy:session.username };
+  db.payments.push(payment);
+  db.accounting.push({ id:uid(), type:'income', category:'Sales', description:`Due Collection ${c.receiptNumber} — ${c.customerName}`, amount, date:today(), reference:c.receiptNumber, createdAt:now(), source:'due-settlement', paymentId:payment.id });
 
   // Ledger: automatic double-entry (invisible) — Dr Cash/Bank, Cr Accounts Receivable (no revenue re-recognized)
-  postDueSettlementJournal(c, amount, method);
+  postDueSettlementJournal(c, amount, method, payment.id);
 
   audit('DueLedger','Payment',c.id,`${c.customerName} — ${fmt(amount)}`);
   saveDB();
   closeModal('due-pay-overlay');
   toast(`Payment of ${fmt(amount)} collected. Remaining: ${fmt(c.dueAmount)}`,'success');
   renderDueLedger();
+}
+
+function voidDuePayment(paymentId) {
+  if (session?.role !== 'admin') { toast('Admin only', 'error'); return; }
+  const payment = db.payments.find(p => p.id === paymentId);
+  if (!payment) { toast('Payment not found', 'error'); return; }
+  if (!payment.creditId) { toast('This payment isn\'t linked to a due collection and can\'t be voided here.', 'error'); return; }
+
+  confirm(`Void this payment of ${fmt(payment.amount)} from ${payment.customerName}? Their outstanding due balance will be restored and this cannot be undone.`, () => {
+    voidJournalEntriesForRef('due-settlement', paymentId, 'Due collection payment voided');
+
+    const acctIdx = db.accounting.findIndex(a => a.source === 'due-settlement' && a.paymentId === paymentId);
+    if (acctIdx > -1) db.accounting.splice(acctIdx, 1);
+
+    const c = db.creditSales.find(x => x.id === payment.creditId);
+    if (c) {
+      c.paidAmount = +(c.paidAmount - payment.amount).toFixed(2);
+      c.dueAmount = +(c.dueAmount + payment.amount).toFixed(2);
+      c.status = c.dueAmount > 0 ? 'outstanding' : 'settled';
+    }
+
+    db.payments = db.payments.filter(p => p.id !== paymentId);
+    audit('DueLedger', 'Payment Voided', paymentId, `${payment.customerName} — ${fmt(payment.amount)}`);
+    saveDB();
+    toast('Payment voided — due balance restored', 'success');
+    renderPaymentHistory();
+    if (typeof renderDueLedger === 'function') renderDueLedger();
+  });
 }
 
 function renderPaymentHistory() {
@@ -12167,7 +12386,8 @@ function renderPaymentHistory() {
       <td class="mono text-success font-bold">${fmt(p.amount)}</td>
       <td>${esc(p.method)}</td>
       <td>${esc(p.notes||'—')}</td>
-    </tr>`).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">💰</div><div class="empty-title">No payments recorded</div></div></td></tr>';
+      <td>${p.creditId ? `<button class="btn btn-xs btn-danger" onclick="voidDuePayment('${esc(p.id)}')">Void</button>` : ''}</td>
+    </tr>`).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">💰</div><div class="empty-title">No payments recorded</div></div></td></tr>';
 }
 
 function viewCreditDetail(creditId) {
@@ -13654,7 +13874,7 @@ function saveSupplierPayment() {
   const notes = document.getElementById('spay-notes').value.trim();
   const spay = { id:uid(), invoiceId, supplierId:inv.supplierId, amount, type, method, notes, date:today(), createdAt:now(), createdBy:session.username };
   db.supplierPayments.push(spay);
-  db.accounting.push({ id:uid(), type:'expense', category:'Purchase', description:`Supplier Payment ${inv.invoiceNumber} (${type})`, amount, date:today(), reference:inv.invoiceNumber, createdAt:now() });
+  db.accounting.push({ id:uid(), type:'expense', category:'Purchase', description:`Supplier Payment ${inv.invoiceNumber} (${type})`, amount, date:today(), reference:inv.invoiceNumber, createdAt:now(), source:'supplier-payment', paymentId:spay.id });
 
   // Ledger: automatic double-entry (invisible) — Dr Accounts Payable, Cr Cash/Bank
   postSupplierPaymentJournal(spay, inv);
@@ -13664,6 +13884,36 @@ function saveSupplierPayment() {
   else if (paid > 0) inv.status = 'partial';
   audit('Purchase','Payment',inv.id,`${inv.invoiceNumber} — ${fmt(amount)} (${type})`);
   saveDB(); closeModal('spay-modal-overlay'); renderSupplierInvoices(); renderSupplierPayments(); toast('Payment recorded','success');
+}
+
+function voidSupplierPayment(paymentId) {
+  if (session?.role !== 'admin') { toast('Admin only', 'error'); return; }
+  const payment = db.supplierPayments.find(p => p.id === paymentId);
+  if (!payment) { toast('Payment not found', 'error'); return; }
+  const inv = db.supplierInvoices.find(i => i.id === payment.invoiceId);
+  const sp = db.secondary.find(s => s.id === payment.supplierId);
+
+  confirm(`Void this payment of ${fmt(payment.amount)} to ${sp?.name || 'this supplier'}? The invoice's outstanding balance will be restored and this cannot be undone.`, () => {
+    voidJournalEntriesForRef('supplier-payment', paymentId, 'Supplier payment voided');
+
+    const acctIdx = db.accounting.findIndex(a => a.source === 'supplier-payment' && a.paymentId === paymentId);
+    if (acctIdx > -1) db.accounting.splice(acctIdx, 1);
+
+    // db.supplierPayments removal is enough — every place that shows an invoice's paid/due
+    // amount recomputes it by summing db.supplierPayments fresh each time, so this
+    // automatically corrects itself everywhere without needing a separate "voided" flag.
+    db.supplierPayments = db.supplierPayments.filter(p => p.id !== paymentId);
+
+    if (inv) {
+      const paidNow = db.supplierPayments.filter(p => p.invoiceId === inv.id).reduce((a, p) => a + p.amount, 0);
+      inv.status = paidNow >= inv.amount ? 'paid' : (paidNow > 0 ? 'partial' : 'unpaid');
+    }
+
+    audit('Purchase', 'Payment Voided', paymentId, `${inv?.invoiceNumber || '—'} — ${fmt(payment.amount)}`);
+    saveDB();
+    toast('Payment voided — invoice balance restored', 'success');
+    renderSupplierInvoices(); renderSupplierPayments();
+  });
 }
 
 function renderSupplierPayments() {
@@ -13678,8 +13928,9 @@ function renderSupplierPayments() {
       <td class="mono">${esc(inv?.invoiceNumber||'—')}</td>
       <td class="mono text-success">${fmt(p.amount)}</td>
       <td>${esc(p.method)}</td>
+      <td><button class="btn btn-xs btn-danger" onclick="voidSupplierPayment('${esc(p.id)}')">Void</button></td>
     </tr>`;
-  }).join('') : '<tr><td colspan="5"><div class="empty"><div class="empty-icon">💰</div><div class="empty-title">No supplier payments yet</div></div></td></tr>';
+  }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">💰</div><div class="empty-title">No supplier payments yet</div></div></td></tr>';
 }
 
 /* ══ ROLES & PERMISSIONS ══ */

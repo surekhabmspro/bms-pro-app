@@ -586,6 +586,9 @@ textarea.form-control{resize:vertical;min-height:80px}
 #filing-banner{background:rgba(239,68,68,.1);border-bottom:1px solid rgba(239,68,68,.3);padding:8px 16px;display:none;align-items:center;gap:10px;font-size:17px;color:var(--danger)}
 #filing-banner button{background:var(--danger);color:#fff;padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
 #filing-banner button:last-child{margin-left:auto;background:none;color:var(--danger)}
+#ict-banner{background:rgba(16,185,129,.1);border-bottom:1px solid rgba(16,185,129,.3);padding:8px 16px;display:none;align-items:center;gap:10px;font-size:17px;color:var(--success)}
+#ict-banner button{background:var(--success);color:#fff;padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
+#ict-banner button:last-child{margin-left:auto;background:none;color:var(--success)}
 /* ══ ADVANCED SEARCH ══ */
 #adv-search{background:var(--elevated);border-bottom:1px solid var(--border);padding:14px 16px;display:none}
 #adv-search.show{display:block}
@@ -875,6 +878,12 @@ textarea.form-control{resize:vertical;min-height:80px}
     <div id="filing-banner">
       ⏰ <span id="filing-banner-text"></span>
       <button onclick="dismissFilingBanner()" style="font-size:19px">✕</button>
+    </div>
+    <!-- INCOMING INTER-COMPANY TRANSFERS BANNER -->
+    <div id="ict-banner">
+      🏢⬅️ <span id="ict-banner-count"></span> incoming transfer(s) from other companies awaiting review.
+      <button onclick="openIncomingTransfers()">Review &amp; Post</button>
+      <button onclick="dismissICTBanner()" style="font-size:19px">✕</button>
     </div>
     <!-- TOPBAR -->
     <div id="topbar">
@@ -1274,6 +1283,7 @@ textarea.form-control{resize:vertical;min-height:80px}
             <div class="dropdown-menu" id="acct-tools-menu">
               <div class="dropdown-item" onclick="exportCSV('accounting');closeDropdowns()">📤 Export CSV</div>
               <div class="dropdown-item" onclick="openRecurring();closeDropdowns()">🔁 Recurring Transactions</div>
+              <div class="dropdown-item" onclick="openInterCompanyTransfer();closeDropdowns()">🏢➡️ Inter-Company Transfer</div>
               <div class="dropdown-item" onclick="openBankRecon();closeDropdowns()">🏦 Bank Reconciliation</div>
               <div class="dropdown-item" onclick="openMyEquipment();closeDropdowns()">🏗️ My Equipment</div>
               <div class="dropdown-item" onclick="openOwnerTxn();closeDropdowns()">🤝 Owner/Partner Transaction</div>
@@ -2316,6 +2326,46 @@ textarea.form-control{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- COMBINED DASHBOARD (all companies) -->
+<div class="modal-overlay" id="combined-dashboard-overlay" onclick="closeModalOnOverlay(event,'combined-dashboard-overlay')">
+  <div class="modal modal-lg">
+    <div class="modal-header"><div class="modal-title">📊 Combined Dashboard<span class="help-tip" data-tip="A read-only side-by-side snapshot of cash, receivables, and payables across every company you administer. Switch into a company for full detail.">?</span></div><button class="modal-close" onclick="closeModal('combined-dashboard-overlay')">✕</button></div>
+    <div class="modal-body">
+      <button class="btn btn-secondary btn-sm" onclick="refreshCombinedDashboard()" style="margin-bottom:12px">🔄 Refresh</button>
+      <div id="combined-dashboard-body"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('combined-dashboard-overlay')">Close</button></div>
+  </div>
+</div>
+
+<!-- INTER-COMPANY TRANSFER (send) -->
+<div class="modal-overlay" id="ict-overlay" onclick="closeModalOnOverlay(event,'ict-overlay')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">🏢➡️ Inter-Company Transfer<span class="help-tip" data-tip="Books an outgoing entry in THIS company right now. The destination company's admin then reviews and posts the matching incoming entry on their own end — never posted for you into books you're not signed into.">?</span></div><button class="modal-close" onclick="closeModal('ict-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Send To *</label><select class="form-control" id="ict-to-company"></select></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Amount *</label><input class="form-control" type="number" id="ict-amount" min="0"></div>
+        <div class="form-group"><label class="form-label">Date *</label><input class="form-control" id="ict-date" onfocus="openCalendar('ict-date','standard')"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Description</label><input class="form-control" id="ict-desc" placeholder="Optional — reason for transfer"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('ict-overlay')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitInterCompanyTransfer()">Send Transfer</button>
+    </div>
+  </div>
+</div>
+
+<!-- INTER-COMPANY TRANSFER (incoming review) -->
+<div class="modal-overlay" id="ict-incoming-overlay" onclick="closeModalOnOverlay(event,'ict-incoming-overlay')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">🏢⬅️ Incoming Transfers</div><button class="modal-close" onclick="closeModal('ict-incoming-overlay')">✕</button></div>
+    <div class="modal-body"><div id="ict-incoming-body"></div></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('ict-incoming-overlay')">Close</button></div>
+  </div>
+</div>
+
 <!-- Owner/Partner Transaction (money in/out from the owner(s), not a sale or expense) -->
 <div class="modal-overlay" id="owner-txn-overlay" onclick="closeModalOnOverlay(event,'owner-txn-overlay')">
   <div class="modal">
@@ -3170,7 +3220,7 @@ function defaultDB() {
         transactions: ['Sales', 'Purchase', 'Service', 'Refund'],
         entities: ['Retail Customer', 'Wholesale Customer', 'Client', 'Member', 'VIP'],
         secondary: ['Supplier', 'Vendor', 'Partner', 'Distributor'],
-        accounting: ['Revenue', 'Salary', 'Utilities', 'Rent', 'Supplies', 'Tax', 'VAT', 'Contractor', 'Professional Fees', 'Other']
+        accounting: ['Revenue', 'Salary', 'Utilities', 'Rent', 'Supplies', 'Tax', 'VAT', 'Contractor', 'Professional Fees', 'Inter-Company Transfer', 'Other']
       },
       labels: {
         records: 'Products', entities: 'Customers', secondary: 'Suppliers',
@@ -3260,6 +3310,7 @@ function loadDB() {
       if (db.settings.digestHour===undefined) db.settings.digestHour = 18;
       if (db.settings.lastDigestDate===undefined) db.settings.lastDigestDate = null;
       if (db.settings.filingReminderDays===undefined) db.settings.filingReminderDays = 5;
+      if (db.settings.categories?.accounting && !db.settings.categories.accounting.includes('Inter-Company Transfer')) db.settings.categories.accounting.push('Inter-Company Transfer');
       if (!db.payrollHistory) db.payrollHistory = [];
       if (!db.secondary) db.secondary = [];
       if (!db.creditSales) db.creditSales = [];
@@ -6095,7 +6146,8 @@ async function loadCompanySwitcher() {
       <label class="form-label">🏢 Companies</label>
       <div class="form-hint" style="margin-bottom:8px">Companies this login administers:</div>
       ${rows}
-      ${newCompanyBtn}`;
+      ${newCompanyBtn}
+      ${out.companies.length > 1 ? `<button class="btn btn-secondary btn-sm" onclick="openCombinedDashboard()" style="margin-top:8px;margin-left:8px">📊 Combined Dashboard</button>` : ''}`;
   } catch (e) {
     el.innerHTML = `<label class="form-label">🏢 Companies</label>${newCompanyBtn}`;
   }
@@ -6170,6 +6222,183 @@ async function deleteCompany(companyId, companyName) {
     },
     companyName
   );
+}
+
+/* ══ COMBINED DASHBOARD ══
+   A single side-by-side view of cash, receivables, and payables across every company you
+   administer — read-only, built off the same /api/companies/mine/summary endpoint already
+   quietly powering the small snapshot in the company switcher list. Never touches any figure. */
+async function openCombinedDashboard() {
+  openModal('combined-dashboard-overlay');
+  await refreshCombinedDashboard();
+}
+
+async function refreshCombinedDashboard() {
+  const body = document.getElementById('combined-dashboard-body');
+  if (!body) return;
+  body.innerHTML = '<div class="empty"><div class="empty-title">Loading…</div></div>';
+  try {
+    const resp = await fetch(SYNC.apiBase + '/api/companies/mine/summary', { headers: { Authorization: 'Bearer ' + SYNC.token } });
+    const out = await resp.json();
+    if (!resp.ok || !Array.isArray(out.companies)) { body.innerHTML = '<div class="empty"><div class="empty-title">Could not load company summaries</div></div>'; return; }
+    const rows = out.companies;
+    const totals = rows.reduce((a,c) => ({ cash: a.cash+c.cash, receivablesDue: a.receivablesDue+c.receivablesDue, payablesDue: a.payablesDue+c.payablesDue }), { cash:0, receivablesDue:0, payablesDue:0 });
+    body.innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>Company</th><th>💵 Cash</th><th>📥 Receivables Due</th><th>📤 Payables Due</th><th>Net Position</th><th></th></tr></thead>
+        <tbody>
+          ${rows.map(c => {
+            const net = c.cash + c.receivablesDue - c.payablesDue;
+            const isCurrent = c.id === SYNC.companyId;
+            return `<tr ${isCurrent?'style="background:rgba(99,102,241,.08)"':''}>
+              <td>${esc(c.name)}${isCurrent?' <span class="badge badge-success">Current</span>':''}</td>
+              <td class="mono">${fmt(c.cash)}</td>
+              <td class="mono">${fmt(c.receivablesDue)}</td>
+              <td class="mono">${fmt(c.payablesDue)}</td>
+              <td class="mono" style="font-weight:700;color:${net>=0?'var(--success)':'var(--danger)'}">${fmt(net)}</td>
+              <td>${!isCurrent?`<button class="btn btn-xs btn-secondary" onclick="closeModal('combined-dashboard-overlay');switchCompany('${esc(c.id)}','${esc(c.name)}')">Switch</button>`:''}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot><tr style="font-weight:700;border-top:2px solid var(--border)">
+          <td>TOTAL</td><td class="mono">${fmt(totals.cash)}</td><td class="mono">${fmt(totals.receivablesDue)}</td><td class="mono">${fmt(totals.payablesDue)}</td>
+          <td class="mono" style="color:${(totals.cash+totals.receivablesDue-totals.payablesDue)>=0?'var(--success)':'var(--danger)'}">${fmt(totals.cash+totals.receivablesDue-totals.payablesDue)}</td><td></td>
+        </tr></tfoot>
+      </table></div>
+      <div class="form-hint" style="margin-top:10px">Snapshot only — switch into a company for full reports, transactions, and detail.</div>`;
+  } catch (e) {
+    body.innerHTML = '<div class="empty"><div class="empty-title">Could not reach server</div></div>';
+  }
+}
+
+/* ══ INTER-COMPANY TRANSFERS ══
+   Real money moving between two of YOUR OWN companies. Rather than guessing the destination
+   company's Chart of Accounts and silently posting a journal entry into books you're not even
+   signed into (risky — a wrong account mapping there would go unnoticed), this is deliberately
+   two honest halves: the OUTGOING entry books immediately here, right now, through this
+   company's own normal Accounting flow. The INCOMING half is left as a clearly-marked pending
+   item for that company's admin to review and post themselves next time they're signed into
+   it — through THAT company's own normal Accounting flow too. Both halves are always reviewed
+   and booked by a human, in the company they actually belong to, using logic that's already
+   trusted everywhere else in this app. */
+let _pendingICTMarkPostId = null;
+let _incomingTransfers = [];
+
+async function openInterCompanyTransfer() {
+  if (!syncConfigured() || !SYNC.token) { toast('Connect to your server first (Sync Setup)','error'); return; }
+  const sel = document.getElementById('ict-to-company');
+  sel.innerHTML = '<option value="">Loading companies…</option>';
+  openModal('ict-overlay');
+  document.getElementById('ict-amount').value = '';
+  document.getElementById('ict-date').value = today();
+  document.getElementById('ict-desc').value = '';
+  try {
+    const resp = await fetch(SYNC.apiBase + '/api/companies/mine', { headers: { Authorization: 'Bearer ' + SYNC.token } });
+    const out = await resp.json();
+    const others = (out.companies||[]).filter(c => c.id !== SYNC.companyId);
+    if (!resp.ok || !others.length) {
+      sel.innerHTML = '<option value="">No other companies available</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">Select destination company...</option>' + others.map(c=>`<option value="${esc(c.id)}" data-name="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+  } catch (e) {
+    sel.innerHTML = '<option value="">Could not load companies</option>';
+  }
+}
+
+async function submitInterCompanyTransfer() {
+  const sel = document.getElementById('ict-to-company');
+  const toCompanyId = sel.value;
+  const toCompanyName = sel.options[sel.selectedIndex]?.dataset.name || '';
+  const amount = parseFloat(document.getElementById('ict-amount').value);
+  const date = document.getElementById('ict-date').value || today();
+  const desc = document.getElementById('ict-desc').value.trim();
+  if (!toCompanyId) { toast('Select a destination company','error'); return; }
+  if (!amount || amount<=0) { toast('Valid amount required','error'); return; }
+
+  confirm(`Send ${fmt(amount)} to "${toCompanyName}"? This books an outgoing entry here now. "${toCompanyName}"'s admin will see it waiting to review and post on their end.`, async () => {
+    try {
+      const resp = await fetch(SYNC.apiBase + '/api/inter-transfers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SYNC.token },
+        body: JSON.stringify({ toCompanyId, amount, date, description: desc })
+      });
+      const out = await resp.json();
+      if (!resp.ok) { toast('Could not record transfer: ' + (out.error||''), 'error'); return; }
+
+      const a = { id: uid(), createdAt: now(), type: 'expense', amount, category: 'Inter-Company Transfer',
+        date, description: `Transfer to ${toCompanyName}${desc ? ': ' + desc : ''}`, reference: out.reference, tdsRateKey: null, tdsAmount: 0 };
+      db.accounting.push(a);
+      postManualAccountingJournal(a);
+      audit('Accounting','Inter-Company Transfer Sent',a.id,a.description);
+      saveDB();
+      closeModal('ict-overlay');
+      renderAccounting();
+      toast(`Sent — reference ${out.reference}. Booked here; waiting for "${toCompanyName}" to post their side.`,'success');
+    } catch (e) {
+      toast('Could not reach server — nothing was booked','error');
+    }
+  }, '', 'Send');
+}
+
+// Checks for transfers waiting to be reviewed IN THE CURRENT company. Safe to call even when
+// not synced/online — just silently does nothing.
+async function checkIncomingTransfers() {
+  const banner = document.getElementById('ict-banner');
+  if (!banner || !syncConfigured() || !SYNC.token) { if (banner) banner.style.display = 'none'; return; }
+  try {
+    const resp = await fetch(SYNC.apiBase + '/api/inter-transfers/incoming', { headers: { Authorization: 'Bearer ' + SYNC.token } });
+    const out = await resp.json();
+    if (!resp.ok || !Array.isArray(out.transfers)) { banner.style.display = 'none'; return; }
+    _incomingTransfers = out.transfers;
+    if (_incomingTransfers.length) {
+      document.getElementById('ict-banner-count').textContent = _incomingTransfers.length;
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch (e) { banner.style.display = 'none'; }
+}
+function dismissICTBanner() { document.getElementById('ict-banner').style.display = 'none'; }
+
+function openIncomingTransfers() {
+  const body = document.getElementById('ict-incoming-body');
+  body.innerHTML = _incomingTransfers.length ? _incomingTransfers.map(t => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--elevated);border-radius:8px;margin-bottom:8px">
+      <div style="flex:1">
+        <div style="font-weight:600">From ${esc(t.from_company_name)} — ${fmt(t.amount)}</div>
+        <div style="font-size:13px;color:var(--text-dim)">${fmtDate(t.currency_date)} · ${esc(t.description||'No description')} · Ref: ${esc(t.reference)}</div>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="postIncomingTransfer('${t.id}')">Post</button>
+    </div>`).join('') : '<div class="empty"><div class="empty-title">Nothing pending</div></div>';
+  openModal('ict-incoming-overlay');
+}
+
+function postIncomingTransfer(id) {
+  const t = _incomingTransfers.find(x=>x.id===id);
+  if (!t) return;
+  closeModal('ict-incoming-overlay');
+  acctEditId = null;
+  document.getElementById('acct-modal-title').textContent = '+ Add Entry (inter-company)';
+  document.getElementById('acct-amount').value = t.amount;
+  document.getElementById('acct-date').value = today();
+  document.getElementById('acct-desc').value = `Transfer from ${t.from_company_name}${t.description ? ': ' + t.description : ''}`;
+  document.getElementById('acct-ref').value = t.reference;
+  openModal('acct-modal-overlay');
+  setAcctType('income');
+  if ((db.settings.categories.accounting||[]).includes('Inter-Company Transfer')) document.getElementById('acct-cat').value = 'Inter-Company Transfer';
+  _pendingICTMarkPostId = id; // saveAccounting() will call markInterCompanyTransferPosted() once this is actually saved
+  toast('Review the amount & date, then Save to book it','info');
+}
+
+async function markInterCompanyTransferPosted(id) {
+  try {
+    await fetch(SYNC.apiBase + '/api/inter-transfers/' + id + '/mark-posted', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + SYNC.token }
+    });
+  } catch (e) { /* worst case it just keeps showing as pending — harmless, can be posted again safely later since this only marks status, doesn't re-create the entry */ }
+  _incomingTransfers = _incomingTransfers.filter(t=>t.id!==id);
+  checkIncomingTransfers();
 }
 
 async function renderBiometricStatus() {
@@ -7466,6 +7695,7 @@ function initApp() {
   checkRecurringDue();
   checkDailyDigest();
   checkFilingReminders();
+  checkIncomingTransfers();
   openModule('dashboard');
   initModuleChecks();
   loadSettingsValues();
@@ -9357,6 +9587,7 @@ function saveAccounting() {
     audit('Accounting','Create',a.id,data.description);
   }
   saveDB(); closeModal('acct-modal-overlay'); renderAccounting(); toast('Entry saved','success');
+  if (_pendingICTMarkPostId) { markInterCompanyTransferPosted(_pendingICTMarkPostId); _pendingICTMarkPostId = null; }
 }
 
 function showAddAccounting() { openModule('accounting'); setTimeout(()=>openAccountingModal(),100); }

@@ -3256,11 +3256,7 @@ function defaultDB() {
   };
 }
 
-function loadDB() {
-  try {
-    const raw = safeGet(scopedKey(DB_KEY));
-    if (raw) {
-      db = JSON.parse(raw);
+function migrateDB() {
       const def = defaultDB();
       // Settings migration
       if (!db.settings) db.settings = def.settings;
@@ -3418,6 +3414,14 @@ function loadDB() {
           if (match) t.entityId = match;
         }
       });
+}
+
+function loadDB() {
+  try {
+    const raw = safeGet(scopedKey(DB_KEY));
+    if (raw) {
+      db = JSON.parse(raw);
+      migrateDB();
     } else {
       db = defaultDB();
     }
@@ -5834,6 +5838,10 @@ async function syncPull(opts) {
         return { ok: false, reason: 'server-empty' };
       }
       db = out.data;
+      migrateDB(); // same "add missing fields" migration loadDB() runs — a pull from the server
+                    // must go through this too, or any field added after that company's last
+                    // local save (filingReminders, recurring, etc.) stays undefined forever and
+                    // crashes the first screen that reads it.
       syncSetVersion(serverVersion);
       if (serverTs) safeSet(scopedKey('bms_sync_ts'), String(serverTs));
       safeSet(scopedKey(DB_KEY), JSON.stringify(db));

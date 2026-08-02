@@ -4675,6 +4675,67 @@ function aggregateAging(rows) {
   return { parties, totals };
 }
 
+// ── Cash Flow Forecast — a simple look-ahead, not part of the official financial statements.
+// Read-only: only reads current cash/bank balances plus already-recorded receivable/payable due
+// dates. Nothing here posts to db.accounting or db.journalEntries, so it can never affect any
+// ledger figure — it's purely a lens on data that already exists.
+function computeCashFlowForecast(asOf) {
+  const asOfDate = asOf || today();
+  const cashCodes = ['1010','1020','1021','1022'];
+  const currentCash = cashCodes.reduce((a,c)=>a+accountBalanceAsOf(c, asOfDate), 0);
+
+  const receivables = (db.creditSales||[]).filter(c=>(c.dueAmount||0)>0.01);
+  const payables = (db.supplierInvoices||[]).map(inv=>{
+    const paid = (db.supplierPayments||[]).filter(p=>p.invoiceId===inv.id).reduce((a,p)=>a+p.amount,0);
+    return { ...inv, due: inv.amount - paid };
+  }).filter(inv=>inv.due>0.01);
+
+  const daysFromToday = (dateStr) => Math.floor((new Date(dateStr) - new Date(asOfDate)) / 86400000);
+
+  const windows = [7, 30, 60].map(days => {
+    const inflow = receivables.filter(c => daysFromToday(c.dueDate||c.date) <= days).reduce((a,c)=>a+c.dueAmount,0);
+    const outflow = payables.filter(inv => daysFromToday(inv.dueDate||inv.date) <= days).reduce((a,inv)=>a+inv.due,0);
+    return { days, inflow, outflow, projected: currentCash + inflow - outflow };
+  });
+
+  return {
+    asOf: asOfDate,
+    currentCash,
+    windows,
+    totalReceivablesOutstanding: receivables.reduce((a,c)=>a+c.dueAmount,0),
+    totalPayablesOutstanding: payables.reduce((a,inv)=>a+inv.due,0)
+  };
+}
+
+// ── Product Profitability — read-only. Cost uses each product's CURRENT cost price (weighted
+// average), not a historical snapshot from the moment of each sale, since that snapshot isn't
+// stored per sale line today. For recent periods this is very close to exact; for a long look-back
+// where cost prices have since changed materially, treat the margin as a close estimate. This
+// never writes anything back — it's purely a read/aggregate over db.sales and db.records.
+function computeProductProfitability(from, to) {
+  const toDate = to || today();
+  const fromDate = from || '2000-01-01';
+  const byProduct = {};
+  (db.sales||[]).filter(s => s.date >= fromDate && s.date <= toDate).forEach(sale => {
+    (sale.items||[]).forEach(item => {
+      const rec = db.records.find(r => r.id === item.id) || db.records.find(r => r.name === item.name);
+      const qty = item.qty || 0;
+      const revenue = (item.price || 0) * qty;
+      const cost = (rec?.costPrice || 0) * qty;
+      const key = item.id || item.name;
+      if (!byProduct[key]) byProduct[key] = { name: item.name, qty: 0, revenue: 0, cost: 0 };
+      byProduct[key].qty += qty;
+      byProduct[key].revenue += revenue;
+      byProduct[key].cost += cost;
+    });
+  });
+  const rows = Object.values(byProduct).map(r => ({
+    ...r, margin: r.revenue - r.cost, marginPct: r.revenue > 0 ? ((r.revenue - r.cost) / r.revenue * 100) : 0
+  })).sort((a, b) => b.margin - a.margin);
+  const totals = rows.reduce((a, r) => ({ revenue: a.revenue + r.revenue, cost: a.cost + r.cost, margin: a.margin + r.margin }), { revenue: 0, cost: 0, margin: 0 });
+  return { rows, totals };
+}
+
 /* ── Phase 6-B: My Equipment (Fixed Asset Register) + automatic straight-line depreciation ── */
 const EQUIPMENT_PRESETS = {
   vehicle:   { life:5,  assetCode:'1120', depCode:'1121' },
@@ -10472,7 +10533,8 @@ function deleteRecord(type, id) {
 const REPORT_CATEGORIES = [
   { id:'sales', group:'business', icon:'🧾', title:'Sales Reports', desc:'Transactions, revenue, top products', types:[
     {v:'sales', label:'Sales / Transaction Report'},
-    {v:'sales-orders', label:'Sales Order Summary'}
+    {v:'sales-orders', label:'Sales Order Summary'},
+    {v:'product-profitability', label:'📈 Product Profitability'}
   ]},
   { id:'purchase', group:'business', icon:'🛍️', title:'Purchase Reports', desc:'Purchase orders, GRN, supplier spend', types:[
     {v:'purchase-orders', label:'Purchase Order Summary'},
@@ -10515,6 +10577,7 @@ const REPORT_CATEGORIES = [
     {v:'account-ledger', label:'Account Ledger (Cash, Bank, any account)'},
     {v:'receivables-aging', label:'Receivables Aging'},
     {v:'payables-aging', label:'Payables Aging'},
+    {v:'cash-flow-forecast', label:'📅 Cash Flow Forecast'},
     {v:'fixed-asset-register', label:'Fixed Asset Register'}
   ]},
   { id:'tax', group:'official', icon:'🧮', title:'Compliance & Regulatory Reports', desc:'Nepal VAT, PAN, government submission, annual & audit reports', types:[
@@ -10613,6 +10676,8 @@ const REPORT_TYPE_HELP = {
   'correction-notes': 'Every Credit Note (sales correction) and Debit Note (purchase correction) ever issued.',
   'receivables-aging': 'How overdue each customer\'s balance is — 0-30, 31-60, 61-90, 90+ days — so you know who to chase first.',
   'payables-aging': 'How overdue each amount you owe a supplier is — so you know who to pay first.',
+  'cash-flow-forecast': 'A simple look-ahead: your cash today, plus what\'s already due to come in and go out over the next 7/30/60 days, based on receivables and payables already on the books.',
+  'product-profitability': 'Revenue, estimated cost, and margin per product — which items are actually making you money. Cost uses each product\'s current cost price, so treat this as a close estimate rather than an exact historical figure.',
   'fixed-asset-register': 'Everything the business owns long-term (equipment, vehicles) and what it\'s worth today.',
   'cash-flow': 'Where actual cash came from and went — different from profit, which can look fine on paper while cash is tight.',
   'owners-equity': 'Shows the owner\'s (or each partner\'s) stake in the business — opening capital, their share of profit, and what they\'ve taken out.',
@@ -10808,6 +10873,31 @@ function generateReport() {
       ${aging.parties.length?aging.parties.map(p=>`<tr><td>${esc(p.name)}</td>${bucketCell(p.total)}${bucketCell(p.notDue)}${bucketCell(p.d30)}${bucketCell(p.d60)}${bucketCell(p.d90)}${bucketCell(p.d90plus)}</tr>`).join(''):'<tr><td colspan="7">No outstanding payables</td></tr>'}
       <tr style="background:#f0f0f0"><td><strong>TOTAL</strong></td>${bucketCell(aging.totals.total)}${bucketCell(aging.totals.notDue)}${bucketCell(aging.totals.d30)}${bucketCell(aging.totals.d60)}${bucketCell(aging.totals.d90)}${bucketCell(aging.totals.d90plus)}</tr>
     </tbody></table>`;
+  } else if (type==='cash-flow-forecast') {
+    const fc = computeCashFlowForecast(to || today());
+    const row = (label, w) => `<tr><td>${label}</td><td style="text-align:right" class="mono text-success">+${fmt(w.inflow)}</td><td style="text-align:right" class="mono text-danger">-${fmt(w.outflow)}</td><td style="text-align:right" class="mono"><strong>${fmt(w.projected)}</strong></td></tr>`;
+    bodyHtml = `<h2>Cash Flow Forecast<span class="help-tip" data-tip="A simple look-ahead using what's already on the books — not a prediction of new business.">?</span></h2>
+    <p style="font-size:15px;color:#555">As of ${fmtDate(fc.asOf)} — based only on receivables and payables already recorded, not future sales/purchases you haven't entered yet.</p>
+    <table style="margin-top:10px"><tbody>
+      <tr style="background:#f0f0f0"><td><strong>Cash &amp; Bank on hand today</strong></td><td style="text-align:right"><strong>${fmt(fc.currentCash)}</strong></td></tr>
+    </tbody></table>
+    <table style="margin-top:14px"><thead><tr><th>Looking ahead</th><th style="text-align:right">Expected In</th><th style="text-align:right">Expected Out</th><th style="text-align:right">Projected Cash</th></tr></thead><tbody>
+      ${fc.windows.map(w=>row(`Next ${w.days} days`, w)).join('')}
+    </tbody></table>
+    <table style="margin-top:14px"><tbody>
+      <tr><td>Total outstanding receivables (all customers)</td><td style="text-align:right" class="mono">${fmt(fc.totalReceivablesOutstanding)}</td></tr>
+      <tr><td>Total outstanding payables (all suppliers)</td><td style="text-align:right" class="mono">${fmt(fc.totalPayablesOutstanding)}</td></tr>
+    </tbody></table>
+    <p style="margin-top:10px;font-size:13px;color:#777">This only reflects money already owed to you or by you as of today. It doesn't guess at future sales, purchases, salaries, or other expenses you haven't recorded yet.</p>`;
+  } else if (type==='product-profitability') {
+    const pp = computeProductProfitability(from, to);
+    bodyHtml = `<h2>Product Profitability<span class="help-tip" data-tip="Revenue, estimated cost, and margin per product — uses each product's current cost price as an estimate.">?</span></h2>
+    <p style="font-size:15px;color:#555">${periodLabel} — sorted by highest margin first.</p>
+    <table><thead><tr><th>Product</th><th style="text-align:right">Qty Sold</th><th style="text-align:right">Revenue</th><th style="text-align:right">Est. Cost</th><th style="text-align:right">Margin</th><th style="text-align:right">Margin %</th></tr></thead><tbody>
+      ${pp.rows.length?pp.rows.map(r=>`<tr><td>${esc(r.name)}</td><td style="text-align:right" class="mono">${r.qty}</td><td style="text-align:right" class="mono">${fmt(r.revenue)}</td><td style="text-align:right" class="mono">${fmt(r.cost)}</td><td style="text-align:right" class="mono" style="color:${r.margin>=0?'green':'red'}">${fmt(r.margin)}</td><td style="text-align:right" class="mono">${r.marginPct.toFixed(1)}%</td></tr>`).join(''):'<tr><td colspan="6">No sales in this period</td></tr>'}
+      <tr style="background:#f0f0f0"><td><strong>TOTAL</strong></td><td></td><td style="text-align:right"><strong>${fmt(pp.totals.revenue)}</strong></td><td style="text-align:right"><strong>${fmt(pp.totals.cost)}</strong></td><td style="text-align:right"><strong>${fmt(pp.totals.margin)}</strong></td><td></td></tr>
+    </tbody></table>
+    <p style="margin-top:10px;font-size:13px;color:#777">Cost uses each product's current cost price, not necessarily its exact cost at the moment of each individual sale — treat this as a close estimate, especially over longer periods where costs may have changed.</p>`;
   } else if (type==='fixed-asset-register') {
     const assets = (db.fixedAssets||[]).filter(a=>a.status==='active');
     const totalCost = assets.reduce((a,x)=>a+x.cost,0), totalDep = assets.reduce((a,x)=>a+x.accumulatedDepreciation,0);

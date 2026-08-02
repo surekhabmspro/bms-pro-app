@@ -210,6 +210,7 @@ a{color:var(--accent);text-decoration:none}
 .kpi-card:hover::after{opacity:1}
 .kpi-card::before{content:'';position:absolute;top:0;right:0;width:80px;height:80px;border-radius:50%;background:var(--accent-dim);transform:translate(25px,-25px);pointer-events:none;z-index:0}
 @keyframes kpiJumpPulse{0%{box-shadow:0 0 0 0 var(--accent-glow)}70%{box-shadow:0 0 0 14px rgba(0,0,0,0)}100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}}
+@keyframes micPulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}70%{box-shadow:0 0 0 22px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
 .kpi-jump-highlight{animation:kpiJumpPulse 1.1s ease-out 1}
 /* ══ SEGMENTED TOGGLE (e.g. 7 Days / 12 Months) ══ */
 .seg-toggle{display:inline-flex;background:var(--elevated);border:1px solid var(--border);border-radius:999px;padding:3px;gap:2px}
@@ -579,6 +580,12 @@ textarea.form-control{resize:vertical;min-height:80px}
 /* ══ BACKUP BANNER ══ */
 #backup-banner{background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);padding:8px 16px;display:none;align-items:center;gap:10px;font-size:17px;color:var(--warning)}
 #backup-banner button{margin-left:auto;background:var(--warning);color:#fff;padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
+#recurring-banner{background:rgba(99,102,241,.1);border-bottom:1px solid rgba(99,102,241,.3);padding:8px 16px;display:none;align-items:center;gap:10px;font-size:17px;color:var(--accent)}
+#recurring-banner button{background:var(--accent);color:#fff;padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
+#recurring-banner button:last-child{margin-left:auto;background:none;color:var(--accent)}
+#filing-banner{background:rgba(239,68,68,.1);border-bottom:1px solid rgba(239,68,68,.3);padding:8px 16px;display:none;align-items:center;gap:10px;font-size:17px;color:var(--danger)}
+#filing-banner button{background:var(--danger);color:#fff;padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
+#filing-banner button:last-child{margin-left:auto;background:none;color:var(--danger)}
 /* ══ ADVANCED SEARCH ══ */
 #adv-search{background:var(--elevated);border-bottom:1px solid var(--border);padding:14px 16px;display:none}
 #adv-search.show{display:block}
@@ -858,6 +865,17 @@ textarea.form-control{resize:vertical;min-height:80px}
       <button onclick="doBackup()">Backup Now</button>
       <button onclick="dismissBackupBanner()" style="background:none;color:var(--warning);margin-left:8px;font-size:19px">✕</button>
     </div>
+    <!-- RECURRING TRANSACTIONS DUE BANNER -->
+    <div id="recurring-banner">
+      🔁 <span id="recurring-due-count"></span> recurring transaction(s) due — review before they're posted.
+      <button onclick="openRecurring()">Review &amp; Post</button>
+      <button onclick="dismissRecurringBanner()" style="font-size:19px">✕</button>
+    </div>
+    <!-- VAT/TDS & CUSTOM FILING DEADLINE BANNER -->
+    <div id="filing-banner">
+      ⏰ <span id="filing-banner-text"></span>
+      <button onclick="dismissFilingBanner()" style="font-size:19px">✕</button>
+    </div>
     <!-- TOPBAR -->
     <div id="topbar">
       <button class="topbar-toggle" onclick="toggleSidebar()">☰</button>
@@ -1021,6 +1039,7 @@ textarea.form-control{resize:vertical;min-height:80px}
               <div class="input-wrap" style="flex:1">
                 <input class="form-control" id="pos-barcode" placeholder="📷 Scan barcode here (USB scanner supported)..." autocomplete="off" style="border-color:var(--accent)">
               </div>
+              <button class="btn btn-secondary" onclick="openBarcodeScanner(code=>{lookupBarcodeAndAdd(code);})" title="Scan with camera">📷 Camera</button>
               <span id="pos-barcode-status" style="font-size:15px;color:var(--text-muted);min-width:90px"></span>
             </div>
             <div class="pos-category-chips" id="pos-cat-chips"></div>
@@ -1086,7 +1105,7 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="module-view" id="view-records">
         <div class="filter-bar">
           <input class="form-control" id="rec-search" placeholder="🔍 Search products..." oninput="renderRecords()">
-          <select class="form-control" id="rec-cat-filter" onchange="renderRecords()"><option value="">All Categories</option></select>
+          <select class="form-control" id="rtx-cat-filter" onchange="renderRecords()"><option value="">All Categories</option></select>
           <button class="btn btn-secondary btn-sm" onclick="exportCSV('records')">📤 Export CSV</button>
           <button class="btn btn-secondary btn-sm" onclick="importCSV('records')">📥 Import CSV</button>
           <button class="btn btn-primary btn-sm" onclick="openRecordModal()">+ Add Product</button>
@@ -1254,12 +1273,15 @@ textarea.form-control{resize:vertical;min-height:80px}
             <button class="btn btn-secondary btn-sm" onclick="toggleAcctToolsMenu()">⋮ More Tools ▾</button>
             <div class="dropdown-menu" id="acct-tools-menu">
               <div class="dropdown-item" onclick="exportCSV('accounting');closeDropdowns()">📤 Export CSV</div>
+              <div class="dropdown-item" onclick="openRecurring();closeDropdowns()">🔁 Recurring Transactions</div>
               <div class="dropdown-item" onclick="openBankRecon();closeDropdowns()">🏦 Bank Reconciliation</div>
               <div class="dropdown-item" onclick="openMyEquipment();closeDropdowns()">🏗️ My Equipment</div>
               <div class="dropdown-item" onclick="openOwnerTxn();closeDropdowns()">🤝 Owner/Partner Transaction</div>
               <div class="dropdown-item" onclick="openPDCTracker();closeDropdowns()">📝 Post-Dated Cheques</div>
             </div>
           </div>
+          <button class="btn btn-secondary btn-sm" onclick="repeatLastAccountingEntry()" title="Duplicate your most recent entry so you just adjust the amount and save">🔁 Repeat Last</button>
+          <button class="btn btn-secondary btn-sm" onclick="openVoiceEntry()" title="Speak an entry, e.g. '5000 rupees diesel expense'">🎤 Voice Entry</button>
           <button class="btn btn-primary btn-sm" onclick="openAccountingModal()">+ Add Entry</button>
         </div>
         <div class="table-wrap"><table><thead><tr><th onclick="sortTable('acct','date')">Date ↕</th><th>Type</th><th onclick="sortTable('acct','category')">Category ↕</th><th>Description</th><th onclick="sortTable('acct','amount')">Amount ↕</th><th>Reference</th><th>Balance</th><th>Actions</th></tr></thead><tbody id="acct-tbody"></tbody></table></div>
@@ -1661,7 +1683,14 @@ textarea.form-control{resize:vertical;min-height:80px}
                   <label><input type="checkbox" id="notif-overdue"> Overdue transactions</label>
                   <label><input type="checkbox" id="notif-backup"> Backup reminders</label>
                   <label><input type="checkbox" id="notif-payroll"> Payroll reminders</label>
+                  <label><input type="checkbox" id="notif-recurring"> Recurring transaction due</label>
+                  <label><input type="checkbox" id="notif-digest"> Daily digest (evening summary)</label>
                 </div>
+              </div>
+              <div class="form-group"><label class="form-label">Daily Digest Time<span class="help-tip" data-tip="The digest fires the first time you open the app after this hour each day — there's no background server sending it while the app is closed.">?</span></label><select class="form-control" id="st-digest-hour" style="max-width:200px"><option value="0">12 AM</option><option value="1">1 AM</option><option value="2">2 AM</option><option value="3">3 AM</option><option value="4">4 AM</option><option value="5">5 AM</option><option value="6">6 AM</option><option value="7">7 AM</option><option value="8">8 AM</option><option value="9">9 AM</option><option value="10">10 AM</option><option value="11">11 AM</option><option value="12">12 PM</option><option value="13">1 PM</option><option value="14">2 PM</option><option value="15">3 PM</option><option value="16">4 PM</option><option value="17">5 PM</option><option value="18">6 PM</option><option value="19">7 PM</option><option value="20">8 PM</option><option value="21">9 PM</option><option value="22">10 PM</option><option value="23">11 PM</option></select></div>
+              <div class="form-group">
+                <button class="btn btn-secondary btn-sm" onclick="requestNotifPermission()">🔔 Enable Browser Pop-up Notifications</button>
+                <div class="form-hint" id="browser-notif-status" style="margin-top:6px"></div>
               </div>
               <button class="btn btn-primary" onclick="saveNotifSettings()">💾 Save Settings</button>
             </div>
@@ -1853,6 +1882,18 @@ textarea.form-control{resize:vertical;min-height:80px}
                   </div>
                 </div>
               </div>
+              <div class="card" style="margin-top:12px;margin-bottom:16px">
+                <div class="card-header"><div class="card-title">⏰ Filing Reminders<span class="help-tip" data-tip="VAT and TDS returns are both due on the 25th day of the following Nepali (BS) calendar month — this reminder is built in and uses that date automatically. Add your own for anything else with its own monthly date, like SSF deposits or income tax installments.">?</span></div></div>
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><input type="checkbox" id="notif-filing"> VAT &amp; TDS filing reminder (25th of the following BS month)</label>
+                <div class="form-group" style="max-width:260px"><label class="form-label">Remind me this many days before</label><input class="form-control" type="number" id="st-filing-days" min="1" max="20" placeholder="5"></div>
+                <div class="form-hint" style="margin:10px 0 8px">Your own reminders (e.g. SSF Deposit, Income Tax Installment)</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+                  <input class="form-control" id="filing-new-name" placeholder="Reminder name" style="flex:2;min-width:160px">
+                  <input class="form-control" id="filing-new-day" type="number" min="1" max="28" placeholder="Day of month" style="flex:1;min-width:110px">
+                  <button class="btn btn-secondary btn-sm" onclick="addFilingReminder()">+ Add</button>
+                </div>
+                <div id="filing-reminders-list"></div>
+              </div>
               <button class="btn btn-primary" onclick="saveTaxSettings()">💾 Save Tax Settings</button>
             </div>
           </div>
@@ -1878,11 +1919,11 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="form-group"><label class="form-label">SKU / Code</label><input class="form-control" id="rec-sku" placeholder="Auto-generated if empty"></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Category</label><input class="form-control" id="rec-category" placeholder="Category"></div>
+          <div class="form-group"><label class="form-label">Category</label><input class="form-control" id="rtx-category" placeholder="Category"></div>
           <div class="form-group"><label class="form-label">Unit</label><input class="form-control" id="rec-unit" placeholder="pcs, kg, ltr, box..."></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Barcode</label><input class="form-control" id="rec-barcode" placeholder="Optional barcode"></div>
+          <div class="form-group"><label class="form-label">Barcode</label><div style="display:flex;gap:8px"><input class="form-control" id="rec-barcode" placeholder="Optional barcode" style="flex:1"><button type="button" class="btn btn-secondary" onclick="openBarcodeScanner(code=>{document.getElementById('rec-barcode').value=code;})" title="Scan with camera">📷</button></div></div>
           <div class="form-group"><label class="form-label">Weight / Size</label><input class="form-control" id="rec-weight" placeholder="e.g. 500g, 1L, 3 inch"></div>
         </div>
         <div class="form-row">
@@ -2196,6 +2237,82 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="table-wrap"><table><thead><tr><th>Name</th><th>Type</th><th>Cost</th><th>Depreciated So Far</th><th>Current Value</th><th></th></tr></thead><tbody id="equipment-tbody"></tbody></table></div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('equipment-overlay')">Close</button></div>
+  </div>
+</div>
+
+<!-- RECURRING TRANSACTIONS -->
+<div class="modal-overlay" id="recurring-overlay" onclick="closeModalOnOverlay(event,'recurring-overlay')">
+  <div class="modal modal-lg">
+    <div class="modal-header"><div class="modal-title" id="recurring-modal-title">🔁 Recurring Transactions<span class="help-tip" data-tip="Set up rent, loan EMIs, fixed salaries, or any bill that repeats. Nothing posts by itself — when one is due, you'll see it here and just tap Post to confirm the amount and book it, same as adding it by hand.">?</span></div><button class="modal-close" onclick="closeModal('recurring-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-hint" style="margin-bottom:12px">Set it up once. When it's due, you'll get a reminder here — tap Post to confirm and it books exactly like a normal Accounting entry.</div>
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <button type="button" id="rtx-type-income" onclick="setRecType('income')" style="flex:1;padding:10px;border-radius:8px;border:2px solid var(--success);background:transparent;color:var(--success);font-weight:700;font-size:18px;cursor:pointer">💰 Income</button>
+        <button type="button" id="rtx-type-expense" onclick="setRecType('expense')" style="flex:1;padding:10px;border-radius:8px;border:2px solid var(--danger);background:var(--danger);color:#fff;font-weight:700;font-size:18px;cursor:pointer">💸 Expense</button>
+      </div>
+      <input type="hidden" id="rtx-type-sel" value="expense">
+      <input type="hidden" id="rtx-edit-id" value="">
+      <div class="form-group"><label class="form-label">Description *</label><input class="form-control" id="rtx-desc" placeholder="e.g. Shop Rent, Loan EMI, Internet Bill"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Amount *</label><input class="form-control" type="number" id="rtx-amount" placeholder="0" min="0"></div>
+        <div class="form-group"><label class="form-label">Category</label><select class="form-control" id="rtx-cat"></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Repeats</label>
+          <select class="form-control" id="rtx-freq">
+            <option value="monthly">Monthly</option>
+            <option value="weekly">Weekly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Next Due Date *</label><input class="form-control" id="rtx-nextdue" onfocus="openCalendar('rtx-nextdue','standard')"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Reference</label><input class="form-control" id="rtx-ref" placeholder="Optional"></div>
+      <div class="form-group"><label><input type="checkbox" id="rtx-active" checked> Active</label></div>
+      <button class="btn btn-primary" onclick="saveRecurringTemplate()">💾 Save Recurring Template</button>
+      <button class="btn btn-secondary" id="rtx-cancel-edit-btn" onclick="resetRecurringForm()" style="display:none">Cancel Edit</button>
+
+      <h3 style="margin-top:20px;font-size:16px;font-weight:700">Your Recurring Transactions</h3>
+      <div class="table-wrap"><table><thead><tr><th>Description</th><th>Type</th><th>Category</th><th>Amount</th><th>Repeats</th><th>Next Due</th><th>Status</th><th>Actions</th></tr></thead><tbody id="recurring-tbody"></tbody></table></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('recurring-overlay')">Close</button></div>
+  </div>
+</div>
+
+<!-- CAMERA BARCODE / QR SCANNER (reusable — used by POS and by Add Product) -->
+<div class="modal-overlay" id="scanner-overlay" onclick="if(event.target===this)closeBarcodeScanner()">
+  <div class="modal" style="max-width:420px;background:#000">
+    <div class="modal-header" style="border-bottom:1px solid #333">
+      <div class="modal-title" style="color:#fff">📷 Scan Barcode / QR</div>
+      <button class="modal-close" style="color:#fff" onclick="closeBarcodeScanner()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;position:relative;background:#000">
+      <video id="scanner-video" playsinline autoplay muted style="width:100%;display:block;background:#000"></video>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:78%;aspect-ratio:2/1;border:3px solid var(--accent);border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,.4);pointer-events:none"></div>
+      <div id="scanner-status" style="position:absolute;bottom:14px;left:0;right:0;text-align:center;color:#fff;font-size:15px;padding:0 16px"></div>
+    </div>
+    <div class="modal-footer" style="border-top:1px solid #333">
+      <button class="btn btn-secondary" onclick="closeBarcodeScanner()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- VOICE-TO-TEXT QUICK ENTRY -->
+<div class="modal-overlay" id="voice-overlay" onclick="if(event.target===this)closeVoiceEntry()">
+  <div class="modal" style="max-width:420px;text-align:center">
+    <div class="modal-header">
+      <div class="modal-title">🎤 Voice Quick Entry<span class="help-tip" data-tip="Say something like &quot;5000 rupees diesel expense&quot; or &quot;received 2000 from Ramesh&quot;. It drafts an Accounting entry for you to check and save — nothing is posted until you tap Save.">?</span></div>
+      <button class="modal-close" onclick="closeVoiceEntry()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="voice-mic-icon" style="width:80px;height:80px;border-radius:50%;background:var(--danger);color:#fff;font-size:34px;display:flex;align-items:center;justify-content:center;margin:10px auto;animation:micPulse 1.5s infinite">🎤</div>
+      <div id="voice-status" style="font-size:16px;color:var(--text-muted);margin-bottom:10px">Listening... try "5000 rupees diesel expense"</div>
+      <div id="voice-transcript" style="min-height:44px;font-size:18px;font-weight:600;padding:10px;background:var(--bg-secondary,rgba(0,0,0,.04));border-radius:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeVoiceEntry()">Cancel</button>
+      <button class="btn btn-primary" id="voice-use-btn" style="display:none" onclick="finalizeVoiceEntry(_voiceLastTranscript)">Use This</button>
+    </div>
   </div>
 </div>
 
@@ -2975,6 +3092,8 @@ function defaultDB() {
     deletedRecords: [],
     searchHistory: [],
     reportTemplates: [],
+    recurring: [],       // NEW: recurring transaction templates (rent, EMI, etc.) — due ones need a tap to confirm & post, never posted silently
+    filingReminders: [], // NEW: custom filing/deadline reminders (e.g. SSF deposit, income tax installment) — VAT/TDS's own 25th-of-month reminder is built in and doesn't need an entry here
     settings: {
       orgName: 'BMS Pro',
       orgTag: 'Universal Business Management',
@@ -2996,6 +3115,9 @@ function defaultDB() {
       overduedays: 7,
       backupDays: 7,
       lastBackupDate: null,
+      digestHour: 18,               // Daily Digest fires the first time you open the app after this hour, once per day
+      lastDigestDate: null,
+      filingReminderDays: 5,        // Filing reminder banner (VAT/TDS + custom) starts showing this many days before the deadline
       accountingPIN: '',             // Accounting PIN security
       accountingPINEnabled: false,
       ownershipType: 'single',       // 'single' or 'partnership'
@@ -3027,7 +3149,7 @@ function defaultDB() {
       leaveTypes: ['Sick Leave', 'Annual Leave', 'Casual Leave', 'Maternity/Paternity', 'Unpaid Leave'],
       businessType: 'mixed', // trading, retail, wholesale, manufacturing, service, mixed
       attendanceMode: 'manual', // manual, biometric
-      notifications: { lowStock: true, overdue: true, backup: true, payroll: true },
+      notifications: { lowStock: true, overdue: true, backup: true, payroll: true, recurringDue: true, dailyDigest: true, filingReminder: true },
       pos: {
         defaultTax: 13,              // Nepal VAT 13%
         receiptPrefix: 'INV',
@@ -3130,6 +3252,14 @@ function loadDB() {
       if (!db.deletedRecords) db.deletedRecords = [];
       if (!db.reportTemplates) db.reportTemplates = [];
       if (!db.searchHistory) db.searchHistory = [];
+      if (!db.recurring) db.recurring = [];
+      if (!db.filingReminders) db.filingReminders = [];
+      if (db.settings.notifications.recurringDue===undefined) db.settings.notifications.recurringDue = true;
+      if (db.settings.notifications.dailyDigest===undefined) db.settings.notifications.dailyDigest = true;
+      if (db.settings.notifications.filingReminder===undefined) db.settings.notifications.filingReminder = true;
+      if (db.settings.digestHour===undefined) db.settings.digestHour = 18;
+      if (db.settings.lastDigestDate===undefined) db.settings.lastDigestDate = null;
+      if (db.settings.filingReminderDays===undefined) db.settings.filingReminderDays = 5;
       if (!db.payrollHistory) db.payrollHistory = [];
       if (!db.secondary) db.secondary = [];
       if (!db.creditSales) db.creditSales = [];
@@ -6251,6 +6381,104 @@ function bsFirstWeekday(year, month) {
   return adDate ? new Date(adDate + 'T00:00:00').getDay() : 0;
 }
 
+/* ══ VAT/TDS & CUSTOM FILING REMINDERS ══
+   VAT and TDS returns are both due on the 25th day of the FOLLOWING Nepali (BS) calendar month
+   (confirmed against current IRD guidance) — this is a real legal deadline, not an approximation,
+   so it's computed off the same BS conversion library used everywhere else in the app, not a
+   hand-rolled date guess. If BS mode is off (Settings ▸ Nepal Tax & VAT ▸ Fiscal Year System),
+   it falls back to the same day-of-month on the Gregorian calendar instead. Custom reminders
+   (SSF, income tax installments, etc.) use the exact same math with a day you set yourself,
+   since those dates vary enough that a wrong hardcoded guess would be worse than asking you. */
+function nextDeadlineDate(dayOfMonth) {
+  if (bsEnabled()) {
+    const bsToday = adToBsParts(today());
+    if (!bsToday) return null;
+    let y = bsToday.year, m = bsToday.month;
+    if (bsToday.day > dayOfMonth) { m += 1; if (m > 12) { m = 1; y += 1; } }
+    return bsPartsToAd(y, m, Math.min(dayOfMonth, bsDaysInMonth(y, m)));
+  }
+  const t = new Date(today() + 'T00:00:00');
+  let y = t.getFullYear(), m = t.getMonth() + 1;
+  if (t.getDate() > dayOfMonth) { m += 1; if (m > 12) { m = 1; y += 1; } }
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const day = Math.min(dayOfMonth, daysInMonth);
+  return y + '-' + String(m).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+}
+
+function daysUntil(dateStr) {
+  const a = new Date(today() + 'T00:00:00');
+  const b = new Date(dateStr + 'T00:00:00');
+  return Math.round((b - a) / 86400000);
+}
+
+function checkFilingReminders() {
+  const banner = document.getElementById('filing-banner');
+  if (!banner) return;
+  const s = db.settings;
+  const thresholdDays = s.filingReminderDays !== undefined ? s.filingReminderDays : 5;
+  const items = [];
+  if (s.notifications?.filingReminder !== false) {
+    const deadline = nextDeadlineDate(25);
+    if (deadline) {
+      const daysLeft = daysUntil(deadline);
+      if (daysLeft >= 0 && daysLeft <= thresholdDays) {
+        items.push(`VAT & TDS filing — due ${fmtDate(deadline)} (${daysLeft===0 ? 'today' : daysLeft + ' day' + (daysLeft===1?'':'s')})`);
+      }
+    }
+  }
+  (db.filingReminders||[]).filter(r=>r.active!==false).forEach(r => {
+    const deadline = nextDeadlineDate(r.dayOfMonth);
+    if (!deadline) return;
+    const daysLeft = daysUntil(deadline);
+    if (daysLeft >= 0 && daysLeft <= thresholdDays) {
+      items.push(`${r.name} — due ${fmtDate(deadline)} (${daysLeft===0 ? 'today' : daysLeft + ' day' + (daysLeft===1?'':'s')})`);
+    }
+  });
+  if (items.length) {
+    document.getElementById('filing-banner-text').textContent = items.join('   •   ');
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+function dismissFilingBanner() { document.getElementById('filing-banner').style.display = 'none'; }
+
+function addFilingReminder() {
+  const nameEl = document.getElementById('filing-new-name');
+  const dayEl = document.getElementById('filing-new-day');
+  const name = nameEl.value.trim();
+  const day = parseInt(dayEl.value);
+  if (!name) { toast('Enter a name for the reminder','warning'); return; }
+  if (!day || day<1 || day>28) { toast('Day of month must be between 1 and 28','warning'); return; }
+  db.filingReminders.push({ id: uid(), name, dayOfMonth: day, active: true });
+  nameEl.value = ''; dayEl.value = '';
+  saveDB(); renderFilingRemindersList(); checkFilingReminders(); toast('Reminder added','success');
+}
+
+function toggleFilingReminderActive(id) {
+  const r = db.filingReminders.find(x=>x.id===id);
+  if (!r) return;
+  r.active = r.active===false ? true : false;
+  saveDB(); renderFilingRemindersList(); checkFilingReminders();
+}
+
+function deleteFilingReminder(id) {
+  db.filingReminders = db.filingReminders.filter(x=>x.id!==id);
+  saveDB(); renderFilingRemindersList(); checkFilingReminders(); toast('Reminder removed','success');
+}
+
+function renderFilingRemindersList() {
+  const list = document.getElementById('filing-reminders-list');
+  if (!list) return;
+  if (!db.filingReminders.length) { list.innerHTML = '<div class="form-hint">No custom reminders yet.</div>'; return; }
+  list.innerHTML = db.filingReminders.map(r => `
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--elevated);border-radius:7px;margin-bottom:5px">
+      <span style="flex:1;font-size:16px">${esc(r.name)} — day ${r.dayOfMonth} of the month</span>
+      <label style="display:flex;align-items:center;gap:4px;font-size:14px"><input type="checkbox" ${r.active!==false?'checked':''} onchange="toggleFilingReminderActive('${r.id}')"> Active</label>
+      <button class="btn btn-xs btn-danger" onclick="deleteFilingReminder('${r.id}')">✕</button>
+    </div>`).join('');
+}
+
 function fmtDate(d) {
   if (!d) return '';
   const dt = new Date(d);
@@ -7235,6 +7463,9 @@ function initApp() {
   checkBackupBanner();
   generateNotifications();
   renderNotifications();
+  checkRecurringDue();
+  checkDailyDigest();
+  checkFilingReminders();
   openModule('dashboard');
   initModuleChecks();
   loadSettingsValues();
@@ -7943,6 +8174,202 @@ function lookupBarcodeAndAdd(code) {
     toast(`No product found for code: ${code}`, 'warning');
   }
   setTimeout(() => { if (status) status.textContent = ''; }, 1500);
+}
+
+/* ══ CAMERA BARCODE / QR SCANNER ══
+   Uses the browser's built-in BarcodeDetector (supported on Chrome/Android — covers the vast
+   majority of Android phones) to read a barcode/QR straight from the camera, no library needed.
+   On phones/browsers without it (mainly older iOS Safari), it tells you plainly and you fall
+   back to typing the code — no silent failure. Fully generic: pass in what should happen with
+   the scanned code (add to cart, fill a field, etc.) via the callback. */
+let _scannerStream = null;
+let _scannerRAF = null;
+let _scannerCallback = null;
+
+async function openBarcodeScanner(onDetect) {
+  const status = document.getElementById('scanner-status');
+  if (!('BarcodeDetector' in window)) {
+    toast('Camera scanning isn\'t supported on this browser — try Chrome on Android, or type/use a USB scanner instead','warning');
+    return;
+  }
+  _scannerCallback = onDetect;
+  openModal('scanner-overlay');
+  if (status) status.textContent = 'Point the camera at the barcode...';
+  try {
+    _scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  } catch (e) {
+    if (status) status.textContent = '';
+    closeModal('scanner-overlay');
+    toast('Camera permission denied or unavailable — check your browser/phone settings','error');
+    return;
+  }
+  const video = document.getElementById('scanner-video');
+  video.srcObject = _scannerStream;
+  await video.play().catch(()=>{});
+  let detector;
+  try {
+    detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code','itf'] });
+  } catch (e) {
+    detector = new BarcodeDetector();
+  }
+  const scanLoop = async () => {
+    if (!_scannerStream) return; // closed
+    try {
+      const codes = await detector.detect(video);
+      if (codes && codes.length) {
+        const value = codes[0].rawValue;
+        if (navigator.vibrate) navigator.vibrate(80);
+        if (status) status.textContent = '✅ Scanned: ' + value;
+        const cb = _scannerCallback;
+        closeBarcodeScanner();
+        if (cb) cb(value);
+        return;
+      }
+    } catch (e) { /* detection hiccup — just try the next frame */ }
+    _scannerRAF = requestAnimationFrame(scanLoop);
+  };
+  _scannerRAF = requestAnimationFrame(scanLoop);
+}
+
+function closeBarcodeScanner() {
+  if (_scannerRAF) cancelAnimationFrame(_scannerRAF);
+  _scannerRAF = null;
+  if (_scannerStream) { _scannerStream.getTracks().forEach(t=>t.stop()); _scannerStream = null; }
+  const video = document.getElementById('scanner-video');
+  if (video) video.srcObject = null;
+  _scannerCallback = null;
+  closeModal('scanner-overlay');
+}
+
+/* ══ VOICE-TO-TEXT QUICK ENTRY ══
+   Uses the browser's built-in speech recognition (Web Speech API — works well in Chrome on
+   Android) to turn something spoken like "5000 rupees diesel expense" into a drafted Accounting
+   entry. It only ever DRAFTS — the entry opens pre-filled in the normal Add Entry form and still
+   needs your own tap on Save, exactly like Repeat Last and Recurring Transactions. On phones/
+   browsers without speech recognition (mainly iOS Safari) it says so plainly instead of failing
+   silently. */
+let _voiceRecognition = null;
+let _voiceLastTranscript = '';
+
+function openVoiceEntry() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('Voice entry isn\'t supported on this browser — try Chrome on Android, or just type the entry','warning'); return; }
+  _voiceLastTranscript = '';
+  document.getElementById('voice-status').textContent = 'Listening... try "5000 rupees diesel expense"';
+  document.getElementById('voice-transcript').textContent = '';
+  document.getElementById('voice-use-btn').style.display = 'none';
+  openModal('voice-overlay');
+  _voiceRecognition = new SR();
+  _voiceRecognition.lang = 'en-US';
+  _voiceRecognition.interimResults = true;
+  _voiceRecognition.maxAlternatives = 1;
+  _voiceRecognition.onresult = (e) => {
+    let transcript = '';
+    for (let i=0;i<e.results.length;i++) transcript += e.results[i][0].transcript;
+    _voiceLastTranscript = transcript;
+    const t = document.getElementById('voice-transcript');
+    if (t) t.textContent = transcript;
+    const useBtn = document.getElementById('voice-use-btn');
+    if (useBtn) useBtn.style.display = '';
+    if (e.results[e.results.length-1].isFinal) {
+      const status = document.getElementById('voice-status');
+      if (status) status.textContent = 'Got it — drafting entry...';
+      finalizeVoiceEntry(transcript);
+    }
+  };
+  _voiceRecognition.onerror = (e) => {
+    let msg = 'Voice entry error — please try again';
+    if (e.error === 'not-allowed' || e.error === 'permission-denied' || e.error === 'service-not-allowed') msg = 'Microphone permission denied — check your browser/phone settings';
+    if (e.error === 'no-speech') msg = "Didn't hear anything — tap 🎤 Voice Entry to try again";
+    const status = document.getElementById('voice-status');
+    if (status) status.textContent = msg;
+  };
+  _voiceRecognition.onend = () => {
+    if (!_voiceLastTranscript) {
+      const status = document.getElementById('voice-status');
+      if (status) status.textContent = 'No speech captured — tap 🎤 Voice Entry to try again';
+    }
+  };
+  try { _voiceRecognition.start(); } catch (e) { /* already running — ignore */ }
+}
+
+function closeVoiceEntry() {
+  if (_voiceRecognition) {
+    try { _voiceRecognition.onresult = null; _voiceRecognition.onerror = null; _voiceRecognition.onend = null; _voiceRecognition.stop(); } catch (e) {}
+    _voiceRecognition = null;
+  }
+  closeModal('voice-overlay');
+}
+
+// Scans spoken text for an amount — plain digits first (most speech engines already convert
+// numbers to digits), falling back to spelled-out numbers ("five thousand five hundred").
+// Returns the amount and the remaining text with that number phrase removed.
+function extractSpokenAmount(text) {
+  const digitMatch = text.match(/\d[\d,]*(\.\d+)?/);
+  if (digitMatch) {
+    const amount = parseFloat(digitMatch[0].replace(/,/g, ''));
+    const rest = (text.slice(0, digitMatch.index) + ' ' + text.slice(digitMatch.index + digitMatch[0].length)).trim();
+    return { amount, rest };
+  }
+  const ones = { zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19 };
+  const tens = { twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90 };
+  const scales = { hundred:100,thousand:1000,lakh:100000,lac:100000,million:1000000,crore:10000000 };
+  const tokens = text.split(/\s+/);
+  let startIdx = -1;
+  for (let i=0;i<tokens.length;i++) {
+    const w = tokens[i].replace(/[^a-z]/g,'');
+    if (ones[w]!==undefined || tens[w]!==undefined || scales[w]!==undefined) { startIdx = i; break; }
+  }
+  if (startIdx === -1) return { amount: null, rest: text };
+  let total = 0, current = 0, endIdx = startIdx;
+  for (let i=startIdx; i<tokens.length; i++) {
+    const w = tokens[i].replace(/[^a-z]/g,'');
+    if (w === 'and') { endIdx = i+1; continue; }
+    if (ones[w] !== undefined) { current += ones[w]; endIdx = i+1; continue; }
+    if (tens[w] !== undefined) { current += tens[w]; endIdx = i+1; continue; }
+    if (scales[w] !== undefined) { current = (current||1) * scales[w]; if (scales[w] >= 1000) { total += current; current = 0; } endIdx = i+1; continue; }
+    break;
+  }
+  total += current;
+  const rest = tokens.slice(0,startIdx).concat(tokens.slice(endIdx)).join(' ').trim();
+  return { amount: total || null, rest };
+}
+
+// Turns the raw transcript into { type, amount, category, description } — best-effort, never
+// blocking: anything it can't confidently work out is just left blank for you to fill in.
+function parseVoiceEntry(rawText) {
+  const text = rawText.toLowerCase().trim();
+  const { amount, rest } = extractSpokenAmount(text);
+  const incomeSignals = ['income','received','earned','credit','sale','sold','deposit','collected'];
+  const isIncome = incomeSignals.some(w => text.includes(w));
+  let clean = rest.replace(/\b(rupees?|rs\.?|npr|nrs|dollars?|expense|expenses|spent|paid|payment|income|received|earned|credit|sale|sold|deposit|collected|for|of|the|an?)\b/g, ' ');
+  clean = clean.replace(/\s+/g,' ').trim();
+  const description = clean ? (clean.charAt(0).toUpperCase() + clean.slice(1)) : rawText.trim();
+  const incCats = ['Revenue','Sales','Service','Interest','Rent Income','Other Income'];
+  const expCats = db.settings.categories.accounting || [];
+  let category = '';
+  for (const c of (isIncome ? incCats : expCats)) { if (clean.includes(c.toLowerCase())) { category = c; break; } }
+  return { type: isIncome ? 'income' : 'expense', amount, category, description };
+}
+
+function finalizeVoiceEntry(text) {
+  if (!text || !text.trim()) { toast("Didn't catch that — try again", 'warning'); return; }
+  const parsed = parseVoiceEntry(text);
+  closeVoiceEntry();
+  acctEditId = null;
+  document.getElementById('acct-modal-title').textContent = '+ Add Entry (from voice)';
+  document.getElementById('acct-amount').value = parsed.amount || '';
+  document.getElementById('acct-date').value = today();
+  document.getElementById('acct-desc').value = parsed.description || text;
+  document.getElementById('acct-ref').value = '';
+  openModal('acct-modal-overlay');
+  setAcctType(parsed.type);
+  if (parsed.category) document.getElementById('acct-cat').value = parsed.category;
+  setTimeout(() => {
+    const amtEl = document.getElementById('acct-amount');
+    if (!parsed.amount) amtEl?.focus(); else document.getElementById('acct-desc')?.focus();
+  }, 60);
+  toast(parsed.amount ? 'Drafted from voice — check details & save' : "Couldn't catch an amount — please fill it in", 'info');
 }
 
 function initBarcodeScanner() {
@@ -8882,6 +9309,30 @@ function openAccountingModal(id=null) {
   setTimeout(()=>document.getElementById('acct-amount')?.focus(), 50);
 }
 
+// One-tap "repeat last entry" — duplicates your most recent Accounting entry (type, category,
+// amount, description) as a fresh draft dated today, so re-typing something you log often
+// (diesel, tea money, small purchases...) is just tap → confirm amount → save.
+function repeatLastAccountingEntry() {
+  if (!db.accounting.length) { toast('No previous entry to repeat yet','info'); return; }
+  const last = [...db.accounting].sort((a,b)=>(b.createdAt||b.date||'').localeCompare(a.createdAt||a.date||''))[0];
+  acctEditId = null; // this is a NEW entry, not an edit of the old one
+  document.getElementById('acct-modal-title').textContent = '+ Add Entry (repeated)';
+  document.getElementById('acct-amount').value = last.amount||'';
+  document.getElementById('acct-date').value = today();
+  document.getElementById('acct-desc').value = last.description||'';
+  document.getElementById('acct-ref').value = '';
+  openModal('acct-modal-overlay');
+  setAcctType(last.type||'income');
+  if (last.category) document.getElementById('acct-cat').value = last.category;
+  if (last.tdsAmount > 0) {
+    document.getElementById('acct-tds-toggle').checked = true;
+    document.getElementById('acct-tds-rate').value = last.tdsRateKey || 'rentCompany';
+    toggleAcctTDSFields();
+  }
+  setTimeout(()=>{ const amt=document.getElementById('acct-amount'); amt?.focus(); amt?.select(); }, 60);
+  toast(`Repeated "${last.description}" — check amount & save`,'info');
+}
+
 function saveAccounting() {
   const amount = parseFloat(document.getElementById('acct-amount').value);
   if (!amount || amount<=0) { toast('Valid amount required','error'); return; }
@@ -8909,6 +9360,227 @@ function saveAccounting() {
 }
 
 function showAddAccounting() { openModule('accounting'); setTimeout(()=>openAccountingModal(),100); }
+
+/* ══ RECURRING TRANSACTIONS ══
+   Templates for bills that repeat (rent, loan EMI, fixed subscriptions...). Nothing here ever
+   posts by itself — a due template shows up in the banner/list and needs one tap on "Post" to
+   actually create the Accounting entry, same as adding one by hand. That tap runs through the
+   exact same postManualAccountingJournal() the manual Accounting screen uses, so it books
+   identically and shows up everywhere the ledger already shows up. */
+function setRecType(type) {
+  document.getElementById('rtx-type-sel').value = type;
+  const incBtn = document.getElementById('rtx-type-income');
+  const expBtn = document.getElementById('rtx-type-expense');
+  if (type === 'income') {
+    incBtn.style.background = 'var(--success)'; incBtn.style.color = '#fff'; incBtn.style.borderColor = 'var(--success)';
+    expBtn.style.background = 'transparent'; expBtn.style.color = 'var(--text-muted)'; expBtn.style.borderColor = 'var(--border)';
+  } else {
+    expBtn.style.background = 'var(--danger)'; expBtn.style.color = '#fff'; expBtn.style.borderColor = 'var(--danger)';
+    incBtn.style.background = 'transparent'; incBtn.style.color = 'var(--text-muted)'; incBtn.style.borderColor = 'var(--border)';
+  }
+  // Reuse the exact same category lists as the manual Accounting entry screen.
+  const incCats = ['Revenue', 'Sales', 'Service', 'Interest', 'Rent Income', 'Other Income'];
+  const expCats = db.settings.categories.accounting||['Salary','Utilities','Rent','Supplies','Tax','VAT','Maintenance','Travel','Contractor','Professional Fees','Other'];
+  const catSelect = document.getElementById('rtx-cat');
+  const prevValue = catSelect.value;
+  const options = type === 'income' ? incCats : expCats;
+  catSelect.innerHTML = options.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if (options.includes(prevValue)) catSelect.value = prevValue;
+}
+
+function resetRecurringForm() {
+  document.getElementById('rtx-edit-id').value = '';
+  document.getElementById('rtx-desc').value = '';
+  document.getElementById('rtx-amount').value = '';
+  document.getElementById('rtx-freq').value = 'monthly';
+  document.getElementById('rtx-nextdue').value = today();
+  document.getElementById('rtx-ref').value = '';
+  document.getElementById('rtx-active').checked = true;
+  document.getElementById('recurring-modal-title').innerHTML = '🔁 Recurring Transactions<span class="help-tip" data-tip="Set up rent, loan EMIs, fixed salaries, or any bill that repeats. Nothing posts by itself — when one is due, you\'ll see it here and just tap Post to confirm the amount and book it, same as adding it by hand.">?</span>';
+  document.getElementById('rtx-cancel-edit-btn').style.display = 'none';
+  setRecType('expense');
+}
+
+function openRecurring() {
+  resetRecurringForm();
+  renderRecurringList();
+  openModal('recurring-overlay');
+}
+
+function saveRecurringTemplate() {
+  const desc = document.getElementById('rtx-desc').value.trim();
+  const amount = parseFloat(document.getElementById('rtx-amount').value);
+  const nextDue = document.getElementById('rtx-nextdue').value;
+  if (!desc) { toast('Description is required','error'); return; }
+  if (!amount || amount<=0) { toast('Valid amount required','error'); return; }
+  if (!nextDue) { toast('Next due date is required','error'); return; }
+  const data = {
+    type: document.getElementById('rtx-type-sel').value,
+    description: desc, amount,
+    category: document.getElementById('rtx-cat').value.trim(),
+    frequency: document.getElementById('rtx-freq').value,
+    nextDue, reference: document.getElementById('rtx-ref').value.trim(),
+    active: document.getElementById('rtx-active').checked
+  };
+  const editId = document.getElementById('rtx-edit-id').value;
+  if (editId) {
+    const r = db.recurring.find(x=>x.id===editId);
+    Object.assign(r, data);
+    audit('Accounting','Recurring Template Edited',editId,desc);
+    toast('Recurring template updated','success');
+  } else {
+    const r = { id:uid(), createdAt:now(), ...data };
+    db.recurring.push(r);
+    audit('Accounting','Recurring Template Added',r.id,desc);
+    toast('Recurring template added','success');
+  }
+  saveDB(); resetRecurringForm(); renderRecurringList(); checkRecurringDue();
+}
+
+function editRecurringTemplate(id) {
+  const r = db.recurring.find(x=>x.id===id);
+  if (!r) return;
+  document.getElementById('rtx-edit-id').value = r.id;
+  document.getElementById('rtx-desc').value = r.description;
+  document.getElementById('rtx-amount').value = r.amount;
+  document.getElementById('rtx-freq').value = r.frequency;
+  document.getElementById('rtx-nextdue').value = r.nextDue;
+  document.getElementById('rtx-ref').value = r.reference||'';
+  document.getElementById('rtx-active').checked = r.active!==false;
+  document.getElementById('recurring-modal-title').innerHTML = '✏️ Edit Recurring Transaction';
+  document.getElementById('rtx-cancel-edit-btn').style.display = '';
+  setRecType(r.type);
+  document.getElementById('rtx-cat').value = r.category;
+}
+
+function deleteRecurringTemplate(id) {
+  const r = db.recurring.find(x=>x.id===id);
+  if (!r) return;
+  confirm(`Delete recurring template "${r.description}"? Past entries already posted from it are not affected.`, ()=>{
+    db.recurring = db.recurring.filter(x=>x.id!==id);
+    audit('Accounting','Recurring Template Deleted',id,r.description);
+    saveDB(); renderRecurringList(); checkRecurringDue(); toast('Recurring template deleted','success');
+  });
+}
+
+function toggleRecurringActive(id) {
+  const r = db.recurring.find(x=>x.id===id);
+  if (!r) return;
+  r.active = r.active===false ? true : false;
+  saveDB(); renderRecurringList(); checkRecurringDue(); toast(r.active?'Resumed':'Paused','info');
+}
+
+// Advances a date string ('YYYY-MM-DD') by one cycle of the given frequency, in local time
+// (never toISOString — that shifts the date under Nepal's UTC+5:45 offset).
+function computeNextDue(dateStr, freq) {
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, (m||1)-1, d||1);
+  if (freq==='weekly') dt.setDate(dt.getDate()+7);
+  else if (freq==='yearly') dt.setFullYear(dt.getFullYear()+1);
+  else dt.setMonth(dt.getMonth()+1);
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+}
+
+function postRecurringNow(id) {
+  const r = db.recurring.find(x=>x.id===id);
+  if (!r) return;
+  confirm(`Post "${r.description}" — ${fmt(r.amount)} (${r.type}) dated today? This creates a normal Accounting entry.`, ()=>{
+    // No `source` tag on purpose: this should behave exactly like a normal manually-typed
+    // Accounting entry afterward (fully editable/deletable there), not like an auto-generated
+    // one (sale/payroll/etc.) that routes into a special void flow when you try to edit it.
+    const data = { type:r.type, amount:r.amount, category:r.category, date:today(), description:r.description, reference:r.reference||'', tdsRateKey:null, tdsAmount:0 };
+    const a = { id:uid(), createdAt:now(), ...data, recurringId:r.id };
+    db.accounting.push(a);
+    postManualAccountingJournal(a);
+    audit('Accounting','Recurring Posted',a.id,r.description);
+    r.nextDue = computeNextDue(r.nextDue, r.frequency);
+    saveDB();
+    renderRecurringList(); checkRecurringDue();
+    if (typeof renderAccounting === 'function' && currentModule==='accounting') renderAccounting();
+    if (typeof refreshDashboardKPIs === 'function') refreshDashboardKPIs();
+    toast(`Posted — next due ${fmtDate(r.nextDue)}`,'success');
+  }, '', 'Post');
+}
+
+function renderRecurringList() {
+  const tbody = document.getElementById('recurring-tbody');
+  if (!tbody) return;
+  const t = today();
+  const rows = [...db.recurring].sort((a,b)=>(a.nextDue||'').localeCompare(b.nextDue||''));
+  tbody.innerHTML = rows.length ? rows.map(r=>{
+    const isDue = r.active!==false && r.nextDue<=t;
+    return `<tr ${isDue?'style="background:rgba(99,102,241,.08)"':''}>
+      <td>${esc(r.description)}</td>
+      <td><span class="badge ${r.type==='income'?'badge-success':'badge-danger'}">${r.type==='income'?'Income':'Expense'}</span></td>
+      <td>${esc(r.category||'—')}</td>
+      <td class="mono">${fmt(r.amount)}</td>
+      <td style="text-transform:capitalize">${esc(r.frequency)}</td>
+      <td>${fmtDate(r.nextDue)}${isDue?' <span class="badge badge-warning">Due</span>':''}</td>
+      <td>${r.active!==false?'<span class="badge badge-success">Active</span>':'<span class="badge badge-muted">Paused</span>'}</td>
+      <td style="white-space:nowrap">
+        ${isDue?`<button class="btn btn-xs btn-primary" onclick="postRecurringNow('${r.id}')">Post</button> `:''}
+        <button class="btn btn-xs btn-secondary btn-edit" onclick="editRecurringTemplate('${r.id}')">Edit</button>
+        <button class="btn btn-xs btn-secondary" onclick="toggleRecurringActive('${r.id}')">${r.active!==false?'Pause':'Resume'}</button>
+        <button class="btn btn-xs btn-danger" onclick="deleteRecurringTemplate('${r.id}')">Del</button>
+      </td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="8"><div class="empty"><div class="empty-icon">🔁</div><div class="empty-title">No recurring transactions yet</div><div class="empty-desc">Add rent, loan EMIs, or any bill that repeats</div></div></td></tr>';
+}
+
+function checkRecurringDue() {
+  const banner = document.getElementById('recurring-banner');
+  if (!banner) return;
+  if (!db.settings.notifications?.recurringDue) { banner.style.display = 'none'; return; }
+  const t = today();
+  const due = (db.recurring||[]).filter(r=>r.active!==false && r.nextDue && r.nextDue<=t);
+  if (due.length) {
+    document.getElementById('recurring-due-count').textContent = due.length;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+function dismissRecurringBanner() { document.getElementById('recurring-banner').style.display = 'none'; }
+
+/* ══ DAILY DIGEST ══
+   A free, on-device alternative to a paid WhatsApp/SMS API — fires the first time you open the
+   app after your chosen hour each day (once per day), reading only data already in the app. */
+function checkDailyDigest() {
+  const s = db.settings;
+  if (!s.notifications?.dailyDigest) return;
+  const t = today();
+  if (s.lastDigestDate === t) return;
+  const hourNow = new Date().getHours();
+  const digestHour = s.digestHour!==undefined ? s.digestHour : 18;
+  if (hourNow < digestHour) return;
+  const pl = computePLPeriod(t, t);
+  const cf = computeCashFlowForecast(t);
+  const outstandingSales = (db.creditSales||[]).filter(c=>c.status==='outstanding');
+  const outstandingDue = outstandingSales.reduce((a,c)=>a+(c.dueAmount||0),0);
+  const todayPurchases = (db.supplierInvoices||[]).filter(inv=>inv.date===t).reduce((a,inv)=>a+(inv.amount||0),0);
+  const title = `📊 Today's Summary — ${fmtDate(t)}`;
+  const bodyLines = [
+    `Sales: ${fmt(pl.totalIncome)}  ·  Purchases: ${fmt(todayPurchases)}  ·  Expense: ${fmt(pl.totalExpense)}`,
+    `Cash in hand: ${fmt(cf.currentCash)}`,
+    `Owed to you: ${fmt(outstandingDue)} (${outstandingSales.length} customer${outstandingSales.length===1?'':'s'})`
+  ];
+  const body = bodyLines.join('\n');
+  db.notifications.push({ id:uid(), refId:'digest-'+t, type:'info', icon:'📊', title, msg: bodyLines.join('  ·  '), time: now(), read:false });
+  if (db.notifications.length > 200) db.notifications = db.notifications.slice(-150);
+  s.lastDigestDate = t;
+  saveDB();
+  if (typeof renderNotifications === 'function') renderNotifications();
+  showBrowserNotification(title, body);
+}
+
+function showBrowserNotification(title, body) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification(title, { body });
+    n.onclick = () => { window.focus(); n.close(); };
+  } catch (e) { /* some mobile browsers only allow this via a service worker — safe to ignore, the in-app notification still shows it */ }
+}
 
 /* ══ HR ══ */
 let empEditId = null;
@@ -11655,8 +12327,11 @@ function loadSettingsValues() {
   setVal('st-date-format', s.dateFormat||'DD/MM/YYYY');
   setVal('st-low-stock', s.lowStockThreshold); setVal('st-overdue-days', s.overduedays||7);
   setVal('st-backup-days', s.backupDays||7);
+  setVal('st-digest-hour', s.digestHour!==undefined?s.digestHour:18);
   setChk('notif-low-stock', s.notifications?.lowStock); setChk('notif-overdue', s.notifications?.overdue);
   setChk('notif-backup', s.notifications?.backup); setChk('notif-payroll', s.notifications?.payroll);
+  setChk('notif-recurring', s.notifications?.recurringDue); setChk('notif-digest', s.notifications?.dailyDigest);
+  updateBrowserNotifStatus();
   setVal('st-classification', s.reportSettings?.classification);
   setChk('st-show-classification', s.reportSettings?.showClassification);
   setVal('st-rpt-prefix', s.reportSettings?.rptPrefix);
@@ -11908,8 +12583,32 @@ function saveNotifSettings() {
   s.lowStockThreshold = parseInt(document.getElementById('st-low-stock').value)||10;
   s.overduedays = parseInt(document.getElementById('st-overdue-days').value)||7;
   s.backupDays = parseInt(document.getElementById('st-backup-days').value)||7;
-  s.notifications = { lowStock: document.getElementById('notif-low-stock').checked, overdue: document.getElementById('notif-overdue').checked, backup: document.getElementById('notif-backup').checked, payroll: document.getElementById('notif-payroll').checked };
+  s.digestHour = parseInt(document.getElementById('st-digest-hour').value);
+  if (isNaN(s.digestHour)) s.digestHour = 18;
+  s.notifications = { lowStock: document.getElementById('notif-low-stock').checked, overdue: document.getElementById('notif-overdue').checked, backup: document.getElementById('notif-backup').checked, payroll: document.getElementById('notif-payroll').checked, recurringDue: document.getElementById('notif-recurring').checked, dailyDigest: document.getElementById('notif-digest').checked };
   saveDB(); toast('Notification settings saved','success');
+  checkRecurringDue();
+}
+
+// Asks the browser for permission to show pop-up notifications outside the tab (e.g. the Daily
+// Digest). Must be triggered by a real tap — browsers block silent/automatic permission requests.
+function requestNotifPermission() {
+  const status = document.getElementById('browser-notif-status');
+  if (!('Notification' in window)) { if (status) status.textContent = 'Not supported on this browser/device.'; return; }
+  if (Notification.permission === 'granted') { if (status) status.textContent = '✅ Enabled — you\'ll get pop-up notifications.'; toast('Already enabled','info'); return; }
+  if (Notification.permission === 'denied') { if (status) status.textContent = '🚫 Blocked — enable notifications for this site in your browser/phone settings.'; return; }
+  Notification.requestPermission().then(perm => {
+    if (status) status.textContent = perm === 'granted' ? '✅ Enabled — you\'ll get pop-up notifications.' : 'Not enabled — you can still see everything in the in-app Notifications bell.';
+    toast(perm==='granted' ? 'Browser notifications enabled' : 'Permission not granted', perm==='granted'?'success':'info');
+  });
+}
+function updateBrowserNotifStatus() {
+  const status = document.getElementById('browser-notif-status');
+  if (!status) return;
+  if (!('Notification' in window)) { status.textContent = 'Not supported on this browser/device.'; return; }
+  if (Notification.permission === 'granted') status.textContent = '✅ Enabled — you\'ll get pop-up notifications.';
+  else if (Notification.permission === 'denied') status.textContent = '🚫 Blocked — enable notifications for this site in your browser/phone settings.';
+  else status.textContent = 'Not enabled yet.';
 }
 
 function saveReportSettings() {
@@ -12560,11 +13259,11 @@ function setRecTab(t, el) {
 
 function renderRecords() {
   const s = document.getElementById('rec-search')?.value?.toLowerCase()||'';
-  const cat = document.getElementById('rec-cat-filter')?.value||'';
+  const cat = document.getElementById('rtx-cat-filter')?.value||'';
   let items = db.records.filter(r => r.status!=='archived' && (!s || r.name.toLowerCase().includes(s) || (r.sku||'').toLowerCase().includes(s)) && (!cat || r.category===cat));
   const ss = sortState.records;
   if (ss) items = [...items].sort((a,b)=>{ const v=a[ss.key]??''; const w=b[ss.key]??''; return ss.asc?(v>w?1:v<w?-1:0):(v<w?1:v>w?-1:0); });
-  const catSel = document.getElementById('rec-cat-filter');
+  const catSel = document.getElementById('rtx-cat-filter');
   if (catSel) {
     const cats = [...new Set(db.records.map(r=>r.category).filter(Boolean))];
     catSel.innerHTML = '<option value="">All Categories</option>' + cats.map(c=>`<option ${cat===c?'selected':''}>${esc(c)}</option>`).join('');
@@ -12606,7 +13305,7 @@ function openRecordModal(id=null) {
   document.getElementById('record-modal-title').textContent = id ? 'Edit Product' : 'Add Product';
   document.getElementById('rec-name').value = r?.name||'';
   document.getElementById('rec-sku').value = r?.sku||'';
-  document.getElementById('rec-category').value = r?.category||'';
+  document.getElementById('rtx-category').value = r?.category||'';
   document.getElementById('rec-unit').value = r?.unit||'pcs';
   document.getElementById('rec-barcode').value = r?.barcode||'';
   // Cost is only manually editable here before this product has ever actually been produced.
@@ -12635,7 +13334,7 @@ function openRecordModal(id=null) {
   document.getElementById('rec-desc').value = r?.description||'';
   setRecTab('basic', document.querySelector('#record-modal-overlay .tabs .tab'));
   openModal('record-modal-overlay');
-  attachSuggest('rec-category', db.settings.categories.records||[]);
+  attachSuggest('rtx-category', db.settings.categories.records||[]);
   attachSuggest('rec-unit', ['pcs','kg','g','ltr','ml','box','dozen','set','inch','cm','m','hr','day']);
   setTimeout(()=>document.getElementById('rec-name')?.focus(), 50);
 }
@@ -12652,7 +13351,7 @@ function saveRecord() {
   const costLocked = recEditId && productHasProductionHistory(recEditId);
   const data = {
     name, sku: document.getElementById('rec-sku').value.trim() || 'SKU-'+Date.now().toString(36).toUpperCase(),
-    category: document.getElementById('rec-category').value.trim(),
+    category: document.getElementById('rtx-category').value.trim(),
     unit: document.getElementById('rec-unit').value.trim()||'pcs',
     barcode: document.getElementById('rec-barcode').value.trim(),
     trackExpiry: document.getElementById('rec-track-expiry').checked,
@@ -14342,6 +15041,9 @@ function loadTaxSettings() {
   sv('st-tds-contractorNoVAT', +((tr.contractorNoVAT ?? 0.15)*100).toFixed(2));
   sv('st-tds-consultancy', +((tr.consultancy ?? 0.15)*100).toFixed(2));
   sv('st-corp-tax-rate', +((am.corporateTaxRate ?? 0.25)*100).toFixed(2));
+  const chk = document.getElementById('notif-filing'); if (chk) chk.checked = s.notifications?.filingReminder !== false;
+  sv('st-filing-days', s.filingReminderDays!==undefined ? s.filingReminderDays : 5);
+  renderFilingRemindersList();
   renderComplianceToggleList();
 }
 
@@ -14373,11 +15075,14 @@ function saveTaxSettings() {
   s.acctMappings.tdsRates.contractorNoVAT = pct('st-tds-contractorNoVAT', 0.15);
   s.acctMappings.tdsRates.consultancy = pct('st-tds-consultancy', 0.15);
   s.acctMappings.corporateTaxRate = pct('st-corp-tax-rate', 0.25);
+  if (!s.notifications) s.notifications = {};
+  s.notifications.filingReminder = document.getElementById('notif-filing')?.checked !== false;
+  s.filingReminderDays = parseInt(document.getElementById('st-filing-days')?.value) || 5;
   if (!s.complianceReports) s.complianceReports = {};
   document.querySelectorAll('#compliance-toggle-list input[data-compliance-type]').forEach(chk => {
     s.complianceReports[chk.dataset.complianceType] = chk.checked;
   });
-  saveDB(); toast('Tax settings saved','success');
+  saveDB(); checkFilingReminders(); toast('Tax settings saved','success');
 }
 
 // VAT/Tax reports have moved to Reports → Tax & VAT Reports category.

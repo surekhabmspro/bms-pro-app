@@ -2920,6 +2920,7 @@ let wizardData = {};
 let wizardStep = 1;
 let wizardMode = 'local'; // 'local' = first-time device setup (original behavior)
                           // 'newCompany' = admin creating an additional company from within the app
+let wizardTemplateOptions = []; // companies this admin could copy structure from (newCompany mode only)
 let currentQRPayment = {};
 let currentArchiveTab = 'customers';
 let currentHRTab = 'employees';
@@ -5930,13 +5931,30 @@ async function loadCompanySwitcher() {
       return;
     }
     const canDelete = out.companies.length > 1;
+
+    // Only worth fetching a side-by-side financial snapshot when there's actually more than one
+    // company to compare — read-only, purely for display, never affects any figure.
+    let summaryById = {};
+    if (out.companies.length > 1) {
+      try {
+        const sResp = await fetch(SYNC.apiBase + '/api/companies/mine/summary', { headers: { Authorization: 'Bearer ' + SYNC.token } });
+        const sOut = await sResp.json();
+        if (sResp.ok && Array.isArray(sOut.companies)) {
+          sOut.companies.forEach(c => { summaryById[c.id] = c; });
+        }
+      } catch (e) { /* snapshot is a nice-to-have — list still works fine without it */ }
+    }
+
     const rows = out.companies.map(c => {
       const isCurrent = c.id === SYNC.companyId;
+      const s = summaryById[c.id];
+      const snapshot = s ? `<div style="font-size:12px;color:var(--text-dim);margin-top:2px">💵 ${fmt(s.cash)} &nbsp; 📥 ${fmt(s.receivablesDue)} due in &nbsp; 📤 ${fmt(s.payablesDue)} due out</div>` : '';
       return `
         <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--elevated);border-radius:8px;margin-bottom:6px">
           <div style="flex:1;min-width:0">
             <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name)}</div>
             ${isCurrent ? `<div style="font-size:12px;color:var(--accent)">● Currently signed in here</div>` : ''}
+            ${snapshot}
           </div>
           ${!isCurrent ? `<button class="btn btn-secondary btn-sm" onclick="switchCompany('${esc(c.id)}','${esc(c.name)}')">Switch</button>` : ''}
           <button class="btn btn-secondary btn-sm" onclick="renameCompany('${esc(c.id)}','${esc(c.name)}')" title="Rename">✏️</button>
@@ -6347,9 +6365,15 @@ function initWizard(mode) {
 // Entry point for "+ New Company" (admin, already inside the app). Creating
 // a company never touches this device's current session or cached data —
 // it only registers a brand-new, completely empty company on the server.
-function startNewCompanyWizard() {
+async function startNewCompanyWizard() {
   if (session?.role !== 'admin') { toast('Admin only', 'error'); return; }
   if (!syncConfigured() || !SYNC.token) { toast('Connect to your server first (Sync Setup) before creating a company.', 'error'); return; }
+  wizardTemplateOptions = [];
+  try {
+    const resp = await fetch(SYNC.apiBase + '/api/companies/mine', { headers: { Authorization: 'Bearer ' + SYNC.token } });
+    const out = await resp.json();
+    if (resp.ok && Array.isArray(out.companies)) wizardTemplateOptions = out.companies;
+  } catch (e) { /* template picker just won't offer options — blank setup still works fine */ }
   initWizard('newCompany');
 }
 
@@ -6373,6 +6397,15 @@ function renderWizardStep() {
   const body = document.getElementById('wiz-body');
   if (wizardStep === 1) {
     body.innerHTML = `
+      ${wizardMode === 'newCompany' && wizardTemplateOptions.length ? `
+      <div class="form-group" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:14px">
+        <label class="form-label">Start From</label>
+        <select class="form-control" id="w-template" onchange="wizardData.templateId=this.value">
+          <option value="">Blank — empty Chart of Accounts (default)</option>
+          ${wizardTemplateOptions.map(c=>`<option value="${esc(c.id)}" ${wizardData.templateId===c.id?'selected':''}>Copy structure from "${esc(c.name)}"</option>`).join('')}
+        </select>
+        <div class="form-hint">Only copies settings/Chart of Accounts (tax rates, account categories, etc.) — never any balances, transactions, or records. Those always start at zero.</div>
+      </div>` : ''}
       <div class="form-group"><label class="form-label">Organization / Business Name *</label><input class="form-control" id="w-orgname" placeholder="My Business" value="${esc(wizardData.orgName||'')}"></div>
       <div class="form-group"><label class="form-label">Tagline / Type</label><input class="form-control" id="w-orgtag" placeholder="e.g. Retail Store, Clinic, Military Unit" value="${esc(wizardData.orgTag||'')}"></div>
       <div class="form-group"><label class="form-label">Logo Initial (1-2 characters)</label><input class="form-control" id="w-logo" maxlength="2" placeholder="B" value="${esc(wizardData.logoInit||'')}" style="width:80px" oninput="updateWizLogo()"></div>
@@ -6516,10 +6549,32 @@ async function finishWizard() {
     // this NEVER touches the global `db` variable, so the admin's current
     // company session and data on this device are untouched either way.
     const freshDb = defaultDB();
+
+    if (wizardData.templateId) {
+      // Copy ONLY structure (Chart of Accounts, tax rates, account mappings, etc.) from an
+      // existing company — never balances, transactions, employees, inventory, or sales. Those
+      // stay exactly as defaultDB() already set them: empty and zeroed.
+      try {
+        const tResp = await fetch(SYNC.apiBase + '/api/companies/' + wizardData.templateId + '/template', {
+          headers: { Authorization: 'Bearer ' + SYNC.token }
+        });
+        const tOut = await tResp.json();
+        if (tResp.ok && tOut.chartOfAccounts) {
+          freshDb.chartOfAccounts = tOut.chartOfAccounts;
+          freshDb.settings = { ...freshDb.settings, ...tOut.settings };
+        } else {
+          toast('Could not load that template — continuing with a blank Chart of Accounts instead.', 'warning');
+        }
+      } catch (e) {
+        toast('Could not reach server for the template — continuing with a blank Chart of Accounts instead.', 'warning');
+      }
+    }
+
     freshDb.users = [admin];
     freshDb.settings.orgName = wizardData.orgName;
     freshDb.settings.orgTag = wizardData.orgTag || 'Business Management System';
     freshDb.settings.logoInit = wizardData.logoInit;
+    freshDb.settings.logoData = '';
     freshDb.settings.phone = wizardData.phone;
     freshDb.settings.email = wizardData.email;
     freshDb.settings.address = wizardData.address;
@@ -6527,6 +6582,12 @@ async function finishWizard() {
     freshDb.settings.currencyCode = wizardData.currencyCode;
     freshDb.settings.dateFormat = wizardData.dateFormat;
     freshDb.settings.accentColor = wizardData.accentColor || '#6366F1';
+    freshDb.settings.accountingPIN = '';
+    freshDb.settings.accountingPINEnabled = false;
+    freshDb.settings.lastBackupDate = null;
+    freshDb.settings.panNumber = '';
+    freshDb.settings.vatNumber = '';
+    freshDb.settings.website = '';
 
     try {
       const resp = await fetch(SYNC.apiBase + '/api/companies', {

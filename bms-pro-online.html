@@ -165,10 +165,10 @@ a{color:var(--accent);text-decoration:none}
 .notif-badge{position:absolute;top:4px;right:4px;width:16px;height:16px;background:var(--danger);color:#fff;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
 /* ══ DROPDOWN ══ */
 .dropdown{position:relative}
-.dropdown-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);min-width:180px;z-index:999;display:none;overflow:hidden}
+.dropdown-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);min-width:180px;max-width:calc(100vw - 24px);box-sizing:border-box;z-index:999;display:none;overflow:hidden}
 .dropdown-menu.show{display:block;animation:dropIn .15s ease}
 @keyframes dropIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-.dropdown-item{padding:9px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:17px;color:var(--text);transition:background var(--transition)}
+.dropdown-item{padding:9px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:17px;color:var(--text);transition:background var(--transition);overflow-wrap:anywhere}
 .dropdown-item:hover{background:var(--elevated)}
 .dropdown-item.danger{color:var(--danger)}
 .dropdown-divider{height:1px;background:var(--border);margin:4px 0}
@@ -338,8 +338,8 @@ textarea.form-control{resize:vertical;min-height:80px}
 .modal-lg{max-width:780px}
 .modal-sm{max-width:380px}
 @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
-.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.modal-title{font-weight:700;font-size:20px;letter-spacing:-0.01em;font-family:var(--font-display)}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:10px}
+.modal-title{font-weight:700;font-size:20px;letter-spacing:-0.01em;font-family:var(--font-display);min-width:0;overflow-wrap:anywhere}
 .modal-close{width:30px;height:30px;border-radius:6px;background:none;color:var(--text-muted);font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background var(--transition)}
 .modal-close:hover{background:var(--elevated);color:var(--text)}
 .modal-body{padding:20px;overflow-y:auto;flex:1}
@@ -6372,8 +6372,8 @@ function dismissICTBanner() { document.getElementById('ict-banner').style.displa
 function openIncomingTransfers() {
   const body = document.getElementById('ict-incoming-body');
   body.innerHTML = _incomingTransfers.length ? _incomingTransfers.map(t => `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--elevated);border-radius:8px;margin-bottom:8px">
-      <div style="flex:1">
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:10px;background:var(--elevated);border-radius:8px;margin-bottom:8px">
+      <div style="flex:1;min-width:160px;overflow-wrap:anywhere">
         <div style="font-weight:600">From ${esc(t.from_company_name)} — ${fmt(t.amount)}</div>
         <div style="font-size:13px;color:var(--text-dim)">${fmtDate(t.currency_date)} · ${esc(t.description||'No description')} · Ref: ${esc(t.reference)}</div>
       </div>
@@ -6709,8 +6709,8 @@ function renderFilingRemindersList() {
   if (!list) return;
   if (!db.filingReminders.length) { list.innerHTML = '<div class="form-hint">No custom reminders yet.</div>'; return; }
   list.innerHTML = db.filingReminders.map(r => `
-    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--elevated);border-radius:7px;margin-bottom:5px">
-      <span style="flex:1;font-size:16px">${esc(r.name)} — day ${r.dayOfMonth} of the month</span>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:7px 10px;background:var(--elevated);border-radius:7px;margin-bottom:5px">
+      <span style="flex:1;min-width:120px;font-size:16px;overflow-wrap:anywhere">${esc(r.name)} — day ${r.dayOfMonth} of the month</span>
       <label style="display:flex;align-items:center;gap:4px;font-size:14px"><input type="checkbox" ${r.active!==false?'checked':''} onchange="toggleFilingReminderActive('${r.id}')"> Active</label>
       <button class="btn btn-xs btn-danger" onclick="deleteFilingReminder('${r.id}')">✕</button>
     </div>`).join('');

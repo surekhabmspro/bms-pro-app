@@ -678,6 +678,20 @@ textarea.form-control{resize:vertical;min-height:80px}
   /* Bigger tap targets for accent color swatches/picker on small screens */
   .color-swatch{width:34px;height:34px}
   #custom-accent-wheel{width:48px;height:40px}
+  /* Dropdown/notification panels: these are positioned with right:0 relative to their own
+     small icon-button wrapper, not to the topbar. When that wrapper isn't the rightmost
+     element on screen (e.g. notif bell, quick-add), a wide panel extends left, can go past
+     x=0, and gets clipped by html/body's overflow:hidden. Pin them to the viewport instead. */
+  #notif-panel,.dropdown-menu{
+    position:fixed!important;
+    left:12px!important;
+    right:12px!important;
+    top:calc(var(--topbar-h) + 6px)!important;
+    width:auto!important;
+    max-width:none!important;
+    max-height:calc(100vh - var(--topbar-h) - 20px);
+    overflow-y:auto;
+  }
 }
 /* ══ PRINT ══ */
 @media print{
@@ -1856,7 +1870,7 @@ textarea.form-control{resize:vertical;min-height:80px}
               <div class="card" style="margin-top:12px;margin-bottom:16px">
                 <div class="card-header"><div class="card-title">📋 Compliance Report Templates</div></div>
                 <div class="form-hint" style="margin-bottom:8px">Turn off any templates that don't apply to your business — they're hidden from Reports ▸ Compliance & Regulatory Reports but nothing is deleted.</div>
-                <div id="compliance-toggle-list" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+                <div id="compliance-toggle-list" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px"></div>
               </div>
               <div class="card" style="margin-top:12px;margin-bottom:16px">
                 <div class="card-header"><div class="card-title">📊 VAT Reports</div></div>
@@ -15297,8 +15311,8 @@ function renderComplianceToggleList() {
   const cfg = db.settings.complianceReports || {};
   const types = REPORT_CATEGORIES.find(c=>c.id==='tax').types;
   list.innerHTML = types.map(t=>`
-    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--elevated);border-radius:7px;cursor:pointer;font-size:17px">
-      <input type="checkbox" data-compliance-type="${esc(t.v)}" ${cfg[t.v]===false?'':'checked'}>
+    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--elevated);border-radius:7px;cursor:pointer;font-size:17px;min-width:0;overflow-wrap:anywhere">
+      <input type="checkbox" data-compliance-type="${esc(t.v)}" style="flex-shrink:0" ${cfg[t.v]===false?'':'checked'}>
       ${esc(t.label)}
     </label>`).join('');
 }

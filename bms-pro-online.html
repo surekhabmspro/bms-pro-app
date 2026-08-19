@@ -1297,10 +1297,10 @@ textarea.form-control{resize:vertical;min-height:80px}
             <div class="dropdown-menu" id="acct-tools-menu">
               <div class="dropdown-item" onclick="exportCSV('accounting');closeDropdowns()">📤 Export CSV</div>
               <div class="dropdown-item" onclick="openRecurring();closeDropdowns()">🔁 Recurring Transactions</div>
-              <div class="dropdown-item" onclick="openInterCompanyTransfer();closeDropdowns()">🏢➡️ Inter-Company Transfer</div>
+              ${(session.role==='admin'||hasPermission('Edit Accounting'))?`<div class="dropdown-item" onclick="openInterCompanyTransfer();closeDropdowns()">🏢➡️ Inter-Company Transfer</div>`:''}
               <div class="dropdown-item" onclick="openBankRecon();closeDropdowns()">🏦 Bank Reconciliation</div>
               <div class="dropdown-item" onclick="openMyEquipment();closeDropdowns()">🏗️ My Equipment</div>
-              <div class="dropdown-item" onclick="openOwnerTxn();closeDropdowns()">🤝 Owner/Partner Transaction</div>
+              ${(session.role==='admin'||hasPermission('Edit Accounting'))?`<div class="dropdown-item" onclick="openOwnerTxn();closeDropdowns()">🤝 Owner/Partner Transaction</div>`:''}
               <div class="dropdown-item" onclick="openPDCTracker();closeDropdowns()">📝 Post-Dated Cheques</div>
             </div>
           </div>
@@ -1973,6 +1973,12 @@ textarea.form-control{resize:vertical;min-height:80px}
             <label class="form-label">Expiry Date</label>
             <input class="form-control" id="rec-expiry-date" onfocus="openCalendar('rec-expiry-date','standard')">
           </div>
+        </div>
+        <div class="form-group" style="margin-top:8px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="rec-vat-exempt">
+            <span>VAT-Exempt Item<span class="help-tip" data-tip="Turn on if this specific item is exempt or zero-rated under your local VAT law (e.g. certain unprocessed/staple goods). When on, VAT is never calculated on this item at checkout, regardless of your normal VAT rate. Leave off for standard-rated items — most processed/manufactured goods are standard-rated.">?</span></span>
+          </label>
         </div>
       </div>
     </div>
@@ -2765,6 +2771,66 @@ textarea.form-control{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- Sync Conflict Alert Modal -->
+<!-- Deposit/Payment Confirm Modal — replaces prompt()-based dialogs for SSF/TDS/VAT deposits
+     and payroll payments. prompt() is unreliable inside this app's installed PWA (the same
+     reason stock-adjustment dialogs were already moved off it) — and these four actions are
+     the most compliance-critical buttons in the app, so they shouldn't be the ones left behind. -->
+<!-- Text/Password Prompt Modal — replaces the remaining prompt()-based dialogs. For password
+     input this is a real improvement over prompt(), not just a PWA-reliability fix: native
+     prompt() shows the typed password in plain text with no masking. -->
+<div class="modal-overlay" id="text-prompt-modal-overlay" onclick="closeModalOnOverlay(event,'text-prompt-modal-overlay')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="text-prompt-title">Enter Value</div><button class="modal-close" onclick="closeModal('text-prompt-modal-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div id="text-prompt-message" style="font-size:17px;margin-bottom:12px;white-space:pre-line"></div>
+      <div class="form-group">
+        <input class="form-control" id="text-prompt-input" type="text" onkeydown="if(event.key==='Enter')confirmTextPromptModal()">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('text-prompt-modal-overlay')">Cancel</button>
+      <button class="btn btn-primary" id="text-prompt-confirm-btn" onclick="confirmTextPromptModal()">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="deposit-confirm-modal-overlay" onclick="closeModalOnOverlay(event,'deposit-confirm-modal-overlay')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="deposit-confirm-title">Confirm</div><button class="modal-close" onclick="closeModal('deposit-confirm-modal-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div id="deposit-confirm-message" style="font-size:17px;margin-bottom:12px;white-space:pre-line"></div>
+      <div class="form-group" id="deposit-confirm-amount-group" style="display:none">
+        <label class="form-label">Amount Actually Deposited</label>
+        <input class="form-control" id="deposit-confirm-amount" type="number" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Paid Via</label>
+        <select class="form-control" id="deposit-confirm-method">
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="Cash">Cash</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('deposit-confirm-modal-overlay')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmDepositModal()">✅ Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sync-conflict-modal-overlay" onclick="closeModalOnOverlay(event,'sync-conflict-modal-overlay')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" style="color:var(--danger)">⚠️ Sync Conflict</div><button class="modal-close" onclick="closeModal('sync-conflict-modal-overlay')">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:17px;margin-bottom:10px">Another device (or company user) saved data to the server before this device could send its own changes. This app can't merge two devices' offline edits automatically, so <b>this device's unsynced changes were not sent</b> — but they were not deleted either.</div>
+      <div style="font-size:17px;margin-bottom:10px">A backup of exactly what was on this device is saved below. Please review it and manually re-enter anything that's missing now.</div>
+      <div id="conflict-backup-section-alert"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('sync-conflict-modal-overlay')">Close</button></div>
+  </div>
+</div>
+
 <!-- Production Order Modal -->
 <div class="modal-overlay" id="prodorder-modal-overlay" onclick="closeModalOnOverlay(event,'prodorder-modal-overlay')">
   <div class="modal">
@@ -3038,7 +3104,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <div class="modal-overlay" id="confirm-overlay">
   <div class="modal modal-sm">
     <div class="modal-header"><div class="modal-title" id="confirm-title">Confirm</div></div>
-    <div class="modal-body"><div id="confirm-msg"></div><div id="confirm-input-wrap" style="margin-top:12px" class="hidden"><input class="form-control" id="confirm-input" placeholder="Type to confirm"></div></div>
+    <div class="modal-body"><div id="confirm-msg" style="white-space:pre-line"></div><div id="confirm-input-wrap" style="margin-top:12px" class="hidden"><input class="form-control" id="confirm-input" placeholder="Type to confirm"></div></div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('confirm-overlay')">Cancel</button><button class="btn btn-danger" id="confirm-ok-btn" onclick="confirmOK()">Confirm</button></div>
   </div>
 </div>
@@ -3138,6 +3204,7 @@ function defaultDB() {
     secondary: [],      // suppliers
     accounting: [],
     chartOfAccounts: [],   // NEW: double-entry ledger accounts — see seedChartOfAccounts()
+    ledgerPostingFailures: [], // NEW: entries postJournalEntry refused to post (didn't balance) — see Integrity Check
     journalEntries: [],    // NEW: double-entry journal entries (Dr/Cr lines) — auto-generated behind the scenes
     correctionNotes: [],   // NEW: Credit Notes (sales corrections) & Debit Notes (purchase corrections)
     bankReconciliations: [], // NEW: saved monthly bank reconciliations
@@ -3192,8 +3259,8 @@ function defaultDB() {
       acctMappings: {
         paymentMethodToAccount: { 'Cash':'1010', 'Card':'1020', 'Bank Transfer':'1020', 'Credit':null },
         qrCodeToAccount: {},           // { qrCodeId: accountCode } — set per QR code in POS QR settings
-        expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Contractor':'5070','Professional Fees':'5100','Other':'5100' },
-        incomeCategoryToAccount: { 'Sales':'4010','Service':'4010','Interest':'4090','Rent Income':'4090','Other Income':'4090' },
+        expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Contractor':'5070','Professional Fees':'5100','Inter-Company Transfer':'1090','Other':'5100' },
+        incomeCategoryToAccount: { 'Sales':'4010','Service':'4010','Interest':'4090','Rent Income':'4090','Inter-Company Transfer':'1090','Other Income':'4090' },
         salesAccountRetail: '4010', salesAccountWholesale: '4020',
         arAccount: '1030', apAccount: '2010',
         vatOutputAccount: '2020', vatInputAccount: '1050',
@@ -3321,6 +3388,16 @@ function migrateDB() {
       if (db.settings.lastDigestDate===undefined) db.settings.lastDigestDate = null;
       if (db.settings.filingReminderDays===undefined) db.settings.filingReminderDays = 5;
       if (db.settings.categories?.accounting && !db.settings.categories.accounting.includes('Inter-Company Transfer')) db.settings.categories.accounting.push('Inter-Company Transfer');
+      // Fix: Inter-Company Transfer used to fall through to Other Expense/Other Income (a P&L
+      // misclassification — see accounting audit) because no mapping existed for it. Backfill the
+      // correct balance-sheet mapping for installs that already have acctMappings saved, since the
+      // "acctMappings missing entirely" branch below only runs for brand-new installs.
+      if (db.settings.acctMappings) {
+        if (!db.settings.acctMappings.expenseCategoryToAccount) db.settings.acctMappings.expenseCategoryToAccount = {};
+        if (!db.settings.acctMappings.incomeCategoryToAccount) db.settings.acctMappings.incomeCategoryToAccount = {};
+        if (!db.settings.acctMappings.expenseCategoryToAccount['Inter-Company Transfer']) db.settings.acctMappings.expenseCategoryToAccount['Inter-Company Transfer'] = '1090';
+        if (!db.settings.acctMappings.incomeCategoryToAccount['Inter-Company Transfer']) db.settings.acctMappings.incomeCategoryToAccount['Inter-Company Transfer'] = '1090';
+      }
       if (!db.payrollHistory) db.payrollHistory = [];
       if (!db.secondary) db.secondary = [];
       if (!db.creditSales) db.creditSales = [];
@@ -3330,6 +3407,7 @@ function migrateDB() {
       if (!db.boms) db.boms = [];
       if (!db.productionOrders) db.productionOrders = [];
       if (!db.productionBatches) db.productionBatches = [];
+      if (!db.ledgerPostingFailures) db.ledgerPostingFailures = [];
       if (!db.purchaseOrders) db.purchaseOrders = [];
       if (!db.salesOrders) db.salesOrders = [];
       if (!db.budgets) db.budgets = {};
@@ -3357,8 +3435,8 @@ function migrateDB() {
         db.settings.acctMappings = {
           paymentMethodToAccount: { 'Cash':'1010', 'Card':'1020', 'Bank Transfer':'1020', 'Credit':null },
           qrCodeToAccount: {},
-          expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Contractor':'5070','Professional Fees':'5100','Other':'5100' },
-          incomeCategoryToAccount: { 'Sales':'4010','Service':'4010','Interest':'4090','Rent Income':'4090','Other Income':'4090' },
+          expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Contractor':'5070','Professional Fees':'5100','Inter-Company Transfer':'1090','Other':'5100' },
+          incomeCategoryToAccount: { 'Sales':'4010','Service':'4010','Interest':'4090','Rent Income':'4090','Inter-Company Transfer':'1090','Other Income':'4090' },
           salesAccountRetail: '4010', salesAccountWholesale: '4020',
           arAccount: '1030', apAccount: '2010',
           vatOutputAccount: '2020', vatInputAccount: '1050',
@@ -3478,6 +3556,7 @@ const DEFAULT_CHART_OF_ACCOUNTS = [
   { code:'1131', name:'Accumulated Depreciation – Furniture', type:'asset', normalBalance:'credit' },
   { code:'1140', name:'Computers & Office Equipment', type:'asset', normalBalance:'debit' },
   { code:'1141', name:'Accumulated Depreciation – Computers', type:'asset', normalBalance:'credit' },
+  { code:'1090', name:'Due from/to Affiliate Companies', type:'asset', normalBalance:'debit' },
   // ── Liabilities ──
   { code:'2010', name:'Accounts Payable (Supplier Dues)', type:'liability', normalBalance:'credit', isControlAccount:true },
   { code:'2020', name:'VAT Payable (Output VAT)', type:'liability', normalBalance:'credit' },
@@ -3626,14 +3705,25 @@ function runAccountingIntegrityCheck(asOf) {
     totalDebits: +rawDebit.toFixed(2), totalCredits: +rawCredit.toFixed(2), difference: +(rawDebit-rawCredit).toFixed(2),
     trialBalanceMatchesRawLedger: Math.abs(tb.totalDebit - rawDebit) < 0.01 && Math.abs(tb.totalCredit - rawCredit) < 0.01,
     totalAssets: bs.totalAssets, totalLiabilities: bs.totalLiabilities, totalEquity: bs.totalEquity, balanceSheetDiff: bsDiff,
-    clean: orphanLines.length===0 && duplicateGroups.length===0 && unbalancedEntries.length===0 && misclassifiedAccounts.length===0 && invalidNormalBalance.length===0 && Math.abs(rawDebit-rawCredit)<0.01 && Math.abs(bsDiff)<1,
-    orphanLines, duplicateGroups, unbalancedEntries, futureDatedEntries, misclassifiedAccounts, invalidNormalBalance, allAccountBalances
+    clean: orphanLines.length===0 && duplicateGroups.length===0 && unbalancedEntries.length===0 && misclassifiedAccounts.length===0 && invalidNormalBalance.length===0 && Math.abs(rawDebit-rawCredit)<0.01 && Math.abs(bsDiff)<1 && (db.ledgerPostingFailures||[]).length===0,
+    orphanLines, duplicateGroups, unbalancedEntries, futureDatedEntries, misclassifiedAccounts, invalidNormalBalance, allAccountBalances,
+    postingFailures: db.ledgerPostingFailures||[]
   };
 }
 
 // Correcting a duplicate: keep the earliest entry (the real one), void every later duplicate.
 // Voiding — not deleting — is deliberate: it keeps the mistaken entry fully visible in the audit
 // trail with a reason attached, and every report already excludes voided entries automatically.
+function dismissLedgerPostingFailure(id) {
+  if (session?.role !== 'admin') { toast('Only an Admin can dismiss this','error'); return; }
+  confirm('Dismiss this failed entry? Only do this once you have manually re-entered it (if needed) via Advanced Ledger.', () => {
+    db.ledgerPostingFailures = (db.ledgerPostingFailures||[]).filter(f=>f.id!==id);
+    saveDB();
+    toast('Dismissed','success');
+    generateReport();
+  });
+}
+
 function correctDuplicateGroup(refType, refId) {
   if (session?.role !== 'admin') { toast('Only an Admin can correct accounting entries','error'); return; }
   const entries = (db.journalEntries||[]).filter(j=>!j.isVoid && j.refType===refType && j.refId===refId)
@@ -3727,10 +3817,20 @@ function postJournalEntry({ date, voucherKind='Journal', refType, refId, referen
   const debitTotal = cleanLines.reduce((a,l)=>a+(+(l.debit||0)),0);
   const creditTotal = cleanLines.reduce((a,l)=>a+(+(l.credit||0)),0);
   if (!cleanLines.length || Math.abs(debitTotal - creditTotal) > 0.01) {
-    // Never post an unbalanced entry. Fails safely — the underlying screen (sale/payment/etc.)
-    // still saves normally; only the invisible ledger entry is skipped, and this is logged
-    // so it can be found and fixed without ever blocking your actual work.
+    // BUG FIXED: this used to only log to console.error and return — the underlying screen
+    // (sale/payment/etc.) would save successfully with no ledger entry ever created for it, and
+    // nothing told the actual user this happened. A console message nobody is watching is not a
+    // safety net. Now it's recorded to a recoverable, reviewable list AND surfaced immediately,
+    // so a bad entry can be found and fixed instead of silently vanishing from the books.
+    if (!db.ledgerPostingFailures) db.ledgerPostingFailures = [];
+    db.ledgerPostingFailures.push({
+      id: uid(), failedAt: now(), date: date||today(), voucherKind, refType, refId, reference: reference||'',
+      description: description||'', lines: cleanLines, debitTotal: +debitTotal.toFixed(2), creditTotal: +creditTotal.toFixed(2)
+    });
     console.error('Ledger: blocked unbalanced entry', description, cleanLines);
+    if (typeof toast === 'function') {
+      toast(`⚠️ A ledger entry failed to post and was NOT recorded in your books: "${description||refType}" (debits ${fmt(debitTotal)} ≠ credits ${fmt(creditTotal)}). See Accounting ▸ Integrity Check to review and fix it.`, 'error');
+    }
     return null;
   }
   const je = {
@@ -3758,17 +3858,17 @@ function voidJournalEntriesForRef(refType, refId, reason) {
 // Inventory asset to Cost of Goods Sold at the moment of sale — using the cost price already
 // stored on each product. This is what makes Gross Profit and Balance Sheet Inventory accurate.
 function postCOGSJournal(sale) {
-  let totalCost = 0;
+  let finishedGoodsCost = 0, tradingGoodsCost = 0;
   (sale.items||[]).forEach(item => {
     const rec = db.records.find(r=>r.id===item.id);
     const cost = (rec?.costPrice || 0) * (item.qty || 0);
-    totalCost += cost;
+    if (isManufacturedProduct(item.id)) finishedGoodsCost += cost; else tradingGoodsCost += cost;
   });
+  const totalCost = finishedGoodsCost + tradingGoodsCost;
   if (totalCost <= 0) return null; // no cost data available — skips silently rather than posting a wrong number
-  const lines = [
-    { accountCode: db.settings.acctMappings.cogsAccount, debit: totalCost, credit: 0 },
-    { accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: totalCost }
-  ];
+  const lines = [ { accountCode: db.settings.acctMappings.cogsAccount, debit: totalCost, credit: 0 } ];
+  if (finishedGoodsCost > 0) lines.push({ accountCode: '1041', debit: 0, credit: finishedGoodsCost });
+  if (tradingGoodsCost > 0) lines.push({ accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: tradingGoodsCost });
   return postJournalEntry({ date: sale.date, voucherKind:'Sales', refType:'cogs', refId: sale.id, reference: sale.receiptNumber, description: `Cost of Goods Sold — ${sale.receiptNumber}`, lines });
 }
 
@@ -3803,11 +3903,28 @@ function postDueSettlementJournal(credit, amount, method, paymentId) {
   return postJournalEntry({ date: today(), voucherKind:'Receipt', refType:'due-settlement', refId: paymentId || credit.id, reference: credit.receiptNumber, description: `Due Collection ${credit.receiptNumber} — ${credit.customerName}`, lines });
 }
 
+// A record is a manufactured Finished Good if something in Production has a BOM for it —
+// i.e. it's built from raw materials/other products, not simply bought in and resold as-is.
+// Distinguishes account 1041 (Finished Goods) from 1042 (Trading/Retail Goods) everywhere
+// inventory value moves for a "product" record — production output, COGS at sale, returns,
+// and manual stock adjustments should all land in whichever of the two actually applies.
+function isManufacturedProduct(recordId) {
+  return (db.boms||[]).some(b => b.productId === recordId);
+}
+function finishedGoodsAccountFor(recordId) {
+  return isManufacturedProduct(recordId) ? '1041' : db.settings.acctMappings.inventoryAccount;
+}
+
 function postSupplierInvoiceJournal(invoice) {
   const vatAmount = invoice.vatAmount || 0;
   const netAmount = +(invoice.amount - vatAmount).toFixed(2);
   // Perpetual inventory: goods bought sit as an ASSET until sold, not expensed at purchase time.
-  const lines = [ { accountCode: db.settings.acctMappings.inventoryAccount, debit: netAmount, credit: 0 } ];
+  // This flow (Purchase Order → Goods Received → Supplier Invoice) is raw-materials only — POs
+  // are built exclusively from db.rawMaterials — so this must hit the Raw Materials account
+  // (1040), not the Trading/Retail Goods account. Production consumption and stock adjustments
+  // already correctly debit/credit 1040 for raw materials; this was the one place purchases
+  // went to the wrong account, so 1040 only ever went down and never up.
+  const lines = [ { accountCode: '1040', debit: netAmount, credit: 0 } ];
   if (vatAmount > 0) lines.push({ accountCode: db.settings.acctMappings.vatInputAccount, debit: vatAmount, credit: 0 });
   lines.push({ accountCode: db.settings.acctMappings.apAccount, debit: 0, credit: invoice.amount });
   return postJournalEntry({ date: invoice.date, voucherKind:'Purchase', refType:'supplier-invoice', refId: invoice.id, reference: invoice.invoiceNumber, description: `Supplier Invoice ${invoice.invoiceNumber}`, lines });
@@ -4178,10 +4295,21 @@ function nextFiscalInvoiceNumber(series) {
   if (!db.settings.fiscalInvoiceCounters) db.settings.fiscalInvoiceCounters = {};
   if (!db.settings.fiscalInvoiceCounters[series]) db.settings.fiscalInvoiceCounters[series] = {};
   const c = db.settings.fiscalInvoiceCounters[series];
-  c[fyKey] = (c[fyKey]||0) + 1;
   const label = nepaliFiscalYearLabel(today());
   const suffix = series === 'sales' ? '' : ('-' + series);
-  return `${label}${suffix}-${String(c[fyKey]).padStart(5,'0')}`;
+  // Self-healing check: this counter is a plain in-memory increment with no server-side atomic
+  // locking, so it's possible (after restoring an older backup, or manually re-entering
+  // transactions following a sync conflict) for it to be behind what's actually been used. Rather
+  // than risk silently handing out a number that's already on a real invoice — a genuine
+  // compliance problem for fiscal-year sequential numbering — verify each candidate is actually
+  // free before using it.
+  let candidate, num;
+  do {
+    num = (c[fyKey]||0) + 1;
+    c[fyKey] = num;
+    candidate = `${label}${suffix}-${String(num).padStart(5,'0')}`;
+  } while (series === 'sales' && (db.sales||[]).some(s=>s.receiptNumber===candidate));
+  return candidate;
 }
 
 function shiftPeriod(from, to, mode) {
@@ -4397,6 +4525,10 @@ function updateCorrectPreview() {
 }
 
 function confirmCorrectInvoice() {
+  // The "Correct an Invoice" button is already hidden for roles without Accounting access —
+  // but that only hides the button. This checks the actual permission at the point of action,
+  // since anything reachable from the browser console bypasses a hidden button entirely.
+  if (!(session?.role==='admin' || hasPermission('Edit Accounting'))) { toast("You don't have permission to correct invoices or void sales",'error'); return; }
   const refType = window._correctRefType, refId = window._correctRefId;
   const original = window._correctOriginal || 0;
   const newAmt = parseFloat(document.getElementById('correct-new-amount').value);
@@ -4475,33 +4607,62 @@ function postCreditNoteJournal(cn, sale) {
   // was never touched — so Inventory stayed permanently understated and COGS permanently
   // overstated after every goods-return correction, even though the revenue side balanced fine.
   // Reverse the same proportion of the original sale's COGS back into Inventory here.
-  if (cn.reason === 'Customer returned goods') {
+  // FURTHER FIX: a fully voided sale (e.g. via Delete) hardcodes reason to 'Entry deleted', not
+  // 'Customer returned goods' — so this reversal never fired for a void either, silently leaving
+  // COGS/Inventory wrong forever even though Revenue was correctly zeroed out. A full reversal to
+  // zero must always reverse COGS too, whatever the stated reason.
+  const isFullVoid = cn.correctedAmount <= 0.004;
+  if (cn.reason === 'Customer returned goods' || isFullVoid) {
     const cogsEntry = (db.journalEntries||[]).find(j => !j.isVoid && j.refType==='cogs' && j.refId===sale.id);
     const originalCost = cogsEntry ? cogsEntry.lines.reduce((a,l)=>a+(l.debit||0),0) : 0;
     if (originalCost > 0 && original > 0) {
-      const costPortion = +(originalCost * (cn.adjustmentAmount/original)).toFixed(2);
-      if (costPortion > 0) {
-        postJournalEntry({ date: cn.date, voucherKind:'Journal', refType:'credit-note-cogs', refId: cn.id, reference: cn.noteNumber, description: `Inventory restored — Credit Note ${cn.noteNumber}`, lines: [
-          { accountCode: db.settings.acctMappings.inventoryAccount, debit: costPortion, credit: 0 },
-          { accountCode: db.settings.acctMappings.cogsAccount, debit: 0, credit: costPortion }
-        ]});
+      // Mirror whichever account(s) the original COGS entry actually credited (1041 Finished
+      // Goods and/or 1042 Trading Goods, split per item at sale time) — reversing always to the
+      // Trading Goods account regardless of what was sold would misclassify manufactured-product
+      // returns the same way the original sale-time bug did.
+      const ratio = cn.adjustmentAmount / original;
+      const reverseLines = [];
+      let totalReversed = 0;
+      (cogsEntry.lines||[]).forEach(l => {
+        if (l.credit > 0) {
+          const portion = +(l.credit * ratio).toFixed(2);
+          if (portion > 0) { reverseLines.push({ accountCode: l.accountCode, debit: portion, credit: 0 }); totalReversed += portion; }
+        }
+      });
+      if (totalReversed > 0) {
+        reverseLines.push({ accountCode: db.settings.acctMappings.cogsAccount, debit: 0, credit: totalReversed });
+        postJournalEntry({ date: cn.date, voucherKind:'Journal', refType:'credit-note-cogs', refId: cn.id, reference: cn.noteNumber, description: `Inventory restored — Credit Note ${cn.noteNumber}`, lines: reverseLines });
       }
+    }
+    // FURTHER FIX: restore the physical stock quantity too, not just the GL value — otherwise
+    // a voided sale's items stay permanently marked as sold, even though the sale never happened.
+    // Only exact for a full void (isFullVoid) where the whole original quantity comes back; a
+    // partial goods-return correction doesn't specify which line items/quantities were returned,
+    // so this doesn't attempt a partial restore in that case.
+    if (isFullVoid && Array.isArray(sale.items)) {
+      sale.items.forEach(item => {
+        const rec = db.records.find(r=>r.id===item.id);
+        if (rec) {
+          rec.stock = (rec.stock||0) + (item.qty||0);
+          db.stockHistory.push({ id:uid(), recordId:rec.id, recordName:rec.name, type:'void-restore', qty:item.qty||0, balanceAfter:rec.stock, date:cn.date, ref:cn.noteNumber, createdAt:now() });
+        }
+      });
     }
   }
   return je;
 }
 
 // Purchase correction: reduces what you owe the supplier and reduces whichever asset account
-// the original invoice actually posted to — Inventory for a normal raw-material/goods invoice,
-// or the specific Fixed Asset account for an equipment invoice recorded on credit. Getting this
-// wrong would silently corrupt whichever account it should have hit instead.
+// the original invoice actually posted to — Raw Materials (1040) for a normal invoice from the
+// PO/GRN flow, or the specific Fixed Asset account for an equipment invoice recorded on credit.
+// Getting this wrong would silently corrupt whichever account it should have hit instead.
 function postDebitNoteJournal(dn, invoice) {
   const original = invoice.amount || 0;
   const vatAmount = invoice.vatAmount || 0;
   const vatPortion = original > 0 ? +(dn.adjustmentAmount * (vatAmount/original)).toFixed(2) : 0;
   const netPortion = +(dn.adjustmentAmount - vatPortion).toFixed(2);
   const isFixedAsset = invoice.category === 'fixed-asset';
-  const assetAccountCode = isFixedAsset ? (db.fixedAssets.find(a=>a.id===invoice.assetId)?.assetCode || db.settings.acctMappings.inventoryAccount) : db.settings.acctMappings.inventoryAccount;
+  const assetAccountCode = isFixedAsset ? (db.fixedAssets.find(a=>a.id===invoice.assetId)?.assetCode || '1040') : '1040';
   const lines = [ { accountCode: db.settings.acctMappings.apAccount, debit: dn.adjustmentAmount, credit: 0 } ];
   lines.push({ accountCode: assetAccountCode, debit: 0, credit: netPortion });
   if (vatPortion > 0) lines.push({ accountCode: db.settings.acctMappings.vatInputAccount, debit: 0, credit: vatPortion });
@@ -5287,6 +5448,7 @@ function openOwnerTxn() {
 }
 
 function saveOwnerTxn() {
+  if (!(session?.role==='admin' || hasPermission('Edit Accounting'))) { toast("You don't have permission to record owner/partner transactions",'error'); return; }
   const type = document.getElementById('owner-txn-type').value;
   const amount = parseFloat(document.getElementById('owner-txn-amount').value) || 0;
   const date = document.getElementById('owner-txn-date').value || today();
@@ -5445,7 +5607,7 @@ function saveBudgetSettings() {
 }
 
 function postInterestCharge(customerName, amount) {
-  confirm(`Charge ${fmt(amount)} interest to ${customerName}? This adds to what they owe you — it's not cash received yet.`, ()=>{
+  confirm(`Charge ${fmt(amount)} interest to ${customerName}? This adds to what they owe you — it's not cash received yet.\n\nNote: this posts directly against your overall Accounts Receivable total. It will NOT appear as a line item in Receivables Aging (which only lists specific credit sale invoices), so when reconciling what a customer owes, remember to add any interest charged here on top of what Receivables Aging shows for them.`, ()=>{
     const a = { id:uid(), type:'income', category:'Interest', description:`Interest charged — ${customerName}`, amount, date:today(), reference:'', createdAt:now() };
     db.accounting.push(a);
     // Interest owed increases Accounts Receivable, not Cash — it hasn't been collected yet.
@@ -5462,14 +5624,22 @@ function postInterestCharge(customerName, amount) {
 function whatsappDueReminder(customerName, amount) {
   const cust = db.entities.find(e=>e.name===customerName);
   let phone = cust?.phone || '';
+  const sendReminder = (phoneNum) => {
+    const cleanPhone = phoneNum.replace(/[^0-9]/g,'');
+    const bizName = db.settings.orgName || 'us';
+    const msg = `Hello ${customerName}, this is a friendly reminder from ${bizName} that you have an outstanding balance of ${fmt(amount)}. Please let us know when we can expect payment. Thank you!`;
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
   if (!phone) {
-    phone = prompt(`No phone number on file for ${customerName}. Enter their number (with country code, e.g. 9779812345678):`, '977');
-    if (!phone) return;
+    openTextPromptModal({
+      title: 'Customer Phone Number',
+      message: `No phone number on file for ${customerName}. Enter their number (with country code, e.g. 9779812345678):`,
+      defaultValue: '977',
+      onConfirm: (val) => { if (val) sendReminder(val); }
+    });
+    return;
   }
-  phone = phone.replace(/[^0-9]/g,'');
-  const bizName = db.settings.orgName || 'us';
-  const msg = `Hello ${customerName}, this is a friendly reminder from ${bizName} that you have an outstanding balance of ${fmt(amount)}. Please let us know when we can expect payment. Thank you!`;
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  sendReminder(phone);
 }
 
 /* ── Post-Dated Cheque Tracker ── */
@@ -5512,17 +5682,26 @@ function markPDC(id, status) {
   const p = (db.postDatedCheques||[]).find(x=>x.id===id);
   if (!p) return;
   if (status === 'cleared') {
-    // Received cheque clearing usually settles a customer's due; issued cheque clearing usually
-    // settles what you owe a supplier — the two most common real-world cases.
-    const lines = p.type==='received'
-      ? [ { accountCode:'1020', debit:p.amount, credit:0 }, { accountCode: db.settings.acctMappings.arAccount, debit:0, credit:p.amount } ]
-      : [ { accountCode: db.settings.acctMappings.apAccount, debit:p.amount, credit:0 }, { accountCode:'1020', debit:0, credit:p.amount } ];
-    postJournalEntry({ date: today(), voucherKind:'Journal', refType:'pdc-cleared', refId: p.id, reference: p.chequeNumber, description:`Cheque ${p.chequeNumber} cleared — ${p.partyName}`, lines });
+    confirm(`Mark this cheque as cleared?\n\nThis will post ${fmt(p.amount)} directly against your overall ${p.type==='received'?'Accounts Receivable':'Accounts Payable'} total — it is NOT linked to a specific invoice for ${p.partyName}.\n\nIf this cheque was payment for a specific sale/purchase invoice already in the system, use Collect Payment / Record Payment against that invoice instead, so it settles correctly there. Only continue here if this cheque is not tied to a specific existing invoice (e.g. an advance, loan, or other settlement).`, () => doMarkPDCCleared(p));
+  } else {
+    p.status = status;
+    audit('Accounting', `PDC ${status}`, p.chequeNumber, `${p.partyName} — ${fmt(p.amount)}`);
+    saveDB();
+    toast(`Marked ${status}`,'success');
+    renderPDCList();
   }
-  p.status = status;
-  audit('Accounting', `PDC ${status}`, p.chequeNumber, `${p.partyName} — ${fmt(p.amount)}`);
+}
+function doMarkPDCCleared(p) {
+  // Received cheque clearing usually settles a customer's due; issued cheque clearing usually
+  // settles what you owe a supplier — the two most common real-world cases.
+  const lines = p.type==='received'
+    ? [ { accountCode:'1020', debit:p.amount, credit:0 }, { accountCode: db.settings.acctMappings.arAccount, debit:0, credit:p.amount } ]
+    : [ { accountCode: db.settings.acctMappings.apAccount, debit:p.amount, credit:0 }, { accountCode:'1020', debit:0, credit:p.amount } ];
+  postJournalEntry({ date: today(), voucherKind:'Journal', refType:'pdc-cleared', refId: p.id, reference: p.chequeNumber, description:`Cheque ${p.chequeNumber} cleared — ${p.partyName}`, lines });
+  p.status = 'cleared';
+  audit('Accounting', 'PDC cleared', p.chequeNumber, `${p.partyName} — ${fmt(p.amount)}`);
   saveDB();
-  toast(`Marked ${status}`,'success');
+  toast(`Marked cleared`,'success');
   renderPDCList();
 }
 
@@ -5540,6 +5719,18 @@ function hasAnyEditPermission() {
 }
 
 let _viewOnlyWarnedThisSession = false;
+// Same-device multi-tab protection: if this app is open in two tabs at once (e.g. POS in one,
+// Reports in another — an entirely normal thing to do), each tab holds its own independent copy
+// of `db` in memory. Without this, whichever tab called saveDB() last would silently overwrite
+// the other tab's changes in localStorage, with zero warning — a same-device version of the
+// exact problem the sync-conflict fix addresses for multi-device use.
+let _otherTabSavedSinceLoad = false;
+window.addEventListener('storage', e => {
+  if (typeof session !== 'undefined' && session && typeof scopedKey === 'function' && e.key === scopedKey(DB_KEY) && e.newValue) {
+    _otherTabSavedSinceLoad = true;
+  }
+});
+
 function saveDB() {
   // Hard stop: a role with zero "Edit ..." permissions anywhere (e.g. Viewer,
   // Partner) can never persist a change, no matter which screen or function
@@ -5554,6 +5745,20 @@ function saveDB() {
     }
     return;
   }
+  if (_otherTabSavedSinceLoad) {
+    // Another tab on this same device saved more recent data while this tab still had its own
+    // older copy in memory. Writing this tab's copy now would silently destroy that newer save.
+    // Back this tab's pending changes up first, load the fresher copy instead of overwriting it,
+    // and tell the user plainly that their last action here needs to be redone.
+    try { safeSet(scopedKey('bms_conflict_backup'), JSON.stringify({ savedAt: now(), db })); } catch(bkErr) {}
+    const fresher = safeGet(scopedKey(DB_KEY));
+    if (fresher) { try { db = JSON.parse(fresher); migrateDB(); } catch(parseErr) {} }
+    _otherTabSavedSinceLoad = false;
+    toast('⚠️ This app was open in another tab, which saved more recent changes. This tab was NOT saved — it has been updated to match the other tab instead. Please redo your last action here.', 'error');
+    if (typeof showSyncConflictAlert === 'function') showSyncConflictAlert();
+    if (typeof refreshViews === 'function') refreshViews();
+    return;
+  }
   const json = JSON.stringify(db);
   let ok = safeSet(scopedKey(DB_KEY), json);
   if (!ok) {
@@ -5563,11 +5768,21 @@ function saveDB() {
     // business record — and try again once. This alone recovers the
     // device in most real-world cases without the user having to do
     // anything, on top of the warning safeSet() already showed.
+    // BUG FIXED: deletedRecords (the Archive "Deleted" tab — your undo mechanism for accidental
+    // deletions) used to be trimmed here right alongside audit log and search history, as if it
+    // were equally disposable. It isn't: trimming it permanently destroys the ability to recover
+    // something a user deleted by mistake, not just old log noise. It's now only touched as a
+    // last resort, after the genuinely disposable logs, and only warns (rather than silently
+    // proceeding) since losing recovery entries is a real, user-visible consequence.
     let trimmed = false;
     if (db.auditLog && db.auditLog.length > 2000) { db.auditLog = db.auditLog.slice(-2000); trimmed = true; }
-    if (db.deletedRecords && db.deletedRecords.length > 200) { db.deletedRecords = db.deletedRecords.slice(-200); trimmed = true; }
     if (db.searchHistory && db.searchHistory.length > 50) { db.searchHistory = db.searchHistory.slice(-50); trimmed = true; }
-    if (trimmed) safeSet(scopedKey(DB_KEY), JSON.stringify(db));
+    if (trimmed) ok = safeSet(scopedKey(DB_KEY), JSON.stringify(db));
+    if (!ok && db.deletedRecords && db.deletedRecords.length > 200) {
+      db.deletedRecords = db.deletedRecords.slice(-200);
+      ok = safeSet(scopedKey(DB_KEY), JSON.stringify(db));
+      if (ok) toast('Storage was full — the oldest entries in your Archive "Deleted" recovery list were removed to make room. They can no longer be recovered.', 'error');
+    }
   }
   scheduleSync();
   clearTimeout(saveDB._refreshTimer);
@@ -5851,6 +6066,22 @@ async function syncPull(opts) {
         syncRefreshStatusDisplay();
         return { ok: false, reason: 'server-empty' };
       }
+      // BUG FIX: previously this unconditionally replaced `db` with the server's copy the
+      // moment newer server data showed up — even if THIS device had unsynced local changes
+      // (SYNC.pending). There is no per-record merge anywhere in this app, so that silently
+      // discarded whatever had been entered offline, with zero warning. That's the real risk
+      // in multi-device/multi-company use: two people (or one person on two devices) working
+      // offline at the same time. Fix: never destroy unsynced local data without first saving
+      // a recoverable backup and telling the person plainly what happened.
+      const hadUnpushedChanges = !!SYNC.pending && !!db;
+      let numberCollisions = [];
+      if (hadUnpushedChanges) {
+        try {
+          numberCollisions = detectNumberCollisions(db, out.data);
+          safeSet(scopedKey('bms_conflict_backup'), JSON.stringify({ savedAt: now(), db, numberCollisions }));
+        }
+        catch(e) { console.warn('Could not save conflict backup', e); }
+      }
       db = out.data;
       migrateDB(); // same "add missing fields" migration loadDB() runs — a pull from the server
                     // must go through this too, or any field added after that company's last
@@ -5859,7 +6090,14 @@ async function syncPull(opts) {
       syncSetVersion(serverVersion);
       if (serverTs) safeSet(scopedKey('bms_sync_ts'), String(serverTs));
       safeSet(scopedKey(DB_KEY), JSON.stringify(db));
-      if (SYNC.pending) scheduleSync(1000);
+      if (hadUnpushedChanges) {
+        // Nothing left in `db` to push — it was just overwritten. Don't reschedule a push
+        // (the old code did, but by then there was nothing local left to send). Instead,
+        // make sure the person actually sees this, since it means data they entered is gone
+        // from view unless they open the backup.
+        SYNC.pending = false;
+        showSyncConflictAlert();
+      }
       if (session && typeof openModule === 'function') {
         updateTopbar();
         renderSidebar();
@@ -6028,7 +6266,9 @@ function syncRenderSetupModal() {
       <div id="backup-export-hint" style="font-size:13px;color:var(--text-dim);margin-bottom:8px"></div>
       <button class="btn btn-secondary btn-sm" onclick="downloadBackupFile()">📥 Download Backup Now</button>
     </div>
+    <div id="conflict-backup-section" class="form-group" style="border-top:1px solid var(--border);padding-top:12px"></div>
     <div id="devices-section" class="form-group" style="border-top:1px solid var(--border);padding-top:12px"></div>`;
+  renderConflictBackupSection();
   if (syncConfigured()) loadBackupsList();
   if (syncConfigured() && SYNC.token) { loadCompanySwitcher(); loadDevicesList(); }
   renderBiometricStatus();
@@ -6070,8 +6310,102 @@ function downloadBackupFile() {
   }
 }
 
-// ── DEVICES — admin-only. Every device currently signed in to this company,
-// with the ability to remotely sign one out. ──
+// ── SYNC CONFLICT BACKUP — recovery mechanism for the syncPull() fix above.
+// Whenever a pull would have silently destroyed this device's unsynced local changes,
+// a full snapshot of `db` (as it was right before the overwrite) gets saved here first.
+// This surfaces it clearly instead of letting it sit invisibly in localStorage.
+function showSyncConflictAlert() {
+  toast('Sync conflict: another device saved first. Your offline changes were NOT sent to the server — see Sync Setup to recover a backup of them.', 'error');
+  openModal('sync-conflict-modal-overlay');
+  renderConflictBackupSection();
+}
+
+// Invoice/voucher numbers (nextFiscalInvoiceNumber, nextVoucherNumber) are plain local counters
+// with no server-side atomic increment — two devices working offline at the same time can
+// generate the identical number for two different real transactions. That can't be prevented
+// client-side without backend changes, but it CAN be caught here: whenever a sync conflict
+// discards this device's unsynced local data, check whether any number it used also got used
+// by whichever device's data won the conflict, so it doesn't sit as a silent duplicate waiting
+// to be found in a VAT audit instead.
+function detectNumberCollisions(localDb, serverDb) {
+  const collisions = [];
+  const checkField = (arr, field, label) => {
+    const serverNums = new Set((serverDb[arr]||[]).map(r=>r[field]).filter(Boolean));
+    (localDb[arr]||[]).forEach(r => {
+      if (r[field] && serverNums.has(r[field])) collisions.push({ label, number: r[field] });
+    });
+  };
+  checkField('sales', 'receiptNumber', 'Sale/Invoice');
+  checkField('creditSales', 'receiptNumber', 'Credit Sale/Invoice');
+  const serverVouchers = new Set((serverDb.journalEntries||[]).map(j=>j.voucherNumber).filter(Boolean));
+  (localDb.journalEntries||[]).forEach(j => {
+    if (j.voucherNumber && serverVouchers.has(j.voucherNumber)) collisions.push({ label: 'Ledger Voucher', number: j.voucherNumber });
+  });
+  return collisions;
+}
+
+function getConflictBackup() {
+  try {
+    const raw = safeGet(scopedKey('bms_conflict_backup'));
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function renderConflictBackupSection() {
+  const targets = ['conflict-backup-section','conflict-backup-section-alert']
+    .map(id => document.getElementById(id)).filter(Boolean);
+  if (!targets.length) return;
+  const backup = getConflictBackup();
+  if (!backup) { targets.forEach(el => el.innerHTML = ''); return; }
+  const when = new Date(backup.savedAt).toLocaleString();
+  const collisions = backup.numberCollisions||[];
+  const collisionHtml = collisions.length ? `
+    <div style="margin:10px 0;padding:8px;background:#fff0f0;border:1px solid #f5c2c2;border-radius:6px">
+      <strong style="color:#c00">⚠ Duplicate Number${collisions.length>1?'s':''} Found</strong>
+      <p style="font-size:14px;margin:4px 0">The following number${collisions.length>1?'s were':' was'} used on this device AND on whichever device's data was kept — meaning two different real transactions may now share the same number. Check and renumber whichever one is wrong via Advanced Ledger:</p>
+      <ul style="margin:4px 0 0 18px;font-size:14px">${collisions.map(c=>`<li>${esc(c.label)}: <span class="mono">${esc(c.number)}</span></li>`).join('')}</ul>
+    </div>` : '';
+  const html = `
+    <label class="form-label" style="color:var(--danger)">⚠️ Unsynced Changes Were Overwritten</label>
+    <div class="form-hint" style="margin-bottom:8px">
+      On ${esc(when)}, this device had entries that hadn't been sent to the server yet when a sync pulled in newer data from elsewhere. Those local changes were NOT lost — they're saved below so you can review and re-enter anything missing. This app can't automatically merge two devices' offline changes, so re-entering by hand is the safe way to reconcile them.
+    </div>
+    ${collisionHtml}
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary btn-sm" onclick="downloadConflictBackup()">📥 Download as File</button>
+      <button class="btn btn-secondary btn-sm" onclick="discardConflictBackup()">🗑️ Dismiss (I've reviewed it)</button>
+    </div>`;
+  targets.forEach(el => el.innerHTML = html);
+}
+
+function downloadConflictBackup() {
+  const backup = getConflictBackup();
+  if (!backup) { toast('No conflict backup found.', 'info'); return; }
+  try {
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date(backup.savedAt).toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `conflict_backup_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Conflict backup downloaded — you can open this file to see exactly what was in your local data.', 'success');
+  } catch (e) {
+    toast('Could not download backup: ' + e.message, 'error');
+  }
+}
+
+function discardConflictBackup() {
+  if (!confirm('Only dismiss this once you have reviewed the backup and re-entered anything that was missing. Continue?')) return;
+  localStorage.removeItem(scopedKey('bms_conflict_backup'));
+  renderConflictBackupSection();
+  toast('Conflict backup dismissed.', 'success');
+}
+
+
 async function loadDevicesList() {
   const el = document.getElementById('devices-section');
   if (!el) return;
@@ -6133,7 +6467,8 @@ async function loadCompanySwitcher() {
       el.innerHTML = `<label class="form-label">🏢 Companies</label>${newCompanyBtn}`;
       return;
     }
-    const canDelete = out.companies.length > 1;
+    const canDelete = out.companies.length > 1 && session?.role === 'admin';
+    const canManage = session?.role === 'admin';
 
     // Only worth fetching a side-by-side financial snapshot when there's actually more than one
     // company to compare — read-only, purely for display, never affects any figure.
@@ -6160,7 +6495,7 @@ async function loadCompanySwitcher() {
             ${snapshot}
           </div>
           ${!isCurrent ? `<button class="btn btn-secondary btn-sm" onclick="switchCompany('${esc(c.id)}','${esc(c.name)}')">Switch</button>` : ''}
-          <button class="btn btn-secondary btn-sm" onclick="renameCompany('${esc(c.id)}','${esc(c.name)}')" title="Rename">✏️</button>
+          ${canManage ? `<button class="btn btn-secondary btn-sm" onclick="renameCompany('${esc(c.id)}','${esc(c.name)}')" title="Rename">✏️</button>` : ''}
           ${(!isCurrent && canDelete) ? `<button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="deleteCompany('${esc(c.id)}','${esc(c.name)}')" title="Delete">🗑️</button>` : ''}
         </div>`;
     }).join('');
@@ -6203,9 +6538,16 @@ async function switchCompany(companyId, companyName) {
 }
 
 async function renameCompany(companyId, currentName) {
-  const newName = prompt('Rename company:', currentName);
-  if (newName === null) return; // cancelled
-  const trimmed = newName.trim();
+  if (session?.role !== 'admin') { toast("Only an admin can rename a company",'error'); return; }
+  openTextPromptModal({
+    title: 'Rename Company',
+    defaultValue: currentName,
+    confirmLabel: 'Rename',
+    onConfirm: (newName) => doRenameCompany(companyId, currentName, newName)
+  });
+}
+async function doRenameCompany(companyId, currentName, newName) {
+  const trimmed = (newName||'').trim();
   if (!trimmed || trimmed === currentName) return;
   try {
     const resp = await fetch(SYNC.apiBase + '/api/companies/' + companyId, {
@@ -6227,6 +6569,7 @@ async function renameCompany(companyId, currentName) {
 }
 
 async function deleteCompany(companyId, companyName) {
+  if (session?.role !== 'admin') { toast("Only an admin can delete a company",'error'); return; }
   confirm(
     `⚠️ PERMANENTLY DELETE "${companyName}"? This erases all of its data (accounting, inventory, payroll, everything) and cannot be undone. Type the company name exactly to confirm.`,
     async () => {
@@ -6287,7 +6630,8 @@ async function refreshCombinedDashboard() {
           <td class="mono" style="color:${(totals.cash+totals.receivablesDue-totals.payablesDue)>=0?'var(--success)':'var(--danger)'}">${fmt(totals.cash+totals.receivablesDue-totals.payablesDue)}</td><td></td>
         </tr></tfoot>
       </table></div>
-      <div class="form-hint" style="margin-top:10px">Snapshot only — switch into a company for full reports, transactions, and detail.</div>`;
+      <div class="form-hint" style="margin-top:10px">Snapshot only — switch into a company for full reports, transactions, and detail.</div>
+      ${(db.settings.companies?.length>1 || rows.length>1) ? `<div class="form-hint" style="margin-top:6px;color:#a66">⚠ If any company here has sent or received an Inter-Company Transfer, verify its "Receivables Due" above actually includes account 1090 (Due from/to Affiliate Companies) by checking that company's own Balance Sheet directly — this summary is worth double-checking rather than trusting blindly for that figure specifically.</div>` : ''}`;
   } catch (e) {
     body.innerHTML = '<div class="empty"><div class="empty-title">Could not reach server</div></div>';
   }
@@ -6329,6 +6673,7 @@ async function openInterCompanyTransfer() {
 }
 
 async function submitInterCompanyTransfer() {
+  if (!(session?.role==='admin' || hasPermission('Edit Accounting'))) { toast("You don't have permission to send inter-company transfers",'error'); return; }
   const sel = document.getElementById('ict-to-company');
   const toCompanyId = sel.value;
   const toCompanyName = sel.options[sel.selectedIndex]?.dataset.name || '';
@@ -8034,11 +8379,66 @@ document.addEventListener('click', e => {
 });
 
 /* ══ MODALS ══ */
-function closeModal(id) { const el=document.getElementById(id); if(el) el.classList.remove('show'); }
+function closeModal(id) {
+  const el=document.getElementById(id); if(el) el.classList.remove('show');
+  // A cancelled "Post" on an incoming inter-company transfer must not leave a stale flag that
+  // marks the transfer as posted the next time ANY accounting entry is saved (see accounting audit).
+  if (id === 'acct-modal-overlay') _pendingICTMarkPostId = null;
+}
 function openModal(id) { const el=document.getElementById(id); if(el) el.classList.add('show'); }
+
+// ── Deposit/Payment Confirm Modal — reusable replacement for prompt()-based method/amount
+// dialogs, used by the SSF/TDS/VAT deposit and payroll-payment functions below. ──
+let _depositConfirmCallback = null;
+function openDepositConfirmModal({ title, message, defaultMethod='Bank Transfer', needsAmount=false, defaultAmount=0, onConfirm }) {
+  document.getElementById('deposit-confirm-title').textContent = title;
+  document.getElementById('deposit-confirm-message').textContent = message;
+  document.getElementById('deposit-confirm-method').value = defaultMethod;
+  const amtGroup = document.getElementById('deposit-confirm-amount-group');
+  if (needsAmount) {
+    amtGroup.style.display = '';
+    document.getElementById('deposit-confirm-amount').value = defaultAmount;
+  } else {
+    amtGroup.style.display = 'none';
+  }
+  _depositConfirmCallback = onConfirm;
+  openModal('deposit-confirm-modal-overlay');
+}
+function confirmDepositModal() {
+  const method = document.getElementById('deposit-confirm-method').value;
+  const showingAmount = document.getElementById('deposit-confirm-amount-group').style.display !== 'none';
+  const amount = showingAmount ? parseFloat(document.getElementById('deposit-confirm-amount').value) : null;
+  const cb = _depositConfirmCallback;
+  closeModal('deposit-confirm-modal-overlay');
+  _depositConfirmCallback = null;
+  if (cb) cb(method, amount);
+}
+
+// ── Text/Password Prompt Modal — reusable replacement for the remaining prompt() dialogs. ──
+let _textPromptCallback = null;
+function openTextPromptModal({ title, message='', inputType='text', defaultValue='', placeholder='', confirmLabel='OK', onConfirm }) {
+  document.getElementById('text-prompt-title').textContent = title;
+  document.getElementById('text-prompt-message').textContent = message;
+  const input = document.getElementById('text-prompt-input');
+  input.type = inputType;
+  input.value = defaultValue;
+  input.placeholder = placeholder;
+  document.getElementById('text-prompt-confirm-btn').textContent = confirmLabel;
+  _textPromptCallback = onConfirm;
+  openModal('text-prompt-modal-overlay');
+  setTimeout(()=>input.focus(), 50);
+}
+function confirmTextPromptModal() {
+  const val = document.getElementById('text-prompt-input').value;
+  const cb = _textPromptCallback;
+  closeModal('text-prompt-modal-overlay');
+  _textPromptCallback = null;
+  if (cb) cb(val);
+}
 function closeModalOnOverlay(e, id) { if(e.target === e.currentTarget) closeModal(id); }
 document.addEventListener('keydown', e => {
   if (e.key==='Escape') {
+    if (document.getElementById('acct-modal-overlay')?.classList.contains('show')) _pendingICTMarkPostId = null;
     document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
     closeCal();
     closeDropdowns();
@@ -8647,21 +9047,36 @@ function initBarcodeScanner() {
 
 function getCartTotals() {
   const subtotal = cart.reduce((a,c)=>a+(c.price*c.qty),0);
+  // BUG FIXED: there was no way to mark any item VAT-exempt — VAT was always calculated on the
+  // entire cart subtotal, with no per-item distinction. Nepal's VAT Act does exempt/zero-rate
+  // certain categories, so an item flagged vatExempt on its product record is now excluded from
+  // the taxable base entirely.
+  const exemptSubtotal = cart.reduce((a,c)=>{
+    const rec = db.records.find(r=>r.id===c.id);
+    return a + (rec?.vatExempt ? c.price*c.qty : 0);
+  }, 0);
+  const taxableSubtotal = subtotal - exemptSubtotal;
   const discountRaw = parseFloat(document.getElementById('cart-discount')?.value||0)||0;
   const discType = document.getElementById('cart-discount-type')?.value||'flat';
   const discount = discType==='pct' ? subtotal * discountRaw/100 : discountRaw;
+  // Split the discount proportionally across taxable/exempt portions — a flat-amount discount
+  // shouldn't land entirely on one side or the other, or it would either overstate the tax
+  // refund on a discount that was never meant to touch exempt goods, or understate it.
+  const discountOnTaxable = subtotal > 0 ? discount * (taxableSubtotal / subtotal) : 0;
   const taxPct = parseFloat(document.getElementById('cart-tax')?.value||0)||0;
   const afterDiscount = Math.max(0, subtotal - discount);
-  const tax = afterDiscount * taxPct/100;
+  const taxableAfterDiscount = Math.max(0, taxableSubtotal - discountOnTaxable);
+  const tax = taxableAfterDiscount * taxPct/100;
   const total = afterDiscount + tax;
-  return { subtotal, discount, tax, total, taxPct };
+  return { subtotal, discount, tax, total, taxPct, exemptSubtotal, taxableSubtotal };
 }
 
 function updateCartTotals() {
-  const { subtotal, discount, tax, total } = getCartTotals();
+  const { subtotal, discount, tax, total, exemptSubtotal } = getCartTotals();
   document.getElementById('cart-totals').innerHTML = `
     <div class="cart-total-row"><span>Subtotal</span><span class="font-mono amt-neutral">${fmt(subtotal)}</span></div>
     ${discount?`<div class="cart-total-row"><span>Discount</span><span class="font-mono amt-expense">-${fmt(discount)}</span></div>`:''}
+    ${exemptSubtotal>0.004?`<div class="cart-total-row" style="font-size:12px;color:#888"><span>incl. VAT-exempt</span><span class="font-mono">${fmt(exemptSubtotal)}</span></div>`:''}
     ${tax?`<div class="cart-total-row"><span>Tax</span><span class="font-mono amt-balance">${fmt(tax)}</span></div>`:''}
     <div class="cart-total-row grand"><span>TOTAL</span><span class="font-mono amt-revenue">${fmt(total)}</span></div>`;
   updateCustomerScreen();
@@ -8729,34 +9144,42 @@ function openCreditSaleModal() {
   openModal('credit-sale-overlay');
 }
 
+let _checkoutInProgress = false;
 function completeCreditSale() {
-  const {subtotal, discount, tax, total, taxPct} = getCartTotals();
-  const customerName = document.getElementById('pos-customer-input')?.value?.trim() || '';
-  const paidNow = parseFloat(document.getElementById('credit-paid-now')?.value) || 0;
-  if (paidNow > total) { toast('Amount paid cannot exceed the total','error'); return; }
-  const dueDate = document.getElementById('credit-due-date')?.value || '';
-  const notes = document.getElementById('credit-notes')?.value || '';
-  const dueAmount = total - paidNow;
-  // Fiscal-year sequential invoice numbering (IRD-compliant format), replaces the old timestamp-based number
-  const receiptNum = nextFiscalInvoiceNumber('sales');
-  const customerType = document.getElementById('pos-customer-type')?.value || 'Retail';
-  const customerId = resolveOrCreateCustomerId(customerName);
+  // Guards against a rapid double-click/double-tap on "Confirm" (easy to do on mobile,
+  // especially if the network feels slow) creating two separate sales for the same cart before
+  // the UI has a chance to close the modal — which would double-charge the customer, double
+  // count the stock deduction, and generate two different invoice numbers for one transaction.
+  if (_checkoutInProgress) return;
+  _checkoutInProgress = true;
+  try {
+    const {subtotal, discount, tax, total, taxPct} = getCartTotals();
+    const customerName = document.getElementById('pos-customer-input')?.value?.trim() || '';
+    const paidNow = parseFloat(document.getElementById('credit-paid-now')?.value) || 0;
+    if (paidNow > total) { toast('Amount paid cannot exceed the total','error'); _checkoutInProgress = false; return; }
+    const dueDate = document.getElementById('credit-due-date')?.value || '';
+    const notes = document.getElementById('credit-notes')?.value || '';
+    const dueAmount = total - paidNow;
+    // Fiscal-year sequential invoice numbering (IRD-compliant format), replaces the old timestamp-based number
+    const receiptNum = nextFiscalInvoiceNumber('sales');
+    const customerType = document.getElementById('pos-customer-type')?.value || 'Retail';
+    const customerId = resolveOrCreateCustomerId(customerName);
 
-  const sale = {
-    id: uid(), receiptNumber: receiptNum, date: today(), createdAt: now(),
-    items: cart.map(c=>({...c})), customerName, customerId, customerType, subtotal, discount,
-    tax: taxPct, taxAmount: tax, total, paymentMethod: 'Credit',
-    paidAmount: paidNow, dueAmount, dueDate, status: dueAmount > 0 ? 'partial' : 'completed',
-    notes, createdBy: session.username, saleType: 'credit'
-  };
-  db.sales.push(sale);
+    const sale = {
+      id: uid(), receiptNumber: receiptNum, date: today(), createdAt: now(),
+      items: cart.map(c=>({...c})), customerName, customerId, customerType, subtotal, discount,
+      tax: taxPct, taxAmount: tax, total, paymentMethod: 'Credit',
+      paidAmount: paidNow, dueAmount, dueDate, status: dueAmount > 0 ? 'partial' : 'completed',
+      notes, createdBy: session.username, saleType: 'credit'
+    };
+    db.sales.push(sale);
 
-  // Credit ledger entry
-  if (dueAmount > 0) {
-    db.creditSales.push({
-      id: uid(), saleId: sale.id, receiptNumber: receiptNum,
-      customerName, customerId, date: today(), dueDate, totalAmount: total,
-      paidAmount: paidNow, dueAmount, status: 'outstanding',
+    // Credit ledger entry
+    if (dueAmount > 0) {
+      db.creditSales.push({
+        id: uid(), saleId: sale.id, receiptNumber: receiptNum,
+        customerName, customerId, date: today(), dueDate, totalAmount: total,
+        paidAmount: paidNow, dueAmount, status: 'outstanding',
       notes, createdAt: now()
     });
   }
@@ -8804,9 +9227,13 @@ function completeCreditSale() {
   clearCart();
   closeModal('credit-sale-overlay');
   updateNavBadges();
+  } finally { _checkoutInProgress = false; }
 }
 
 function completeSale(method) {
+  if (_checkoutInProgress) return;
+  _checkoutInProgress = true;
+  try {
   const {subtotal, discount, tax, total, taxPct} = getCartTotals();
   const customerName = document.getElementById('pos-customer-input')?.value?.trim() || '';
   const customerType = document.getElementById('pos-customer-type')?.value || 'Retail';
@@ -8861,6 +9288,7 @@ function completeSale(method) {
   updateNavBadges();
   generateNotifications();
   renderNotifications();
+  } finally { _checkoutInProgress = false; }
 }
 
 function startQRCheckout() {
@@ -9151,7 +9579,7 @@ function saveStockAdj() {
   const unitCost = adjRecordType === 'product' ? (rec.costPrice||0) : (rec.cost||0);
   const value = Math.abs(actualDelta) * unitCost;
   if (value > 0.004) {
-    const inventoryCode = adjRecordType === 'product' ? db.settings.acctMappings.inventoryAccount : '1040';
+    const inventoryCode = adjRecordType === 'product' ? finishedGoodsAccountFor(rec.id) : '1040';
     const lines = actualDelta < 0
       ? [ { accountCode:'5095', debit:value, credit:0 }, { accountCode:inventoryCode, debit:0, credit:value } ]
       : [ { accountCode:inventoryCode, debit:value, credit:0 }, { accountCode:'5095', debit:0, credit:value } ];
@@ -9740,11 +10168,13 @@ function computeNextDue(dateStr, freq) {
 function postRecurringNow(id) {
   const r = db.recurring.find(x=>x.id===id);
   if (!r) return;
-  confirm(`Post "${r.description}" — ${fmt(r.amount)} (${r.type}) dated today? This creates a normal Accounting entry.`, ()=>{
+  const postDate = r.nextDue || today();
+  const isLate = postDate < today();
+  confirm(`Post "${r.description}" — ${fmt(r.amount)} (${r.type})${isLate?` dated ${fmtDate(postDate)} (its actual due date, not today) since it's overdue`:' dated today'}? This creates a normal Accounting entry.`, ()=>{
     // No `source` tag on purpose: this should behave exactly like a normal manually-typed
     // Accounting entry afterward (fully editable/deletable there), not like an auto-generated
     // one (sale/payroll/etc.) that routes into a special void flow when you try to edit it.
-    const data = { type:r.type, amount:r.amount, category:r.category, date:today(), description:r.description, reference:r.reference||'', tdsRateKey:null, tdsAmount:0 };
+    const data = { type:r.type, amount:r.amount, category:r.category, date:postDate, description:r.description, reference:r.reference||'', tdsRateKey:null, tdsAmount:0 };
     const a = { id:uid(), createdAt:now(), ...data, recurringId:r.id };
     db.accounting.push(a);
     postManualAccountingJournal(a);
@@ -10187,22 +10617,27 @@ function cleanupPayrollDuplicates(month) {
   });
 }
 function openMarkSSFDeposited(month) {
+  if (!(session?.role==='admin' || hasPermission('Edit Accounting'))) { toast("You don't have permission to record SSF deposits",'error'); return; }
   const ph = db.payrollHistory.find(p=>p.month===month);
   if (!ph) { toast('No payroll found for that month','error'); return; }
   if (ph.ssfPaid) { toast('Already marked as deposited','warning'); return; }
-  const method = prompt(`Deposit SSF for ${month}? Total: ${fmt(ph.totalSSF||0)}\nPaid via? Type "Cash" or "Bank"`, 'Bank');
-  if (!method) return;
-  const normalizedMethod = method.trim().toLowerCase().startsWith('b') ? 'Bank Transfer' : 'Cash';
-  const cashCode = normalizedMethod === 'Bank Transfer' ? '1020' : '1010';
-  postJournalEntry({ date: today(), voucherKind:'Payment', refType:'ssf-deposit', refId: month, reference:`SSF-${month}`, description:`SSF Deposit — ${month}`, lines: [
-    { accountCode:'2070', debit: ph.totalSSF||0, credit:0 },
-    { accountCode: cashCode, debit:0, credit: ph.totalSSF||0 }
-  ]});
-  ph.ssfPaid = true; ph.ssfPaidDate = today(); ph.ssfPaidMethod = normalizedMethod;
-  audit('HR','SSF Deposit', month, `${fmt(ph.totalSSF||0)} (${normalizedMethod})`);
-  saveDB();
-  toast('SSF marked as deposited','success');
-  renderSalaryHistory();
+  openDepositConfirmModal({
+    title: 'Deposit SSF',
+    message: `Deposit SSF for ${periodMonthLabel(month)}?\nTotal: ${fmt(ph.totalSSF||0)}`,
+    onConfirm: (method) => {
+      const normalizedMethod = method === 'Cash' ? 'Cash' : 'Bank Transfer';
+      const cashCode = normalizedMethod === 'Bank Transfer' ? '1020' : '1010';
+      postJournalEntry({ date: today(), voucherKind:'Payment', refType:'ssf-deposit', refId: month, reference:`SSF-${month}`, description:`SSF Deposit — ${month}`, lines: [
+        { accountCode:'2070', debit: ph.totalSSF||0, credit:0 },
+        { accountCode: cashCode, debit:0, credit: ph.totalSSF||0 }
+      ]});
+      ph.ssfPaid = true; ph.ssfPaidDate = today(); ph.ssfPaidMethod = normalizedMethod;
+      audit('HR','SSF Deposit', month, `${fmt(ph.totalSSF||0)} (${normalizedMethod})`);
+      saveDB();
+      toast('SSF marked as deposited','success');
+      renderSalaryHistory();
+    }
+  });
 }
 // GAP FIXED: TDS Payable (2060) and VAT Payable/Receivable (2020/1050) were credited/debited every
 // time TDS was withheld or VAT was collected/paid on a purchase — but unlike SSF Payable (which has
@@ -10212,51 +10647,61 @@ function openMarkSSFDeposited(month) {
 // paid — a real problem for a Balance Sheet meant to be shown to a tax office or auditor. These two
 // functions close that gap, following the exact same pattern as the SSF deposit above.
 function openMarkTDSDeposited() {
+  if (!(session?.role==='admin' || hasPermission('Edit Accounting'))) { toast("You don't have permission to record TDS deposits",'error'); return; }
   const outstanding = +accountBalanceAsOf('2060', today()).toFixed(2);
   if (outstanding <= 0.004) { toast('No outstanding TDS Payable balance to deposit','warning'); return; }
-  const method = prompt(`Deposit withheld TDS to IRD?\nOutstanding TDS Payable: ${fmt(outstanding)}\nPaid via? Type "Cash" or "Bank"`, 'Bank');
-  if (!method) return;
-  const amtInput = prompt(`Amount actually deposited (usually the full outstanding balance):`, String(outstanding));
-  if (!amtInput) return;
-  const amount = Math.min(outstanding, Math.max(0, parseFloat(amtInput)||0));
-  if (amount <= 0) { toast('Enter a valid amount','error'); return; }
-  const normalizedMethod = method.trim().toLowerCase().startsWith('b') ? 'Bank Transfer' : 'Cash';
-  const cashCode = normalizedMethod === 'Bank Transfer' ? '1020' : '1010';
-  postJournalEntry({ date: today(), voucherKind:'Payment', refType:'tds-deposit', refId: today(), reference:`TDS-${today()}`, description:`TDS Deposit to IRD`, lines: [
-    { accountCode:'2060', debit: amount, credit:0 },
-    { accountCode: cashCode, debit:0, credit: amount }
-  ]});
-  db.taxDeposits = db.taxDeposits || [];
-  db.taxDeposits.push({ id:uid(), kind:'TDS', date:today(), amount, method:normalizedMethod, createdBy:session.username, createdAt:now() });
-  audit('Accounting','TDS Deposit', today(), `${fmt(amount)} (${normalizedMethod})`);
-  saveDB();
-  toast('TDS deposit recorded','success');
+  openDepositConfirmModal({
+    title: 'Deposit TDS to IRD',
+    message: `Deposit withheld TDS to IRD?\nOutstanding TDS Payable: ${fmt(outstanding)}`,
+    needsAmount: true,
+    defaultAmount: outstanding,
+    onConfirm: (method, amtInput) => {
+      const amount = Math.min(outstanding, Math.max(0, amtInput || 0));
+      if (amount <= 0) { toast('Enter a valid amount','error'); return; }
+      const normalizedMethod = method === 'Cash' ? 'Cash' : 'Bank Transfer';
+      const cashCode = normalizedMethod === 'Bank Transfer' ? '1020' : '1010';
+      postJournalEntry({ date: today(), voucherKind:'Payment', refType:'tds-deposit', refId: today(), reference:`TDS-${today()}`, description:`TDS Deposit to IRD`, lines: [
+        { accountCode:'2060', debit: amount, credit:0 },
+        { accountCode: cashCode, debit:0, credit: amount }
+      ]});
+      db.taxDeposits = db.taxDeposits || [];
+      db.taxDeposits.push({ id:uid(), kind:'TDS', date:today(), amount, method:normalizedMethod, createdBy:session.username, createdAt:now() });
+      audit('Accounting','TDS Deposit', today(), `${fmt(amount)} (${normalizedMethod})`);
+      saveDB();
+      toast('TDS deposit recorded','success');
+    }
+  });
 }
 function openSettleVAT() {
+  if (!(session?.role==='admin' || hasPermission('Edit Accounting'))) { toast("You don't have permission to record VAT settlements",'error'); return; }
   const outputBal = +accountBalanceAsOf('2020', today()).toFixed(2);   // credit-normal
   const inputBal = +accountBalanceAsOf('1050', today()).toFixed(2);    // debit-normal
   const net = +(outputBal - inputBal).toFixed(2);
   if (Math.abs(net) <= 0.004) { toast('No net VAT balance outstanding to settle','warning'); return; }
   const isPayable = net > 0;
-  const method = prompt(`${isPayable?'Pay':'Record refund of'} net VAT to/from IRD?\nOutput VAT Payable: ${fmt(outputBal)} | Input VAT Receivable: ${fmt(inputBal)}\nNet ${isPayable?'Payable':'Refundable'}: ${fmt(Math.abs(net))}\nVia? Type "Cash" or "Bank"`, 'Bank');
-  if (!method) return;
-  const normalizedMethod = method.trim().toLowerCase().startsWith('b') ? 'Bank Transfer' : 'Cash';
-  const cashCode = normalizedMethod === 'Bank Transfer' ? '1020' : '1010';
-  // Clear both sides of the VAT accounts and settle the net difference in cash — whichever
-  // direction it runs. This intentionally clears the FULL outstanding balance on each account
-  // (not just the current period's registers) so 2020/1050 always return to zero after a filing,
-  // same as how a real VAT return closes out the period.
-  const lines = [];
-  if (outputBal > 0) lines.push({ accountCode:'2020', debit: outputBal, credit: 0 });
-  if (inputBal > 0) lines.push({ accountCode:'1050', debit: 0, credit: inputBal });
-  if (isPayable) lines.push({ accountCode: cashCode, debit: 0, credit: Math.abs(net) });
-  else lines.push({ accountCode: cashCode, debit: Math.abs(net), credit: 0 });
-  postJournalEntry({ date: today(), voucherKind:'Payment', refType:'vat-settlement', refId: today(), reference:`VAT-${today()}`, description:`VAT Return Settlement — Net ${isPayable?'Paid':'Refunded'}`, lines });
-  db.taxDeposits = db.taxDeposits || [];
-  db.taxDeposits.push({ id:uid(), kind:'VAT', date:today(), amount:Math.abs(net), direction:isPayable?'paid':'refunded', method:normalizedMethod, createdBy:session.username, createdAt:now() });
-  audit('Accounting','VAT Settlement', today(), `${fmt(Math.abs(net))} ${isPayable?'paid':'refunded'} (${normalizedMethod})`);
-  saveDB();
-  toast('VAT settlement recorded','success');
+  openDepositConfirmModal({
+    title: isPayable ? 'Pay VAT to IRD' : 'Record VAT Refund',
+    message: `${isPayable?'Pay':'Record refund of'} net VAT to/from IRD?\nOutput VAT Payable: ${fmt(outputBal)} | Input VAT Receivable: ${fmt(inputBal)}\nNet ${isPayable?'Payable':'Refundable'}: ${fmt(Math.abs(net))}`,
+    onConfirm: (method) => {
+      const normalizedMethod = method === 'Cash' ? 'Cash' : 'Bank Transfer';
+      const cashCode = normalizedMethod === 'Bank Transfer' ? '1020' : '1010';
+      // Clear both sides of the VAT accounts and settle the net difference in cash — whichever
+      // direction it runs. This intentionally clears the FULL outstanding balance on each account
+      // (not just the current period's registers) so 2020/1050 always return to zero after a filing,
+      // same as how a real VAT return closes out the period.
+      const lines = [];
+      if (outputBal > 0) lines.push({ accountCode:'2020', debit: outputBal, credit: 0 });
+      if (inputBal > 0) lines.push({ accountCode:'1050', debit: 0, credit: inputBal });
+      if (isPayable) lines.push({ accountCode: cashCode, debit: 0, credit: Math.abs(net) });
+      else lines.push({ accountCode: cashCode, debit: Math.abs(net), credit: 0 });
+      postJournalEntry({ date: today(), voucherKind:'Payment', refType:'vat-settlement', refId: today(), reference:`VAT-${today()}`, description:`VAT Return Settlement — Net ${isPayable?'Paid':'Refunded'}`, lines });
+      db.taxDeposits = db.taxDeposits || [];
+      db.taxDeposits.push({ id:uid(), kind:'VAT', date:today(), amount:Math.abs(net), direction:isPayable?'paid':'refunded', method:normalizedMethod, createdBy:session.username, createdAt:now() });
+      audit('Accounting','VAT Settlement', today(), `${fmt(Math.abs(net))} ${isPayable?'paid':'refunded'} (${normalizedMethod})`);
+      saveDB();
+      toast('VAT settlement recorded','success');
+    }
+  });
 }
 function renderSalaryHistory() {
   const empF = document.getElementById('sh-emp-filter')?.value?.toLowerCase()||'';
@@ -10277,7 +10722,7 @@ function renderSalaryHistory() {
       const ph = db.payrollHistory.find(p=>p.month===m);
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-alt,#f7f7f9);border-radius:6px;margin-bottom:6px">
         <span>SSF for ${esc(periodMonthLabel(m))}: <strong>${fmt(ph.totalSSF||0)}</strong> ${ph.ssfPaid?`<span class="badge badge-success">Deposited ${fmtDate(ph.ssfPaidDate)}</span>`:`<span class="badge badge-warning">Pending</span>`}</span>
-        ${ph.ssfPaid?'':`<button class="btn btn-xs btn-primary" onclick="openMarkSSFDeposited('${m}')">Mark Deposited</button>`}
+        ${ph.ssfPaid?'':((session.role==='admin'||hasPermission('Edit Accounting'))?`<button class="btn btn-xs btn-primary" onclick="openMarkSSFDeposited('${m}')">Mark Deposited</button>`:'')}
       </div>`;
     }).join('') : '';
   }
@@ -10298,20 +10743,26 @@ function renderSalaryHistory() {
 
 // Mark one employee's payroll as actually paid — clears their share of Salary Payable.
 function openMarkPayrollPaid(month, empId) {
+  if (!(session?.role==='admin' || hasPermission('Process Payroll'))) { toast("You don't have permission to mark payroll as paid",'error'); return; }
   const ph = db.payrollHistory.find(p=>p.month===month);
   const entry = ph?.entries?.find(e=>e.empId===empId);
   if (!entry) return;
-  const method = prompt(`Paid via? Type "Cash" or "Bank" — Amount: ${fmt(entry.netPay)}`, 'Cash');
-  if (!method) return;
-  const normalizedMethod = method.trim().toLowerCase().startsWith('b') ? 'Bank Transfer' : 'Cash';
-  postPayrollPaymentJournal(month, empId, entry.empName, entry.netPay, normalizedMethod);
-  entry.paid = true;
-  entry.paidDate = today();
-  entry.paidMethod = normalizedMethod;
-  audit('HR','Payroll Payment', `${month}:${empId}`, `${entry.empName} — ${fmt(entry.netPay)} (${normalizedMethod})`);
-  saveDB();
-  toast(`Marked ${entry.empName} as paid`,'success');
-  renderSalaryHistory();
+  openDepositConfirmModal({
+    title: 'Mark Payroll Paid',
+    message: `Mark ${entry.empName}'s salary as paid?\nAmount: ${fmt(entry.netPay)}`,
+    defaultMethod: 'Cash',
+    onConfirm: (method) => {
+      const normalizedMethod = method === 'Cash' ? 'Cash' : 'Bank Transfer';
+      postPayrollPaymentJournal(month, empId, entry.empName, entry.netPay, normalizedMethod);
+      entry.paid = true;
+      entry.paidDate = today();
+      entry.paidMethod = normalizedMethod;
+      audit('HR','Payroll Payment', `${month}:${empId}`, `${entry.empName} — ${fmt(entry.netPay)} (${normalizedMethod})`);
+      saveDB();
+      toast(`Marked ${entry.empName} as paid`,'success');
+      renderSalaryHistory();
+    }
+  });
 }
 
 function showPaySlip(entry) {
@@ -10946,7 +11397,7 @@ function viewProfile(type, id) {
     </div>
     <h3 style="font-size:18px;font-weight:700;margin:16px 0 8px">Items</h3>
     <div class="table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead><tbody>${itemRows}</tbody></table></div>
-    ${(session.role==='admin'||hasPermission('Accounting'))?`<div class="no-print-audit" style="margin-top:14px"><button class="btn btn-secondary" onclick="openCorrectInvoice('sale','${sale.id}')">🧾 Correct an Invoice</button></div>`:''}
+    ${(session.role==='admin'||hasPermission('Edit Accounting'))?`<div class="no-print-audit" style="margin-top:14px"><button class="btn btn-secondary" onclick="openCorrectInvoice('sale','${sale.id}')">🧾 Correct an Invoice</button></div>`:''}
     ${profileAuditHtml(type,id)}`;
   } else if (type==='accounting') {
     const a = db.accounting.find(x=>x.id===id);
@@ -11254,6 +11705,28 @@ function unarchiveFromList(type, id) {
 // Permanently (irreversibly) delete a record straight out of the Archive — admin only, and
 // distinct from deleteRecord()/deleteCurrentProfile() which soft-delete (moves it to
 // db.deletedRecords, recoverable from the Archive ▸ Deleted tab).
+// Best-effort reference count — checks the most common places each record type could be
+// referenced from. Not guaranteed exhaustive (this codebase has many transaction types), but
+// catches the overwhelmingly common cases so a permanent delete isn't a total guess.
+function countRecordReferences(type, id, name) {
+  let count = 0;
+  if (type === 'record') {
+    count += (db.sales||[]).filter(s=>(s.items||[]).some(i=>i.id===id)).length;
+    count += (db.productionBatches||[]).filter(b=>b.productId===id || (b.materialsConsumed||[]).some(m=>m.materialId===id)).length;
+    count += (db.boms||[]).filter(b=>b.productId===id || (b.items||[]).some(i=>i.materialId===id)).length;
+  } else if (type === 'entity') {
+    count += (db.sales||[]).filter(s=>s.customerId===id || s.customerName===name).length;
+  } else if (type === 'employee') {
+    count += (db.payrollHistory||[]).filter(p=>(p.entries||[]).some(e=>e.empId===id)).length;
+  } else if (type === 'secondary') {
+    count += (db.supplierInvoices||[]).filter(i=>i.supplierId===id).length;
+    count += (db.purchaseOrders||[]).filter(p=>p.supplierId===id).length;
+  } else if (type === 'rawMaterial') {
+    count += (db.purchaseOrders||[]).filter(p=>(p.items||[]).some(i=>i.materialId===id)).length;
+    count += (db.boms||[]).filter(b=>(b.items||[]).some(i=>i.materialId===id)).length;
+  }
+  return count;
+}
 function permanentlyDeleteArchived(type, id) {
   if (session?.role !== 'admin') { toast('Only an Admin can permanently delete a record','error'); return; }
   const stores = { record: db.records, entity: db.entities, employee: db.employees, secondary: db.secondary, rawMaterial: db.rawMaterials };
@@ -11261,14 +11734,18 @@ function permanentlyDeleteArchived(type, id) {
   if (!store) return;
   const item = store.find(x=>x.id===id);
   if (!item) return;
-  confirm(`Permanently delete "${item.name}"?\n\nThis action cannot be undone. The record will be completely removed and will NOT be recoverable from Archive.`, ()=>{
+  const refCount = countRecordReferences(type, id, item.name);
+  const refWarning = refCount > 0
+    ? `\n\n⚠ Found ${refCount} historical record(s) that reference "${item.name}" (sales, production, invoices, etc.). Those figures and journal entries stay financially correct either way — but their display will show a blank/broken name for this item afterward instead of "${item.name}", since there'll be nothing left to look the name up from. Only continue if you're sure.`
+    : '';
+  confirm(`Permanently delete "${item.name}"?\n\nThis action cannot be undone. The record will be completely removed and will NOT be recoverable from Archive.${refWarning}`, ()=>{
     const idx = store.findIndex(x=>x.id===id);
     if (idx>=0) store.splice(idx,1);
-    audit(ARCHIVABLE_MODULE_LABEL[type]||type, 'Permanent Delete', id, item.name);
+    audit(ARCHIVABLE_MODULE_LABEL[type]||type, 'Permanent Delete', id, item.name + (refCount>0?` (had ${refCount} historical reference(s))`:''));
     saveDB();
     toast('Record permanently deleted','success');
     renderArchive();
-  }, '', 'Permanently Delete');
+  }, refCount > 0 ? 'DELETE' : '', 'Permanently Delete');
 }
 
 // Entry point used by Archive section rows — same permission-gated, irreversible action,
@@ -11931,6 +12408,7 @@ function generateReport() {
     ${Math.abs(cf.reconcilingDifference)>1 ? `<p style="margin-top:10px;font-weight:700;color:red">⚠ Operating + Investing + Financing (${fmt(cf.computedChange)}) doesn't match the actual cash movement (${fmt(cf.netChange)}) by ${fmt(cf.reconcilingDifference)} — this points to an account type not yet categorized above. The Net Change figure itself is still correct (it's taken directly from actual Cash/Bank balances); the breakdown above it is what's short.</p>` : '<p style="margin-top:10px;font-weight:700;color:green">✓ Reconciles — Operating + Investing + Financing matches the actual Opening→Closing cash movement exactly.</p>'}`;
   } else if (type==='owners-equity') {
     const oe = computeOwnersEquityStatement(from, to);
+    const equityReconcileNote = `<p style="font-size:13px;color:#777;margin-top:10px">Note: "Closing Capital" above includes this period's profit/loss share for presentation, as a formal Statement of Equity should. This app does not post an automatic year-end closing entry, so the capital account balance you see directly in the Trial Balance or Chart of Accounts will be smaller than this — it only reflects actual cash invested/withdrawn, not the profit share, until you manually record a closing/appropriation entry via Advanced Ledger.</p>`;
     if (oe.single) {
       const r = oe.rows[0];
       bodyHtml = `<h2>Statement of Owner's Equity</h2>
@@ -11941,13 +12419,13 @@ function generateReport() {
         <tr><td>Add: Share of Profit</td><td style="text-align:right" class="mono">${fmt(r.profitShare)}</td></tr>
         <tr><td>Less: Drawings during the period</td><td style="text-align:right" class="mono">-${fmt(r.drawings)}</td></tr>
         <tr style="background:#f0f0f0"><td><strong>Closing Capital</strong></td><td style="text-align:right"><strong>${fmt(r.closing)}</strong></td></tr>
-      </tbody></table>`;
+      </tbody></table>${equityReconcileNote}`;
     } else {
       bodyHtml = `<h2>Partners' Capital Accounts</h2>
       <p style="font-size:15px;color:#555">${periodLabel}</p>
       <table><thead><tr><th>Partner</th><th style="text-align:right">Opening</th><th style="text-align:right">Investments</th><th style="text-align:right">Share of Profit</th><th style="text-align:right">Drawings</th><th style="text-align:right">Closing</th></tr></thead><tbody>
         ${oe.rows.map(r=>`<tr><td>${esc(r.name)} (${r.sharePct}%)</td><td style="text-align:right" class="mono">${fmt(r.opening)}</td><td style="text-align:right" class="mono">${fmt(r.investments)}</td><td style="text-align:right" class="mono">${fmt(r.profitShare)}</td><td style="text-align:right" class="mono">${fmt(r.drawings)}</td><td style="text-align:right" class="mono"><strong>${fmt(r.closing)}</strong></td></tr>`).join('')}
-      </tbody></table>
+      </tbody></table>${equityReconcileNote}
       <h2 style="margin-top:20px">Profit &amp; Loss Appropriation Account<span class="help-tip" data-tip="The formal page showing exactly how total profit was divided between partners, by their agreed percentage.">?</span></h2>
       <table><thead><tr><th>Partner</th><th style="text-align:right">Share %</th><th style="text-align:right">Amount</th></tr></thead><tbody>
         ${oe.rows.map(r=>`<tr><td>${esc(r.name)}</td><td style="text-align:right">${r.sharePct}%</td><td style="text-align:right" class="mono">${fmt(r.profitShare)}</td></tr>`).join('')}
@@ -12062,6 +12540,13 @@ function generateReport() {
     const isAdmin = session?.role === 'admin';
     bodyHtml = `<h2>🔍 Accounting Integrity Checker</h2>
     <p style="font-size:15px;color:#555">A complete scan of the ledger — not just "balanced or not," but exactly which voucher(s) are responsible when it isn't. As of ${fmtDate(check.asOf)}.</p>
+    ${check.postingFailures.length ? `<div style="margin-top:10px;padding:10px;background:#fff0f0;border:1px solid #f5c2c2;border-radius:6px">
+      <strong style="color:#c00">⚠ ${check.postingFailures.length} Entr${check.postingFailures.length===1?'y':'ies'} Failed To Post — NOT In Your Books</strong>
+      <p style="font-size:14px;margin:6px 0">These transactions saved on their own screen, but the ledger entry itself was refused because it didn't balance, and was never recorded. Fix the underlying cause, re-enter it manually via Advanced Ledger if needed, then dismiss each one below.</p>
+      <table><thead><tr><th>Failed At</th><th>Date</th><th>Description</th><th>Debits</th><th>Credits</th>${isAdmin?'<th></th>':''}</tr></thead><tbody>
+      ${check.postingFailures.map(f=>`<tr><td>${fmtDate(f.failedAt?f.failedAt.slice(0,10):f.date)}</td><td>${fmtDate(f.date)}</td><td>${esc(f.description)} <span style="color:#888">(${esc(f.refType||'')})</span></td><td class="mono">${fmt(f.debitTotal)}</td><td class="mono">${fmt(f.creditTotal)}</td>${isAdmin?`<td><button class="btn btn-xs btn-secondary" onclick="dismissLedgerPostingFailure('${esc(f.id)}')">Dismiss</button></td>`:''}</tr>`).join('')}
+      </tbody></table>
+    </div>` : ''}
     <table style="margin-top:12px"><tbody>
       <tr><td>Total Debits</td><td style="text-align:right" class="mono">${fmt(check.totalDebits)}</td></tr>
       <tr><td>Total Credits</td><td style="text-align:right" class="mono">${fmt(check.totalCredits)}</td></tr>
@@ -12258,7 +12743,7 @@ function generateReport() {
       ${tds.rows.length?tds.rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td class="mono">${esc(r.voucherNumber)}</td><td>${esc(r.description)}</td><td style="text-align:right" class="mono">${fmt(r.tdsAmount)}</td></tr>`).join(''):'<tr><td colspan="4">No TDS withheld in this period</td></tr>'}
       <tr style="background:#f0f0f0"><td colspan="3"><strong>TOTAL DUE TO IRD (this period)</strong></td><td style="text-align:right"><strong>${fmt(tds.total)}</strong></td></tr>
     </tbody></table>
-    <p style="font-size:15px;margin-top:12px">Outstanding TDS Payable on the books (all-time, undeposited): <strong>${fmt(outstandingTDS)}</strong> ${outstandingTDS>0.004?`<button class="btn btn-xs btn-primary" onclick="openMarkTDSDeposited()">Record Deposit to IRD</button>`:'<span class="badge badge-success">Nothing outstanding</span>'}</p>`;
+    <p style="font-size:15px;margin-top:12px">Outstanding TDS Payable on the books (all-time, undeposited): <strong>${fmt(outstandingTDS)}</strong> ${(outstandingTDS>0.004&&(session.role==='admin'||hasPermission('Edit Accounting')))?`<button class="btn btn-xs btn-primary" onclick="openMarkTDSDeposited()">Record Deposit to IRD</button>`:(outstandingTDS>0.004?'':'<span class="badge badge-success">Nothing outstanding</span>')}</p>`;
   } else if (type==='ssf-register') {
     const payrolls = (db.payrollHistory||[]).filter(ph=>(ph.totalSSF||0)>0 && periodMonthOverlapsRange(ph.month, from, to));
     let rows = [];
@@ -12350,7 +12835,7 @@ function generateReport() {
       <tr><td>Input VAT Paid</td><td class="mono amt-purchase">${fmt(purchaseReg.totalVAT)}</td></tr>
       <tr style="background:#f0f0f0"><td><strong>Net VAT Payable / (Refundable) — this period</strong></td><td class="mono"><strong>${fmt(salesReg.totalVAT-purchaseReg.totalVAT)}</strong></td></tr>
     </tbody></table>
-    <p style="font-size:15px;margin-top:12px">Outstanding on the books (all-time, unsettled): Output VAT ${fmt(outputBal)} − Input VAT ${fmt(inputBal)} = <strong>${fmt(Math.abs(netOutstanding))} ${netOutstanding>=0?'payable':'refundable'}</strong> ${Math.abs(netOutstanding)>0.004?`<button class="btn btn-xs btn-primary" onclick="openSettleVAT()">Record Settlement with IRD</button>`:'<span class="badge badge-success">Nothing outstanding</span>'}</p>
+    <p style="font-size:15px;margin-top:12px">Outstanding on the books (all-time, unsettled): Output VAT ${fmt(outputBal)} − Input VAT ${fmt(inputBal)} = <strong>${fmt(Math.abs(netOutstanding))} ${netOutstanding>=0?'payable':'refundable'}</strong> ${(Math.abs(netOutstanding)>0.004&&(session.role==='admin'||hasPermission('Edit Accounting')))?`<button class="btn btn-xs btn-primary" onclick="openSettleVAT()">Record Settlement with IRD</button>`:(Math.abs(netOutstanding)>0.004?'':'<span class="badge badge-success">Nothing outstanding</span>')}</p>
     <p style="font-size:15px;color:#666;margin-top:10px">This summary is generated from recorded transactions only. Verify against original tax invoices before submission — Claude/this system does not file returns on your behalf.</p>`;
   } else if (type==='annual-report') {
     const yearFrom = from || nepaliFiscalYearStartDate(today());
@@ -12520,9 +13005,16 @@ function exportReportCSV() {
 }
 
 function saveReportTemplate() {
-  const name = prompt('Template name:'); if (!name) return;
-  db.reportTemplates.push({ id:uid(), name, category:window._currentReportCat, type:document.getElementById('rpt-type').value, from:document.getElementById('rpt-from').value, to:document.getElementById('rpt-to').value, savedAt:now() });
-  saveDB(); toast('Template saved','success');
+  openTextPromptModal({
+    title: 'Save Report Template',
+    message: 'Template name:',
+    confirmLabel: 'Save',
+    onConfirm: (name) => {
+      if (!name) return;
+      db.reportTemplates.push({ id:uid(), name, category:window._currentReportCat, type:document.getElementById('rpt-type').value, from:document.getElementById('rpt-from').value, to:document.getElementById('rpt-to').value, savedAt:now() });
+      saveDB(); toast('Template saved','success');
+    }
+  });
 }
 
 function renderSavedTemplates() {
@@ -13016,11 +13508,18 @@ async function resetUserPw(id) {
   // Same protection as saveUser(): a non-admin with "Manage Users" permission must not be able
   // to seize control of the real admin account by resetting its password.
   if (u.role === 'admin' && session?.role !== 'admin') { toast('Only an Admin can reset an Admin account\'s password','error'); return; }
-  const pw = prompt(`New password for ${u.username}:`);
-  if (!pw || pw.length < 4) { toast('Password too short','error'); return; }
-  const s=salt(); u.passwordSalt=s; u.passwordHash=await hashPw(pw,s);
-  saveDB(); audit('UserManager','Password Reset',id,u.username);
-  toast(`Password reset for ${u.username}`,'success');
+  openTextPromptModal({
+    title: 'Reset Password',
+    message: `New password for ${u.username}:`,
+    inputType: 'password',
+    confirmLabel: 'Reset',
+    onConfirm: async (pw) => {
+      if (!pw || pw.length < 4) { toast('Password too short','error'); return; }
+      const s=salt(); u.passwordSalt=s; u.passwordHash=await hashPw(pw,s);
+      saveDB(); audit('UserManager','Password Reset',id,u.username);
+      toast(`Password reset for ${u.username}`,'success');
+    }
+  });
 }
 
 function deactivateUser(id) {
@@ -13277,36 +13776,50 @@ function handleRestoreFile(e) {
   // role plus re-entering the admin password, so reaching the Settings page with a lesser
   // "System Settings" permission isn't enough on its own to overwrite everyone's data.
   if (session?.role !== 'admin') { toast('Admin only','error'); e.target.value=''; return; }
-  const pw = prompt('Enter admin password to confirm restore:');
-  const u = db.users.find(x=>x.id===session.id);
-  hashPw(pw||'', u?.passwordSalt||'').then(hash=>{
-    if (!u || hash !== u.passwordHash) { toast('Incorrect password','error'); e.target.value=''; return; }
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const parsed = JSON.parse(ev.target.result);
-        if (!parsed.users || !parsed.settings) { toast('Invalid backup file','error'); return; }
-        confirm('Restore this backup? Current data will be overwritten. Type "RESTORE" to confirm.', ()=>{
-          db = parsed; saveDB(); toast('Backup restored! Refreshing...','success');
-          setTimeout(()=>location.reload(), 1500);
-        }, 'RESTORE');
-      } catch { toast('Invalid JSON file','error'); }
-    };
-    reader.readAsText(file);
-    e.target.value='';
+  openTextPromptModal({
+    title: 'Confirm Restore',
+    message: 'Enter admin password to confirm restore:',
+    inputType: 'password',
+    confirmLabel: 'Confirm',
+    onConfirm: (pw) => {
+      const u = db.users.find(x=>x.id===session.id);
+      hashPw(pw||'', u?.passwordSalt||'').then(hash=>{
+        if (!u || hash !== u.passwordHash) { toast('Incorrect password','error'); e.target.value=''; return; }
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const parsed = JSON.parse(ev.target.result);
+            if (!parsed.users || !parsed.settings) { toast('Invalid backup file','error'); return; }
+            confirm('Restore this backup? Current data will be overwritten. Type "RESTORE" to confirm.', ()=>{
+              db = parsed; saveDB(); toast('Backup restored! Refreshing...','success');
+              setTimeout(()=>location.reload(), 1500);
+            }, 'RESTORE');
+          } catch { toast('Invalid JSON file','error'); }
+        };
+        reader.readAsText(file);
+        e.target.value='';
+      });
+    }
   });
 }
 
 async function systemReset() {
   if (session?.role !== 'admin') { toast('Admin only','error'); return; }
-  const pw = prompt('Enter admin password to confirm reset:');
-  const u = db.users.find(x=>x.id===session.id);
-  if (!u || await hashPw(pw||'', u.passwordSalt) !== u.passwordHash) { toast('Incorrect password','error'); return; }
-  confirm('⚠️ SYSTEM RESET: All data will be permanently deleted. Type "RESET" to confirm.', ()=>{
-    safeRemove(scopedKey(DB_KEY));
-    toast('System reset complete. Reloading...','warning');
-    setTimeout(()=>location.reload(), 1500);
-  }, 'RESET');
+  openTextPromptModal({
+    title: 'Confirm System Reset',
+    message: 'Enter admin password to confirm reset:',
+    inputType: 'password',
+    confirmLabel: 'Confirm',
+    onConfirm: async (pw) => {
+      const u = db.users.find(x=>x.id===session.id);
+      if (!u || await hashPw(pw||'', u.passwordSalt) !== u.passwordHash) { toast('Incorrect password','error'); return; }
+      confirm('⚠️ SYSTEM RESET: All data will be permanently deleted. Type "RESET" to confirm.', ()=>{
+        safeRemove(scopedKey(DB_KEY));
+        toast('System reset complete. Reloading...','warning');
+        setTimeout(()=>location.reload(), 1500);
+      }, 'RESET');
+    }
+  });
 }
 
 /* ══ ENTITIES / CUSTOMERS ENHANCED ══ */
@@ -13583,6 +14096,7 @@ function openRecordModal(id=null) {
   document.getElementById('rec-track-expiry').checked = !!r?.trackExpiry;
   document.getElementById('rec-expiry-date').value = r?.expiryDate||'';
   toggleRecExpiryField();
+  document.getElementById('rec-vat-exempt').checked = !!r?.vatExempt;
   document.getElementById('rec-price').value = r?.salePrice||'';
   document.getElementById('rec-wholesale-price').value = r?.wholesalePrice||'';
   document.getElementById('rec-stock').value = r?.stock||'0';
@@ -13603,6 +14117,8 @@ function saveRecord() {
   if (isDuplicateName(db.records, name, recEditId)) { toast(`A product named "${name}" already exists`,'error'); return; }
   const sku = document.getElementById('rec-sku').value.trim();
   if (sku && isDuplicateName(db.records, sku, recEditId, 'sku')) { toast(`SKU "${sku}" is already used by another product`,'error'); return; }
+  const barcode = document.getElementById('rec-barcode').value.trim();
+  if (barcode && isDuplicateName(db.records, barcode, recEditId, 'barcode')) { toast(`Barcode "${barcode}" is already used by another product — scanning it would always ring up the wrong item`,'error'); return; }
   // Products no longer carry a Supplier field — they're made from raw materials via
   // Production/BOM, and suppliers link only to those raw materials, not to what's produced
   // from them. Cost stays manually editable only until real production history exists.
@@ -13614,6 +14130,7 @@ function saveRecord() {
     barcode: document.getElementById('rec-barcode').value.trim(),
     trackExpiry: document.getElementById('rec-track-expiry').checked,
     expiryDate: document.getElementById('rec-track-expiry').checked ? document.getElementById('rec-expiry-date').value : null,
+    vatExempt: document.getElementById('rec-vat-exempt').checked,
     salePrice: parseFloat(document.getElementById('rec-price').value)||0,
     wholesalePrice: parseFloat(document.getElementById('rec-wholesale-price').value)||0,
     stock: parseInt(document.getElementById('rec-stock').value)||0,
@@ -14087,7 +14604,8 @@ function confirmMakeNow() {
   }
   let totalCost = 0;
   let rawMaterialCost = 0;
-  let productIngredientCost = 0;
+  let manufacturedIngredientCost = 0;
+  let tradingIngredientCost = 0;
   const consumed = [];
   const batchNumber = 'BATCH-'+Date.now().toString(36).toUpperCase();
   bom.items.forEach(it=>{
@@ -14097,7 +14615,9 @@ function confirmMakeNow() {
     m.stock -= needed;
     const lineCost = needed * (it.itemType==='product' ? (m.costPrice||0) : (m.cost||0));
     totalCost += lineCost;
-    if (it.itemType === 'product') productIngredientCost += lineCost; else rawMaterialCost += lineCost;
+    if (it.itemType === 'product') {
+      if (isManufacturedProduct(it.materialId)) manufacturedIngredientCost += lineCost; else tradingIngredientCost += lineCost;
+    } else rawMaterialCost += lineCost;
     consumed.push({ materialId:m.id, materialName:m.name, qty:needed, unit:m.unit, itemType:it.itemType||'material' });
     db.stockHistory.push({ id:uid(), recordId:m.id, recordName:m.name, type:'production_consumption', qty:-needed, balanceAfter:m.stock, date:today(), ref:batchNumber, createdAt:now() });
   });
@@ -14119,18 +14639,19 @@ function confirmMakeNow() {
     db.stockHistory.push({ id:uid(), recordId:product.id, recordName:product.name, type:'production', qty, balanceAfter:product.stock, date:today(), ref:batchNumber, createdAt:now() });
   }
   // Ledger: inventory transfer (invisible) — raw materials AND any semi-finished product used as
-  // an ingredient both become the new finished/trading goods. Not a sale or expense, so it never
-  // touches P&L — just moves value between asset accounts. Previously, semi-finished-product
-  // ingredients (a recipe that uses another product you made, not a raw material) were included
-  // in the product's own cost calculation but silently never appeared in the books at all — the
-  // consumed product's value just vanished from account 1042 with nothing recorded. Both
-  // components are posted now, so the full picture is auditable.
+  // an ingredient both become the new finished good. Output is always Finished Goods (1041), since
+  // it was just built from a BOM — that's a different asset than something bought in and resold
+  // as-is (1042). An ingredient that's itself a manufactured product also comes out of 1041; an
+  // ingredient that's a plain trading good (e.g. bought-in packaging with no BOM of its own)
+  // comes out of 1042. Previously everything here used the single Trading Goods account, which is
+  // why 1041 never had anything posted to it.
   if (totalCost > 0) {
     const lines = qty > 0
-      ? [ { accountCode: db.settings.acctMappings.inventoryAccount, debit: totalCost, credit: 0 } ]
+      ? [ { accountCode: '1041', debit: totalCost, credit: 0 } ]
       : [ { accountCode: '5095', debit: totalCost, credit: 0 } ];   // zero yield — material cost is a loss, not inventory
     if (rawMaterialCost > 0) lines.push({ accountCode: '1040', debit: 0, credit: rawMaterialCost });
-    if (productIngredientCost > 0) lines.push({ accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: productIngredientCost });
+    if (manufacturedIngredientCost > 0) lines.push({ accountCode: '1041', debit: 0, credit: manufacturedIngredientCost });
+    if (tradingIngredientCost > 0) lines.push({ accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: tradingIngredientCost });
     postJournalEntry({ date: today(), voucherKind:'Journal', refType:'production', refId: batchNumber, reference: batchNumber, description: qty > 0 ? `Production — ${bom.name}` : `Production — ${bom.name} — zero yield, materials lost`, lines });
   }
   db.productionBatches.push({ id:uid(), orderId:null, batchNumber, productId:bom.productId, qtyProduced:qty, materialsConsumed:consumed, cost:totalCost, date:today(), status:'completed', createdBy:session.username });
@@ -14368,7 +14889,8 @@ function confirmCompleteProduction() {
   const batches = order.batches;
   let totalCost = 0;
   let rawMaterialCost = 0;
-  let productIngredientCost = 0;
+  let manufacturedIngredientCost = 0;
+  let tradingIngredientCost = 0;
   const consumed = [];
   const batchNumber = 'BATCH-'+Date.now().toString(36).toUpperCase();
   bom.items.forEach(it=>{
@@ -14378,7 +14900,9 @@ function confirmCompleteProduction() {
     m.stock -= needed;
     const lineCost = needed * (it.itemType==='product' ? (m.costPrice||0) : (m.cost||0));
     totalCost += lineCost;
-    if (it.itemType === 'product') productIngredientCost += lineCost; else rawMaterialCost += lineCost;
+    if (it.itemType === 'product') {
+      if (isManufacturedProduct(it.materialId)) manufacturedIngredientCost += lineCost; else tradingIngredientCost += lineCost;
+    } else rawMaterialCost += lineCost;
     consumed.push({ materialId:m.id, materialName:m.name, qty:needed, unit:m.unit, itemType:it.itemType||'material' });
     db.stockHistory.push({ id:uid(), recordId:m.id, recordName:m.name, type:'production_consumption', qty:-needed, balanceAfter:m.stock, date:today(), ref:order.orderNumber, createdAt:now() });
   });
@@ -14403,17 +14927,18 @@ function confirmCompleteProduction() {
     product.stock = newTotalQty;
     db.stockHistory.push({ id:uid(), recordId:product.id, recordName:product.name, type:'production', qty:actualQty, balanceAfter:product.stock, date:today(), ref:order.orderNumber, createdAt:now() });
   }
-  // Ledger: inventory transfer (invisible) — raw materials AND any semi-finished product used as
-  // an ingredient both become the new finished/trading goods. Previously, semi-finished-product
-  // ingredients were folded into this product's cost calculation but never appeared in the books
-  // at all — the consumed product's value just vanished from account 1042 with nothing recorded.
-  // Both components are posted now, so the full picture is auditable (same fix as Make Now).
+  // Ledger: inventory transfer (invisible) — output is always Finished Goods (1041), since it was
+  // just built from a BOM, not bought in and resold as-is (1042). An ingredient that's itself a
+  // manufactured product also comes out of 1041; a plain trading-good ingredient comes out of
+  // 1042. Previously everything here used the single Trading Goods account, which is why 1041
+  // never had anything posted to it (same fix as Make Now).
   if (totalCost > 0) {
     const lines = actualQty > 0
-      ? [ { accountCode: db.settings.acctMappings.inventoryAccount, debit: totalCost, credit: 0 } ]
+      ? [ { accountCode: '1041', debit: totalCost, credit: 0 } ]
       : [ { accountCode: '5095', debit: totalCost, credit: 0 } ];   // zero yield — material cost is a loss, not inventory
     if (rawMaterialCost > 0) lines.push({ accountCode: '1040', debit: 0, credit: rawMaterialCost });
-    if (productIngredientCost > 0) lines.push({ accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: productIngredientCost });
+    if (manufacturedIngredientCost > 0) lines.push({ accountCode: '1041', debit: 0, credit: manufacturedIngredientCost });
+    if (tradingIngredientCost > 0) lines.push({ accountCode: db.settings.acctMappings.inventoryAccount, debit: 0, credit: tradingIngredientCost });
     postJournalEntry({ date: today(), voucherKind:'Journal', refType:'production', refId: batchNumber, reference: batchNumber, description: actualQty > 0 ? `Production — ${bom.name} (${order.orderNumber})` : `Production — ${bom.name} (${order.orderNumber}) — zero yield, materials lost`, lines });
   }
   const batch = { id:uid(), orderId:order.id, batchNumber, productId:bom.productId, qtyProduced:actualQty, materialsConsumed:consumed, cost:totalCost, date:today(), status:'completed', createdBy:session.username };
@@ -14941,7 +15466,7 @@ function renderSupplierInvoices() {
       <td>${fmtDate(inv.dueDate)||'—'}</td>
       <td><span class="badge ${status==='paid'?'badge-success':status==='partial'?'badge-warning':'badge-danger'}">${status==='paid'?'Paid':status==='partial'?'Partial':'Unpaid'}</span></td>
       <td style="display:flex;gap:6px">${due>0?`<button class="btn btn-xs btn-success" onclick="openSupplierPaymentModal('${inv.id}')">💰 Pay</button>`:'<span class="text-muted">Settled</span>'}
-      ${(session.role==='admin'||hasPermission('Accounting'))?`<button class="btn btn-xs btn-secondary" onclick="openCorrectInvoice('supplier-invoice','${inv.id}')">🧾 Correct</button>`:''}</td>
+      ${(session.role==='admin'||hasPermission('Edit Accounting'))?`<button class="btn btn-xs btn-secondary" onclick="openCorrectInvoice('supplier-invoice','${inv.id}')">🧾 Correct</button>`:''}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">No supplier invoices yet</div></div></td></tr>';
 }
@@ -15426,7 +15951,22 @@ function exportCSV(type) {
 
 function downloadCSV(data, name) {
   if (!data?.length) return;
-  const keys = Object.keys(data[0]).filter(k=>typeof data[0][k]!=='object'||data[0][k]===null);
+  // BUG FIXED: this used to take column headers from Object.keys(data[0]) only — the FIRST
+  // record in the array — and decide which fields were "nested objects to exclude" based only
+  // on that same first record's shape. Given how many fields have been added to this data model
+  // over time, any field the oldest record predates would be silently missing from the ENTIRE
+  // export, even though every other row actually had that data. Now it's the union of every
+  // field across every record, and a field is only excluded if it's genuinely a nested
+  // object/array somewhere in the data — not just based on one row's shape.
+  const keySet = new Set();
+  const objectKeys = new Set();
+  data.forEach(row => {
+    Object.keys(row).forEach(k => {
+      keySet.add(k);
+      if (row[k] !== null && typeof row[k] === 'object') objectKeys.add(k);
+    });
+  });
+  const keys = [...keySet].filter(k => !objectKeys.has(k));
   const csv = [keys.join(','), ...data.map(row=>keys.map(k=>{ const v=row[k]??''; return `"${String(v).replace(/"/g,'""')}"` }).join(','))].join('\n');
   const blob = new Blob([csv],{type:'text/csv'});
   const url = URL.createObjectURL(blob);
@@ -15484,7 +16024,7 @@ function importRecordsCSV(text) {
     idxBarcode = col('barcode');
   if (idxName < 0) { toast('CSV must have a "name" column (matching the Export CSV format)','error'); return; }
 
-  let created = 0, updated = 0, skipped = 0, costSkipped = 0;
+  let created = 0, updated = 0, skipped = 0, costSkipped = 0, stockChangedCount = 0, barcodeSkipped = 0;
   for (let i = 1; i < lines.length; i++) {
     const cells = parseCSVLine(lines[i]);
     const name = (cells[idxName]||'').trim();
@@ -15507,13 +16047,29 @@ function importRecordsCSV(text) {
       lowStockThreshold: idxReorder >= 0 ? (parseFloat(cells[idxReorder])||10) : (existing?.lowStockThreshold||10),
       barcode: idxBarcode >= 0 ? (cells[idxBarcode]||'').trim() : (existing?.barcode||'')
     };
+    // Same protection as the manual product form: a barcode already used by a DIFFERENT product
+    // would make scanning it always ring up the wrong item, silently, at checkout.
+    if (fields.barcode && isDuplicateName(db.records, fields.barcode, existing?.id||null, 'barcode')) {
+      barcodeSkipped++;
+      fields.barcode = existing?.barcode || '';
+    }
     if (!costLocked && idxCost >= 0) fields.costPrice = parseFloat(cells[idxCost])||0;
+    // BUG FOUND: changing stock here for an EXISTING product does not touch the ledger at all —
+    // unlike Stock Adjustment (saveStockAdj), which posts to Inventory/Shrinkage accounts. This
+    // can't safely auto-post a correcting journal entry, because it genuinely can't tell whether
+    // this import is a fresh opening-balance catalog setup (shouldn't hit P&L) or a recount
+    // correction (should) — guessing wrong would be worse than not guessing. So instead of
+    // silently creating an Inventory-vs-books mismatch, it now tells you plainly when it happens.
+    if (existing && idxStock >= 0 && Math.abs((existing.stock||0) - fields.stock) > 0.004) stockChangedCount++;
     if (existing) { Object.assign(existing, fields); updated++; }
     else { db.records.push({ id:uid(), createdAt:now(), status:'active', trackExpiry:false, costPrice:0, ...fields }); created++; }
   }
   saveDB(); renderRecords();
-  audit('Products','CSV Import','',`${created} created, ${updated} updated, ${skipped} skipped`);
-  toast(`Import complete: ${created} created, ${updated} updated${skipped?`, ${skipped} skipped (blank name)`:''}${costSkipped?`, cost ignored for ${costSkipped} (locked by production history)`:''}`, 'success');
+  audit('Products','CSV Import','',`${created} created, ${updated} updated, ${skipped} skipped${stockChangedCount?`, ${stockChangedCount} stock qty changed (not posted to ledger)`:''}`);
+  toast(`Import complete: ${created} created, ${updated} updated${skipped?`, ${skipped} skipped (blank name)`:''}${costSkipped?`, cost ignored for ${costSkipped} (locked by production history)`:''}${barcodeSkipped?`, barcode ignored for ${barcodeSkipped} (already used by a different product)`:''}`, 'success');
+  if (stockChangedCount > 0) {
+    toast(`⚠️ Stock quantity changed for ${stockChangedCount} existing product(s) by this import — this does NOT post to your accounting ledger. If this was a recount correction, use Stock Adjustment instead so it's reflected in your books.`, 'error');
+  }
 }
 
 /* ══ SORT & PAGINATION ══ */

@@ -920,7 +920,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         </div>
         <div class="dropdown" style="position:relative">
           <button class="btn-icon" onclick="toggleNotifPanel()" id="notif-btn">🔔<span class="notif-badge" id="notif-count" style="display:none">0</span></button>
-          <div id="notif-panel">
+          <div id="notif-panel" class="notif-panel">
             <div class="notif-header">
               <div class="notif-tabs">
                 <div class="notif-tab active" onclick="setNotifTab('all',this)">All</div>
@@ -1297,10 +1297,10 @@ textarea.form-control{resize:vertical;min-height:80px}
             <div class="dropdown-menu" id="acct-tools-menu">
               <div class="dropdown-item" onclick="exportCSV('accounting');closeDropdowns()">📤 Export CSV</div>
               <div class="dropdown-item" onclick="openRecurring();closeDropdowns()">🔁 Recurring Transactions</div>
-              ${(session.role==='admin'||hasPermission('Edit Accounting'))?`<div class="dropdown-item" onclick="openInterCompanyTransfer();closeDropdowns()">🏢➡️ Inter-Company Transfer</div>`:''}
+              <div class="dropdown-item" id="menu-ict" onclick="openInterCompanyTransfer();closeDropdowns()">🏢➡️ Inter-Company Transfer</div>
               <div class="dropdown-item" onclick="openBankRecon();closeDropdowns()">🏦 Bank Reconciliation</div>
               <div class="dropdown-item" onclick="openMyEquipment();closeDropdowns()">🏗️ My Equipment</div>
-              ${(session.role==='admin'||hasPermission('Edit Accounting'))?`<div class="dropdown-item" onclick="openOwnerTxn();closeDropdowns()">🤝 Owner/Partner Transaction</div>`:''}
+              <div class="dropdown-item" id="menu-owner-txn" onclick="openOwnerTxn();closeDropdowns()">🤝 Owner/Partner Transaction</div>
               <div class="dropdown-item" onclick="openPDCTracker();closeDropdowns()">📝 Post-Dated Cheques</div>
             </div>
           </div>
@@ -3574,6 +3574,7 @@ const DEFAULT_CHART_OF_ACCOUNTS = [
   { code:'4010', name:'Sales Revenue – Retail', type:'income', normalBalance:'credit' },
   { code:'4020', name:'Sales Revenue – Wholesale', type:'income', normalBalance:'credit' },
   { code:'4090', name:'Other Income', type:'income', normalBalance:'credit' },
+  { code:'4091', name:'Gain on Disposal of Fixed Assets', type:'income', normalBalance:'credit' },
   // ── Expense ──
   { code:'5010', name:'Cost of Goods Sold', type:'expense', normalBalance:'debit' },
   { code:'5020', name:'Salary & Wages', type:'expense', normalBalance:'debit' },
@@ -3585,6 +3586,7 @@ const DEFAULT_CHART_OF_ACCOUNTS = [
   { code:'5070', name:'Maintenance', type:'expense', normalBalance:'debit' },
   { code:'5080', name:'Travel', type:'expense', normalBalance:'debit' },
   { code:'5090', name:'Depreciation Expense', type:'expense', normalBalance:'debit' },
+  { code:'5091', name:'Loss on Disposal of Fixed Assets', type:'expense', normalBalance:'debit' },
   { code:'5100', name:'Other Expense', type:'expense', normalBalance:'debit' },
   { code:'5095', name:'Inventory Adjustment (Shrinkage/Correction)', type:'expense', normalBalance:'debit' }
 ];
@@ -4673,13 +4675,33 @@ function postDebitNoteJournal(dn, invoice) {
 function computeVATSalesRegister(from, to) {
   const vatCode = db.settings.acctMappings.vatOutputAccount;
   const entries = (db.journalEntries||[]).filter(j => !j.isVoid && ['pos-sale','credit-sale','credit-note'].includes(j.refType) && (!from||j.date>=from) && (!to||j.date<=to));
+  // Finds the exempt-after-discount portion of a sale, so it can be subtracted from the taxable
+  // figure below — same proportional math as getCartTotals() uses at checkout.
+  const exemptPortionOf = (sale) => {
+    if (!sale || !(sale.exemptSubtotal > 0.004) || !(sale.subtotal > 0)) return 0;
+    const discountOnExempt = (sale.discount||0) * (sale.exemptSubtotal / sale.subtotal);
+    return Math.max(0, sale.exemptSubtotal - discountOnExempt);
+  };
   const rows = entries.map(j => {
     const isReversal = j.refType === 'credit-note';
     const vatLine = j.lines.find(l=>l.accountCode===vatCode);
     const salesLine = j.lines.find(l=>{ const acc=getAccountByCode(l.accountCode); return acc && acc.type==='income'; });
     const vat = vatLine ? (isReversal ? -(vatLine.debit||0) : (vatLine.credit||0)) : 0;
-    const taxable = salesLine ? (isReversal ? -(salesLine.debit||0) : (salesLine.credit||0)) : 0;
-    return { date:j.date, voucherNumber:j.voucherNumber, description:j.description, taxable, vat, isReversal };
+    let taxable = salesLine ? (isReversal ? -(salesLine.debit||0) : (salesLine.credit||0)) : 0;
+    if (isReversal) {
+      const cn = (db.correctionNotes||[]).find(c=>c.id===j.refId);
+      const originalSale = cn ? db.sales.find(s=>s.id===cn.refId) : null;
+      if (originalSale && originalSale.exemptSubtotal > 0.004 && originalSale.subtotal > 0) {
+        // Apply the original sale's exempt ratio to this reversal's amount — a partial credit
+        // note is itself a partial reversal, proportioned the same way the original sale was.
+        const exemptRatio = exemptPortionOf(originalSale) / (originalSale.subtotal - (originalSale.discount||0) || 1);
+        taxable = taxable * (1 - exemptRatio);
+      }
+    } else {
+      const sale = db.sales.find(s=>s.id===j.refId);
+      taxable -= exemptPortionOf(sale);
+    }
+    return { date:j.date, voucherNumber:j.voucherNumber, description:j.description, taxable: +taxable.toFixed(2), vat, isReversal };
   }).sort((a,b)=>a.date.localeCompare(b.date));
   return { rows, totalTaxable: rows.reduce((a,r)=>a+r.taxable,0), totalVAT: rows.reduce((a,r)=>a+r.vat,0) };
 }
@@ -5183,6 +5205,14 @@ function saveFixedAsset() {
 function removeFixedAsset(id) {
   const asset = db.fixedAssets.find(a=>a.id===id);
   if (!asset) return;
+  // Any depreciation already posted against this asset (composite refId "assetId:YYYY-MM") needs
+  // reversing no matter which branch below runs — otherwise Accumulated Depreciation for a
+  // now-gone asset sits on the books forever, and Depreciation Expense was recognized for an
+  // asset that's being fully unwound.
+  const voidAssetDepreciation = (reason) => {
+    (db.journalEntries||[]).filter(j => !j.isVoid && j.refType==='depreciation' && (j.refId||'').startsWith(asset.id+':'))
+      .forEach(j => voidJournalEntry(j.id, reason));
+  };
   // If this was bought on credit, removing it must also deal with the payable — otherwise
   // "remove and re-add" (which is what correcting an equipment invoice tells you to do) would
   // leave the old amount still owed to the supplier while a second invoice gets created for the
@@ -5203,6 +5233,7 @@ function removeFixedAsset(id) {
       // actually keeps it out of the list.
       db.supplierInvoices = db.supplierInvoices.filter(i=>i.id!==linkedInvoice.id);
       voidJournalEntriesForRef('fixed-asset-purchase', asset.id, 'Equipment removed');
+      voidAssetDepreciation('Equipment removed (unpaid credit purchase unwound)');
       audit('Accounting','Equipment Removed (On Credit)', asset.id, asset.name);
       saveDB();
       renderEquipmentList();
@@ -5210,11 +5241,35 @@ function removeFixedAsset(id) {
     });
     return;
   }
-  confirm(`Remove "${asset.name}"? This won't undo its depreciation history.`, ()=>{
-    asset.status = 'removed';
-    audit('Accounting','Equipment Removed', asset.id, asset.name);
-    saveDB();
-    renderEquipmentList();
+  // BUG FIXED: this used to just hide the asset from the Equipment list (status='removed') with
+  // no journal entry at all — its full original cost and accumulated depreciation stayed on the
+  // Balance Sheet forever, permanently overstating Fixed Assets, with no way to record what it
+  // was actually sold for or recognize the resulting gain/loss. This is now a proper disposal:
+  // clears the asset off the books and books the difference between what you received for it
+  // and its book value as a gain or loss.
+  const bookValue = +(asset.cost - asset.accumulatedDepreciation).toFixed(2);
+  openTextPromptModal({
+    title: 'Remove Equipment — Disposal',
+    message: `Removing "${asset.name}" (book value ${fmt(bookValue)}). Enter what you received for it — 0 if scrapped/written off with nothing received:`,
+    defaultValue: '0',
+    confirmLabel: 'Remove',
+    onConfirm: (val) => {
+      const proceeds = Math.max(0, parseFloat(val)||0);
+      const gainLoss = +(proceeds - bookValue).toFixed(2);
+      const lines = [
+        { accountCode: asset.depCode, debit: asset.accumulatedDepreciation, credit: 0 },
+        { accountCode: asset.assetCode, debit: 0, credit: asset.cost }
+      ];
+      if (proceeds > 0) lines.push({ accountCode: '1010', debit: proceeds, credit: 0 });
+      if (gainLoss > 0.004) lines.push({ accountCode: '4091', debit: 0, credit: gainLoss });
+      else if (gainLoss < -0.004) lines.push({ accountCode: '5091', debit: -gainLoss, credit: 0 });
+      postJournalEntry({ date: today(), voucherKind:'Journal', refType:'fixed-asset-disposal', refId: asset.id, reference: asset.name, description: `Disposal — ${asset.name}`, lines });
+      asset.status = 'removed';
+      audit('Accounting','Equipment Disposed', asset.id, `${asset.name} — proceeds ${fmt(proceeds)}, ${gainLoss>=0?'gain':'loss'} ${fmt(Math.abs(gainLoss))}`);
+      saveDB();
+      renderEquipmentList();
+      toast(`Disposed — ${gainLoss>=0?'gain':'loss'} of ${fmt(Math.abs(gainLoss))} recorded`,'success');
+    }
   });
 }
 
@@ -5333,10 +5388,13 @@ function computeCashFlow(from, to) {
 
   const operating = netProfit + depreciation - changeInAR - changeInInventory + changeInAP + changeInOtherWorkingCapital;
 
-  // Investing: gross cash spent buying fixed assets this period (debit side only — depreciation
-  // credits to the same account are excluded so they aren't counted twice).
+  // Investing: gross cash spent buying fixed assets this period (debit side), separately from
+  // proceeds actually received disposing of one (credit side — see removeFixedAsset). Depreciation
+  // never touches these accounts (it credits the separate contra-asset depCode instead), so the
+  // credit side here is disposals only, not a double-count of depreciation.
   const assetPurchases = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && fixedAssetCodes.includes(l.accountCode)).reduce((a,l)=>a+l.debit,0);
-  const investing = -assetPurchases;
+  const assetDisposalProceeds = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && fixedAssetCodes.includes(l.accountCode)).reduce((a,l)=>a+l.credit,0);
+  const investing = -assetPurchases + assetDisposalProceeds;
 
   // Financing: net owner/partner capital movement plus net loan drawdowns/repayments this period
   const equityMovement = ledgerLinesUpTo(toDate).filter(l=>l.date>=fromDate && equityCodes.includes(l.accountCode)).reduce((a,l)=>a+l.credit-l.debit,0);
@@ -5349,7 +5407,7 @@ function computeCashFlow(from, to) {
   const computedChange = +(operating + investing + financing).toFixed(2);
   const reconcilingDifference = +(netChange - computedChange).toFixed(2);
 
-  return { netProfit, depreciation, changeInAR, changeInInventory, changeInAP, changeInOtherWorkingCapital, operating, investing, loanMovement, equityMovement, financing, netChange, computedChange, reconcilingDifference, openingCash, closingCash };
+  return { netProfit, depreciation, changeInAR, changeInInventory, changeInAP, changeInOtherWorkingCapital, operating, investing, assetPurchases, assetDisposalProceeds, loanMovement, equityMovement, financing, netChange, computedChange, reconcilingDifference, openingCash, closingCash };
 }
 
 /* ── Phase 6-D: Business Ownership (Single Owner or Partnership) ── */
@@ -8055,6 +8113,7 @@ function initApp() {
   else document.body.classList.remove('light-mode');
   renderSidebar();
   updateTopbar();
+  applyPermissionGatedUI();
   startClock();
   checkBackupBanner();
   generateNotifications();
@@ -8085,6 +8144,18 @@ function updateTopbar() {
   document.getElementById('sb-tag').textContent = APP_BRAND_NAME;
   document.getElementById('sb-user-name').textContent = session.name;
   document.getElementById('sb-user-role').textContent = '@' + session.username;
+}
+
+// Hides static-HTML menu items that require a permission beyond just having the module open —
+// these two are part of the page's raw HTML (not JS-rendered per module refresh like most of the
+// app), so they can't use the normal ${hasPermission(...)?...:''} pattern the way dynamically
+// rendered lists can. Call this after login/session start and after any permission change.
+function applyPermissionGatedUI() {
+  const canAccounting = !!(session && (session.role==='admin' || hasPermission('Edit Accounting')));
+  ['menu-ict','menu-owner-txn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = canAccounting ? '' : 'none';
+  });
 }
 
 /* ══ SIDEBAR ══ */
@@ -9153,7 +9224,7 @@ function completeCreditSale() {
   if (_checkoutInProgress) return;
   _checkoutInProgress = true;
   try {
-    const {subtotal, discount, tax, total, taxPct} = getCartTotals();
+    const {subtotal, discount, tax, total, taxPct, exemptSubtotal} = getCartTotals();
     const customerName = document.getElementById('pos-customer-input')?.value?.trim() || '';
     const paidNow = parseFloat(document.getElementById('credit-paid-now')?.value) || 0;
     if (paidNow > total) { toast('Amount paid cannot exceed the total','error'); _checkoutInProgress = false; return; }
@@ -9167,7 +9238,7 @@ function completeCreditSale() {
 
     const sale = {
       id: uid(), receiptNumber: receiptNum, date: today(), createdAt: now(),
-      items: cart.map(c=>({...c})), customerName, customerId, customerType, subtotal, discount,
+      items: cart.map(c=>({...c})), customerName, customerId, customerType, subtotal, discount, exemptSubtotal,
       tax: taxPct, taxAmount: tax, total, paymentMethod: 'Credit',
       paidAmount: paidNow, dueAmount, dueDate, status: dueAmount > 0 ? 'partial' : 'completed',
       notes, createdBy: session.username, saleType: 'credit'
@@ -9234,7 +9305,7 @@ function completeSale(method) {
   if (_checkoutInProgress) return;
   _checkoutInProgress = true;
   try {
-  const {subtotal, discount, tax, total, taxPct} = getCartTotals();
+  const {subtotal, discount, tax, total, taxPct, exemptSubtotal} = getCartTotals();
   const customerName = document.getElementById('pos-customer-input')?.value?.trim() || '';
   const customerType = document.getElementById('pos-customer-type')?.value || 'Retail';
   // Fiscal-year sequential invoice numbering (IRD-compliant format), replaces the old timestamp-based number
@@ -9243,7 +9314,7 @@ function completeSale(method) {
   const customerId = resolveOrCreateCustomerId(customerName);
   const sale = {
     id: uid(), receiptNumber: receiptNum, date: today(), createdAt: now(),
-    items: cart.map(c=>({...c})), customerName, customerId, customerType, subtotal, discount,
+    items: cart.map(c=>({...c})), customerName, customerId, customerType, subtotal, discount, exemptSubtotal,
     tax: taxPct, taxAmount: tax, total, paymentMethod: method,
     qrId: (method||'').toLowerCase().includes('qr') ? currentQRPayment.qrId : null,
     status: 'completed', saleType: 'cash', createdBy: session.username
@@ -9452,6 +9523,7 @@ function buildThermalReceiptHtml(sale, printerType) {
       <div class="th-dashed"></div>
       <div class="th-row"><span>Subtotal</span><span>${fmt(sale.subtotal)}</span></div>
       ${sale.discount?`<div class="th-row"><span>Discount</span><span>-${fmt(sale.discount)}</span></div>`:''}
+      ${sale.exemptSubtotal>0.004?`<div class="th-row th-sm"><span>incl. VAT-exempt</span><span>${fmt(sale.exemptSubtotal)}</span></div>`:''}
       ${sale.taxAmount?`<div class="th-row"><span>Tax (${sale.tax}%)</span><span>${fmt(sale.taxAmount)}</span></div>`:''}
       <div class="th-dashed"></div>
       <div class="th-row th-bold th-lg"><span>TOTAL</span><span>${fmt(sale.total)}</span></div>
@@ -9521,6 +9593,7 @@ function buildA4InvoiceHtml(sale) {
       <div class="inv-totals">
         <div class="inv-totals-row"><span>Subtotal</span><span>${fmt(sale.subtotal)}</span></div>
         ${sale.discount?`<div class="inv-totals-row"><span>Discount</span><span>-${fmt(sale.discount)}</span></div>`:''}
+        ${sale.exemptSubtotal>0.004?`<div class="inv-totals-row" style="font-size:12px;color:#777"><span>incl. VAT-exempt</span><span>${fmt(sale.exemptSubtotal)}</span></div>`:''}
         ${sale.taxAmount?`<div class="inv-totals-row"><span>Tax (${sale.tax}%)</span><span>${fmt(sale.taxAmount)}</span></div>`:''}
         <div class="inv-totals-row inv-grand-total"><span>Grand Total</span><span>${fmt(sale.total)}</span></div>
       </div>
@@ -12390,7 +12463,8 @@ function generateReport() {
     </tbody></table>
     <h3 style="margin-top:14px">Investing Activities</h3>
     <table><tbody>
-      ${row('Equipment purchased', cf.investing)}
+      ${row('Equipment purchased', -cf.assetPurchases)}
+      ${cf.assetDisposalProceeds>0.004?row('Proceeds from disposal of equipment', cf.assetDisposalProceeds):''}
       <tr style="background:#f0f0f0">${row('Cash from Investing Activities', cf.investing, true).replace('<tr>','').replace('</tr>','')}</tr>
     </tbody></table>
     <h3 style="margin-top:14px">Financing Activities</h3>
@@ -15707,7 +15781,7 @@ function saveRole() {
     db.settings.roles.push({ id, createdAt:now(), ...data });
     audit('Roles','Create',id,name);
   }
-  saveDB(); closeModal('role-modal-overlay'); renderRolesList(); toast('Role saved','success');
+  saveDB(); closeModal('role-modal-overlay'); renderRolesList(); applyPermissionGatedUI(); toast('Role saved','success');
 }
 
 function duplicateRole(id) {

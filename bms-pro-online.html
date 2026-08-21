@@ -1514,6 +1514,7 @@ textarea.form-control{resize:vertical;min-height:80px}
             <div class="settings-nav-item" onclick="setSettingsSection('advanced-ledger',this)">⚙️ Advanced Ledger</div>
             <div class="settings-nav-item" onclick="setSettingsSection('ownership',this)">🤝 Business Ownership</div>
             <div class="settings-nav-item" onclick="setSettingsSection('salary-comp',this)">💵 Salary Components</div>
+            <div class="settings-nav-item" onclick="setSettingsSection('tax-slabs',this)">🧾 Income Tax Withholding</div>
             <div class="settings-nav-item" onclick="setSettingsSection('tax',this)">🧾 Nepal Tax &amp; VAT</div>
             <div class="settings-nav-item" onclick="setSettingsSection('reports',this)">📊 Report Settings</div>
 
@@ -1848,6 +1849,35 @@ textarea.form-control{resize:vertical;min-height:80px}
               </div>
               <button class="btn btn-primary" style="margin-top:16px" onclick="saveSalaryComponents()">💾 Save Components</button>
             </div>
+            <!-- INCOME TAX SLABS (TDS on Salary) -->
+            <div class="settings-section" id="sec-tax-slabs">
+              <div class="settings-title">🧾 Income Tax Withholding (TDS on Salary)</div>
+              <div class="settings-desc">
+                Automatically calculates each employee's "Tax" deduction on the Payroll screen from their salary, using the slab table below. This app doesn't know the current tax slabs on its own — enter them yourself (or ask your accountant), and update this table whenever the slabs change (usually with each fiscal year's budget). Nothing here files anything or talks to IRD; it only pre-fills a number you can still see and override on the Payroll screen before approving.
+              </div>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:10px">
+                <input type="checkbox" id="tax-slabs-enabled" onchange="toggleTaxSlabsEnabled()">
+                <span>Enable automatic tax calculation</span>
+              </label>
+              <div id="tax-slabs-config" style="display:none;margin-top:12px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                  <input type="checkbox" id="tax-slabs-ssf-deductible">
+                  <span>Reduce taxable income by the employee's own SSF contribution first<span class="help-tip" data-tip="Common provision: retirement/social-security contributions are often deducted from income before applying tax slabs. Confirm with your accountant whether this applies to you.">?</span></span>
+                </label>
+                <div class="form-hint" style="margin-top:10px">Slabs apply to ANNUAL taxable income (salary × 12). Each tier taxes only the portion of income that falls within it — not the whole income at that tier's rate. The last row should have no upper limit.</div>
+                <div id="tax-slabs-list" style="margin-top:8px"></div>
+                <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addTaxSlabTier()">+ Add Slab Tier</button>
+                <div style="margin-top:14px;padding:10px;background:var(--elevated);border-radius:8px">
+                  <div style="font-weight:600;margin-bottom:6px">Try a monthly salary</div>
+                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <input class="form-control" id="tax-slab-test-salary" type="number" placeholder="Monthly gross salary" style="max-width:200px">
+                    <button class="btn btn-secondary btn-sm" onclick="testTaxSlabCalc()">Calculate</button>
+                    <span id="tax-slab-test-result" style="font-size:15px;color:var(--text-muted)"></span>
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-primary" style="margin-top:16px" onclick="saveTaxSlabsSettings()">💾 Save Tax Slabs</button>
+            </div>
             <!-- NEPAL TAX & VAT -->
             <div class="settings-section" id="sec-tax">
               <div class="settings-title">🧾 Nepal Tax & VAT Settings</div>
@@ -2069,6 +2099,10 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="form-group"><label class="form-label">Date *</label><input class="form-control" id="acct-date" onfocus="openCalendar('acct-date','standard')"></div>
       </div>
       <div class="form-group"><label class="form-label">Category</label><select class="form-control" id="acct-cat" onchange="updateAcctTDSVisibility()"></select></div>
+      <div class="form-group" id="acct-employee-section" style="display:none">
+        <label class="form-label">Employee<span class="help-tip" data-tip="Tags this advance to a specific employee so Reports ▸ Employee Advances can track their running balance.">?</span></label>
+        <select class="form-control" id="acct-employee-select"></select>
+      </div>
       <div class="form-group"><label class="form-label">Description *</label><input class="form-control" id="acct-desc" placeholder="Brief description of this entry"></div>
       <div class="form-group"><label class="form-label">Reference</label><input class="form-control" id="acct-ref" placeholder="Invoice #, Receipt # (optional)"></div>
       <div class="form-group" id="acct-tds-section" style="display:none;background:var(--bg-alt,#f7f7f9);padding:12px;border-radius:8px">
@@ -3259,7 +3293,7 @@ function defaultDB() {
       acctMappings: {
         paymentMethodToAccount: { 'Cash':'1010', 'Card':'1020', 'Bank Transfer':'1020', 'Credit':null },
         qrCodeToAccount: {},           // { qrCodeId: accountCode } — set per QR code in POS QR settings
-        expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Contractor':'5070','Professional Fees':'5100','Inter-Company Transfer':'1090','Other':'5100' },
+        expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Contractor':'5070','Professional Fees':'5100','Inter-Company Transfer':'1090','Staff Advance/Loan Given':'1035','Other':'5100' },
         incomeCategoryToAccount: { 'Sales':'4010','Service':'4010','Interest':'4090','Rent Income':'4090','Inter-Company Transfer':'1090','Other Income':'4090' },
         salesAccountRetail: '4010', salesAccountWholesale: '4020',
         arAccount: '1030', apAccount: '2010',
@@ -3275,6 +3309,11 @@ function defaultDB() {
       salaryComponents: {            // Editable salary components
         earnings: ['Basic Salary','TA','DA','Fuel Allowance','Festival Allowance','Overtime','Bonus','Other Allowance'],
         deductions: ['Tax','Advance Adjustment','Loan Recovery','Other Deduction']
+      },
+      incomeTaxSlabs: {               // TDS on employee salary — off by default; nothing here is
+        enabled: false,                // guessed or hardcoded, the person must enter their own
+        ssfDeductible: true,           // current slabs in Settings ▸ Income Tax Withholding
+        tiers: []                      // [{ upTo: 500000, rate: 1 }, { upTo: null, rate: 39 }, ...] — upTo:null = no upper limit
       },
       customerTypes: ['Retail', 'Wholesale'],
       leaveTypes: ['Sick Leave', 'Annual Leave', 'Casual Leave', 'Maternity/Paternity', 'Unpaid Leave'],
@@ -3301,7 +3340,7 @@ function defaultDB() {
         transactions: ['Sales', 'Purchase', 'Service', 'Refund'],
         entities: ['Retail Customer', 'Wholesale Customer', 'Client', 'Member', 'VIP'],
         secondary: ['Supplier', 'Vendor', 'Partner', 'Distributor'],
-        accounting: ['Revenue', 'Salary', 'Utilities', 'Rent', 'Supplies', 'Tax', 'VAT', 'Contractor', 'Professional Fees', 'Inter-Company Transfer', 'Other']
+        accounting: ['Revenue', 'Salary', 'Utilities', 'Rent', 'Supplies', 'Tax', 'VAT', 'Contractor', 'Professional Fees', 'Inter-Company Transfer', 'Staff Advance/Loan Given', 'Other']
       },
       labels: {
         records: 'Products', entities: 'Customers', secondary: 'Suppliers',
@@ -3348,6 +3387,7 @@ function migrateDB() {
       if (!db.settings.modules) db.settings.modules = def.settings.modules;
       if (!db.settings.reportSettings) db.settings.reportSettings = def.settings.reportSettings;
       if (!db.settings.salaryComponents) db.settings.salaryComponents = def.settings.salaryComponents;
+      if (!db.settings.incomeTaxSlabs) db.settings.incomeTaxSlabs = def.settings.incomeTaxSlabs;
       if (!db.settings.customerTypes) db.settings.customerTypes = def.settings.customerTypes;
       if (db.settings.accountingPINEnabled === undefined) db.settings.accountingPINEnabled = false;
       if (!db.settings.accountingPIN) { db.settings.accountingPIN = ''; db.settings.accountingPINEnabled = false; }
@@ -3388,15 +3428,19 @@ function migrateDB() {
       if (db.settings.lastDigestDate===undefined) db.settings.lastDigestDate = null;
       if (db.settings.filingReminderDays===undefined) db.settings.filingReminderDays = 5;
       if (db.settings.categories?.accounting && !db.settings.categories.accounting.includes('Inter-Company Transfer')) db.settings.categories.accounting.push('Inter-Company Transfer');
+      if (db.settings.categories?.accounting && !db.settings.categories.accounting.includes('Staff Advance/Loan Given')) db.settings.categories.accounting.push('Staff Advance/Loan Given');
       // Fix: Inter-Company Transfer used to fall through to Other Expense/Other Income (a P&L
       // misclassification — see accounting audit) because no mapping existed for it. Backfill the
       // correct balance-sheet mapping for installs that already have acctMappings saved, since the
-      // "acctMappings missing entirely" branch below only runs for brand-new installs.
+      // "acctMappings missing entirely" branch below only runs for brand-new installs. Same issue
+      // for Staff Advance/Loan Given — without this, giving an employee an advance would default
+      // to "Other" (a P&L expense) instead of the Employee Advances Receivable asset account.
       if (db.settings.acctMappings) {
         if (!db.settings.acctMappings.expenseCategoryToAccount) db.settings.acctMappings.expenseCategoryToAccount = {};
         if (!db.settings.acctMappings.incomeCategoryToAccount) db.settings.acctMappings.incomeCategoryToAccount = {};
         if (!db.settings.acctMappings.expenseCategoryToAccount['Inter-Company Transfer']) db.settings.acctMappings.expenseCategoryToAccount['Inter-Company Transfer'] = '1090';
         if (!db.settings.acctMappings.incomeCategoryToAccount['Inter-Company Transfer']) db.settings.acctMappings.incomeCategoryToAccount['Inter-Company Transfer'] = '1090';
+        if (!db.settings.acctMappings.expenseCategoryToAccount['Staff Advance/Loan Given']) db.settings.acctMappings.expenseCategoryToAccount['Staff Advance/Loan Given'] = '1035';
       }
       if (!db.payrollHistory) db.payrollHistory = [];
       if (!db.secondary) db.secondary = [];
@@ -3435,7 +3479,7 @@ function migrateDB() {
         db.settings.acctMappings = {
           paymentMethodToAccount: { 'Cash':'1010', 'Card':'1020', 'Bank Transfer':'1020', 'Credit':null },
           qrCodeToAccount: {},
-          expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Contractor':'5070','Professional Fees':'5100','Inter-Company Transfer':'1090','Other':'5100' },
+          expenseCategoryToAccount: { 'Salary':'5020','Utilities':'5040','Rent':'5030','Supplies':'5050','Tax':'5060','VAT':'2020','Maintenance':'5070','Travel':'5080','Contractor':'5070','Professional Fees':'5100','Inter-Company Transfer':'1090','Staff Advance/Loan Given':'1035','Other':'5100' },
           incomeCategoryToAccount: { 'Sales':'4010','Service':'4010','Interest':'4090','Rent Income':'4090','Inter-Company Transfer':'1090','Other Income':'4090' },
           salesAccountRetail: '4010', salesAccountWholesale: '4020',
           arAccount: '1030', apAccount: '2010',
@@ -3542,6 +3586,7 @@ const DEFAULT_CHART_OF_ACCOUNTS = [
   { code:'1021', name:'eSewa Wallet', type:'asset', normalBalance:'debit' },
   { code:'1022', name:'Khalti Wallet', type:'asset', normalBalance:'debit' },
   { code:'1030', name:"Accounts Receivable (Customer Dues)", type:'asset', normalBalance:'debit', isControlAccount:true },
+  { code:'1035', name:'Employee Advances Receivable', type:'asset', normalBalance:'debit' },
   { code:'1040', name:'Inventory – Raw Materials', type:'asset', normalBalance:'debit' },
   { code:'1041', name:'Inventory – Finished Goods', type:'asset', normalBalance:'debit' },
   { code:'1042', name:'Inventory – Trading/Retail Goods', type:'asset', normalBalance:'debit' },
@@ -3564,7 +3609,8 @@ const DEFAULT_CHART_OF_ACCOUNTS = [
   { code:'2070', name:'SSF Payable (Social Security Fund)', type:'liability', normalBalance:'credit' },
   { code:'2040', name:'Advance from Customers', type:'liability', normalBalance:'credit' },
   { code:'2050', name:'Short-Term Loans', type:'liability', normalBalance:'credit' },
-  { code:'2060', name:'TDS Payable', type:'liability', normalBalance:'credit' },
+  { code:'2060', name:'TDS Payable (Vendor/Contractor)', type:'liability', normalBalance:'credit' },
+  { code:'2061', name:'TDS Payable (Employee Salary)', type:'liability', normalBalance:'credit' },
   { code:'2110', name:'Long-Term Loans', type:'liability', normalBalance:'credit' },
   // ── Equity ──
   { code:'3010', name:"Owner's Capital", type:'equity', normalBalance:'credit' },
@@ -3957,14 +4003,25 @@ function postManualAccountingJournal(entry) {
 }
 
 function postPayrollJournal(month, entries) {
-  const totalGrossWage = entries.reduce((a,e)=>a+e.grossWage,0);
+  // BUG FIXED: Salary Expense used to be debited for grossWage AFTER Tax/Loan Recovery had
+  // already been subtracted out of it — understating true labor cost, and leaving the withheld
+  // tax with no liability account tracking what's owed to IRD, and loan recovery with no asset
+  // account tracking what the employee still owes. Salary Expense is now the true gross earned
+  // (grossWage + taxWithheld + loanRecovered, i.e. before those two specific withholdings —
+  // "Other Deduction" stays blended in since its correct treatment isn't knowable from a
+  // free-text label), and each withholding gets its own credit line.
+  const totalSalaryExpense = entries.reduce((a,e)=>a+e.grossWage+(e.taxWithheld||0)+(e.loanRecovered||0),0);
   const totalEmployerSSF = entries.reduce((a,e)=>a+(e.employerSSF||0),0);
   const totalNetPayable = entries.reduce((a,e)=>a+e.netPay,0);
   const totalSSFPayable = entries.reduce((a,e)=>a+(e.employeeSSF||0)+(e.employerSSF||0),0);
-  const lines = [ { accountCode: db.settings.acctMappings.salaryExpenseAccount, debit: totalGrossWage, credit: 0 } ];
+  const totalTaxWithheld = entries.reduce((a,e)=>a+(e.taxWithheld||0),0);
+  const totalLoanRecovered = entries.reduce((a,e)=>a+(e.loanRecovered||0),0);
+  const lines = [ { accountCode: db.settings.acctMappings.salaryExpenseAccount, debit: totalSalaryExpense, credit: 0 } ];
   if (totalEmployerSSF > 0) lines.push({ accountCode: '5025', debit: totalEmployerSSF, credit: 0 });
   lines.push({ accountCode: '2030', debit: 0, credit: totalNetPayable });
   if (totalSSFPayable > 0) lines.push({ accountCode: '2070', debit: 0, credit: totalSSFPayable });
+  if (totalTaxWithheld > 0.004) lines.push({ accountCode: '2061', debit: 0, credit: totalTaxWithheld });
+  if (totalLoanRecovered > 0.004) lines.push({ accountCode: '1035', debit: 0, credit: totalLoanRecovered });
   return postJournalEntry({ date: today(), voucherKind:'Payment', refType:'payroll', refId: month, reference: `PAY-${month}`, description: `Payroll Approved ${month}`, lines });
 }
 
@@ -10020,6 +10077,17 @@ function updateAcctTDSVisibility() {
   const section = document.getElementById('acct-tds-section');
   if (section) section.style.display = applicable ? '' : 'none';
   if (!applicable) { document.getElementById('acct-tds-toggle').checked = false; toggleAcctTDSFields(); }
+  const empSection = document.getElementById('acct-employee-section');
+  if (empSection) {
+    const isAdvance = cat === 'Staff Advance/Loan Given';
+    empSection.style.display = isAdvance ? '' : 'none';
+    if (isAdvance) {
+      const sel = document.getElementById('acct-employee-select');
+      const current = sel.value;
+      sel.innerHTML = db.employees.filter(e=>e.status==='active').map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');
+      if (current) sel.value = current;
+    }
+  }
 }
 
 function toggleAcctTDSFields() {
@@ -10057,6 +10125,8 @@ function openAccountingModal(id=null) {
   openModal('acct-modal-overlay');
   setAcctType(a?.type||'income');
   if (a?.category) document.getElementById('acct-cat').value = a.category; // set after options are populated
+  updateAcctTDSVisibility(); // .value= doesn't fire onchange — call explicitly so TDS/employee sections reflect the loaded entry
+  if (a?.employeeId) document.getElementById('acct-employee-select').value = a.employeeId;
   if (a?.tdsAmount > 0) {
     document.getElementById('acct-tds-toggle').checked = true;
     document.getElementById('acct-tds-rate').value = a.tdsRateKey || 'rentCompany';
@@ -10080,6 +10150,8 @@ function repeatLastAccountingEntry() {
   openModal('acct-modal-overlay');
   setAcctType(last.type||'income');
   if (last.category) document.getElementById('acct-cat').value = last.category;
+  updateAcctTDSVisibility();
+  if (last.employeeId) document.getElementById('acct-employee-select').value = last.employeeId;
   if (last.tdsAmount > 0) {
     document.getElementById('acct-tds-toggle').checked = true;
     document.getElementById('acct-tds-rate').value = last.tdsRateKey || 'rentCompany';
@@ -10098,7 +10170,9 @@ function saveAccounting() {
   const tdsRateKey = tdsOn ? document.getElementById('acct-tds-rate').value : null;
   const tdsRate = tdsOn ? ((db.settings.acctMappings.tdsRates||{})[tdsRateKey] || 0) : 0;
   const tdsAmount = tdsOn ? +(amount * tdsRate).toFixed(2) : 0;
-  const data = { type: document.getElementById('acct-type-sel').value, amount, category: document.getElementById('acct-cat').value.trim(), date: document.getElementById('acct-date').value||today(), description: desc, reference: document.getElementById('acct-ref').value.trim(), tdsRateKey, tdsAmount };
+  const isAdvance = document.getElementById('acct-cat').value.trim() === 'Staff Advance/Loan Given';
+  const employeeId = isAdvance ? (document.getElementById('acct-employee-select')?.value || null) : null;
+  const data = { type: document.getElementById('acct-type-sel').value, amount, category: document.getElementById('acct-cat').value.trim(), date: document.getElementById('acct-date').value||today(), description: desc, reference: document.getElementById('acct-ref').value.trim(), tdsRateKey, tdsAmount, employeeId };
   if (acctEditId) {
     const a = db.accounting.find(a=>a.id===acctEditId);
     Object.assign(a, data);
@@ -10484,6 +10558,30 @@ function computeAttendanceDeductionDays(empId, month) {
   return days;
 }
 
+// Progressive income tax withholding on salary (TDS), using slabs entered in Settings ▸ Income
+// Tax Withholding — never hardcoded here, since Nepal's slabs change with the fiscal year and
+// this app has no way to know when that happens or what the new numbers are. Annualizes the
+// monthly gross (the standard approach for a level monthly salary), applies each tier only to
+// the portion of income that falls within it, then divides the annual tax by 12. Returns 0 if
+// tax calculation isn't enabled or no tiers are configured — never guesses a number.
+function computeMonthlyIncomeTax(monthlyGrossSalary, monthlyEmployeeSSF) {
+  const cfg = db.settings.incomeTaxSlabs;
+  if (!cfg || !cfg.enabled || !Array.isArray(cfg.tiers) || !cfg.tiers.length) return 0;
+  const sortedTiers = [...cfg.tiers].sort((a,b)=>(a.upTo==null?Infinity:a.upTo)-(b.upTo==null?Infinity:b.upTo));
+  const annualGross = Math.max(0, monthlyGrossSalary||0) * 12;
+  const annualSSF = cfg.ssfDeductible ? Math.max(0, monthlyEmployeeSSF||0) * 12 : 0;
+  const taxableAnnual = Math.max(0, annualGross - annualSSF);
+  let tax = 0, lower = 0;
+  for (const tier of sortedTiers) {
+    const upper = (tier.upTo == null || tier.upTo === '') ? Infinity : +tier.upTo;
+    if (taxableAnnual <= lower) break;
+    const amountInTier = Math.max(0, Math.min(taxableAnnual, upper) - lower);
+    tax += amountInTier * ((+tier.rate||0)/100);
+    lower = upper;
+  }
+  return +(tax/12).toFixed(2);
+}
+
 function computeAttendanceDeductionAmount(emp, month) {
   // Some employees (typically permanent staff on a fixed monthly salary) should always be paid
   // in full regardless of attendance — this preference is per-employee, set in their profile.
@@ -10516,6 +10614,16 @@ function renderPayrollTable() {
         const ph = db.payrollHistory.find(p=>p.month===month&&p.entries?.find(x=>x.empId===e.id));
         const entry = ph?.entries?.find(x=>x.empId===e.id);
         const att = computeAttendanceDeductionAmount(e, month);
+        // Auto-calculated Tax withholding (see computeMonthlyIncomeTax) — only pre-filled when
+        // nothing's been saved for this employee this month yet, so it never overwrites a value
+        // someone already typed or approved. Still a plain editable input either way.
+        const estSSF = e.ssfEnrolled !== false ? (e.salary||0) * (db.settings.acctMappings.ssfEmployeeRate ?? 0.11) : 0;
+        const dedValues = {};
+        deductions.forEach(ded => {
+          let v = entry?.deductions?.[ded];
+          if (v === undefined && ded === 'Tax') v = computeMonthlyIncomeTax(e.salary||0, estSSF);
+          dedValues[ded] = v || 0;
+        });
         // BUG FIXED: this initial render used to show Net Pay as simply Salary minus Attendance
         // Deduction, completely ignoring any saved Bonus/extra-earnings or Advance/Tax deductions
         // — until the admin manually touched an input field (which triggers updateNetPayRow, the
@@ -10523,14 +10631,20 @@ function renderPayrollTable() {
         // when opening Payroll each month could already be wrong, even though the actual amount
         // processed on approval was always correct (processPayroll reads the same inputs
         // directly). Compute it the same way here so what's shown on load already matches.
+        // FURTHER BUG FIXED: this also never subtracted employee SSF at all — Net Pay was always
+        // overstated by ~11% of salary right up until Approve was clicked, then a smaller number
+        // would appear in Payroll History with no visible reason why it changed. Mirrors
+        // processPayroll's exact clamped SSF math now, so the preview matches what gets recorded.
         const extraTotal = extraEarnings.reduce((a,earn)=>a+(entry?.earnings?.[earn]||0),0);
-        const dedTotal = deductions.reduce((a,ded)=>a+(entry?.deductions?.[ded]||0),0);
-        const netPay = Math.max(0, (e.salary||0) + extraTotal - dedTotal - att.amount);
+        const dedTotal = deductions.reduce((a,ded)=>a+dedValues[ded],0);
+        const preSSFPay = Math.max(0, (e.salary||0) + extraTotal - dedTotal - att.amount);
+        const previewSSF = e.ssfEnrolled !== false ? Math.min(estSSF, preSSFPay) : 0;
+        const netPay = +(preSSFPay - previewSSF).toFixed(2);
         return `<tr>
           <td style="font-weight:500">${esc(e.name)}<div style="font-size:14px;color:var(--text-muted)">${esc(e.role||'')}</div></td>
           <td class="mono amt-neutral">${fmt(e.salary||0)}</td>
           ${extraEarnings.map(earn=>`<td><input type="number" value="${entry?.earnings?.[earn]||0}" id="earn-${e.id}-${earn.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
-          ${deductions.map(ded=>`<td><input type="number" value="${entry?.deductions?.[ded]||0}" id="ded-${e.id}-${ded.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
+          ${deductions.map(ded=>`<td><input type="number" value="${dedValues[ded]}" id="ded-${e.id}-${ded.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
           <td class="mono text-danger" title="${e.attendanceDeductionEnabled===false?'This employee is exempt — always paid in full regardless of attendance':`${att.days} day(s) unpaid this month`}">${e.attendanceDeductionEnabled===false?'<span style="color:var(--text-muted)">Exempt</span>':fmt(att.amount)}</td>
           <td class="mono font-bold" id="net-${e.id}">${fmt(netPay)}</td>
         </tr>`;
@@ -10546,8 +10660,12 @@ function updateNetPayRow(empId) {
   sc.earnings.slice(1).forEach(earn => { extra += parseFloat(document.getElementById(`earn-${empId}-${earn.replace(/\s/g,'_')}`)?.value)||0; });
   sc.deductions.forEach(ded => { deduct += parseFloat(document.getElementById(`ded-${empId}-${ded.replace(/\s/g,'_')}`)?.value)||0; });
   const attDeduction = computeAttendanceDeductionAmount(emp, month).amount;
+  const preSSFPay = Math.max(0, (emp.salary||0) + extra - deduct - attDeduction);
+  const ssfEmpRate = db.settings.acctMappings.ssfEmployeeRate ?? 0.11;
+  const estSSF = emp.ssfEnrolled !== false ? +((emp.salary||0) * ssfEmpRate).toFixed(2) : 0;
+  const ssf = Math.min(estSSF, preSSFPay);
   const el = document.getElementById('net-'+empId);
-  if (el) el.textContent = fmt(Math.max(0, (emp.salary||0) + extra - deduct - attDeduction));
+  if (el) el.textContent = fmt(+(preSSFPay - ssf).toFixed(2));
 }
 
 function processPayroll() {
@@ -10571,17 +10689,28 @@ function processPayroll() {
     // the same figure shown (and checkable) on the payroll screen before approving.
     const att = computeAttendanceDeductionAmount(e, month);
     const totalDeductions = Object.values(deductions).reduce((a,b)=>a+b,0) + att.amount;
+    // BUG FIXED: "Tax" and "Loan Recovery"/"Advance Adjustment" deductions used to just blend
+    // into the same figure used for Salary Expense — meaning tax withheld from an employee's pay
+    // was never tracked as a liability owed to IRD (it just silently reduced reported labor
+    // cost), and recovering a staff loan/advance never reduced any tracked receivable balance —
+    // there was no way to see what an employee still owed on an advance. Both are now split out
+    // and given their real accounting treatment; anything else stays blended as before, since a
+    // custom/renamed deduction's correct treatment isn't knowable from its label alone.
+    const taxWithheld = deductions['Tax'] || 0;
+    const loanRecovered = (deductions['Loan Recovery']||0) + (deductions['Advance Adjustment']||0);
+    const otherDeductionsTotal = +(totalDeductions - att.amount - taxWithheld - loanRecovered).toFixed(2);
+    const trueGrossWage = +((e.salary||0) + totalEarnings - att.amount).toFixed(2); // real earned amount — the correct basis for Salary Expense
     // BUG FIXED: grossWage can legitimately go negative or near-zero (e.g. heavy unpaid-leave
     // docking), but employeeSSF used to always be a flat 11% of BASE salary regardless of that —
     // so netPay (floored at 0) and employeeSSF no longer added back up to grossWage. Since
     // postPayrollJournal posts ONE combined entry for every employee in the month, that mismatch
     // made the whole month's payroll journal entry unbalanced and silently rejected by
     // postJournalEntry — salary expense/payable would vanish from Trial Balance/P&L/Balance Sheet
-    // while Payroll History still showed it as processed. Fix: clamp grossWage at 0 for ledger
-    // purposes (flagging it instead of quietly going negative) and cap the SSF actually withheld
-    // at what the paycheck can support, so netPay + employeeSSF always equals grossWage exactly —
-    // the entry can never fail its own balance check again.
-    let grossWage = (e.salary||0) + totalEarnings - totalDeductions;
+    // while Payroll History still showed it as processed. Fix: clamp pay-before-SSF at 0 for
+    // ledger purposes (flagging it instead of quietly going negative) and cap the SSF actually
+    // withheld at what the paycheck can support, so netPay + employeeSSF always equals
+    // pay-before-SSF exactly — the entry can never fail its own balance check again.
+    let grossWage = trueGrossWage - taxWithheld - loanRecovered - otherDeductionsTotal;
     const negativeGross = grossWage < 0;
     if (negativeGross) grossWage = 0;
     const ssfEnrolled = e.ssfEnrolled !== false;
@@ -10592,7 +10721,7 @@ function processPayroll() {
     const ssfShortfall = +(uncappedEmployeeSSF - employeeSSF).toFixed(2);
     const employerSSF = ssfEnrolled ? +((e.salary||0) * ssfErRate).toFixed(2) : 0;
     const netPay = +(grossWage - employeeSSF).toFixed(2);
-    return { empId:e.id, empName:e.name, role:e.role, salary:e.salary||0, earnings, deductions, attendanceDeductionDays:att.days, attendanceDeduction:att.amount, totalEarnings, totalDeductions, grossWage, negativeGross, ssfEnrolled, employeeSSF, ssfShortfall, employerSSF, netPay, paid:false, paidDate:null, paidMethod:null };
+    return { empId:e.id, empName:e.name, role:e.role, salary:e.salary||0, earnings, deductions, attendanceDeductionDays:att.days, attendanceDeduction:att.amount, totalEarnings, totalDeductions, trueGrossWage, taxWithheld, loanRecovered, otherDeductionsTotal, grossWage, negativeGross, ssfEnrolled, employeeSSF, ssfShortfall, employerSSF, netPay, paid:false, paidDate:null, paidMethod:null };
   });
   const totalPay = entries.reduce((a,x)=>a+x.netPay,0);
   const totalSSF = entries.reduce((a,x)=>a+x.employeeSSF+x.employerSSF,0);
@@ -10725,7 +10854,7 @@ function openMarkTDSDeposited() {
   if (outstanding <= 0.004) { toast('No outstanding TDS Payable balance to deposit','warning'); return; }
   openDepositConfirmModal({
     title: 'Deposit TDS to IRD',
-    message: `Deposit withheld TDS to IRD?\nOutstanding TDS Payable: ${fmt(outstanding)}`,
+    message: `Deposit withheld TDS to IRD?\nOutstanding TDS Payable (Vendor/Contractor): ${fmt(outstanding)}`,
     needsAmount: true,
     defaultAmount: outstanding,
     onConfirm: (method, amtInput) => {
@@ -10733,7 +10862,7 @@ function openMarkTDSDeposited() {
       if (amount <= 0) { toast('Enter a valid amount','error'); return; }
       const normalizedMethod = method === 'Cash' ? 'Cash' : 'Bank Transfer';
       const cashCode = normalizedMethod === 'Bank Transfer' ? '1020' : '1010';
-      postJournalEntry({ date: today(), voucherKind:'Payment', refType:'tds-deposit', refId: today(), reference:`TDS-${today()}`, description:`TDS Deposit to IRD`, lines: [
+      postJournalEntry({ date: today(), voucherKind:'Payment', refType:'tds-deposit', refId: today(), reference:`TDS-${today()}`, description:`TDS Deposit to IRD (Vendor/Contractor)`, lines: [
         { accountCode:'2060', debit: amount, credit:0 },
         { accountCode: cashCode, debit:0, credit: amount }
       ]});
@@ -10742,6 +10871,36 @@ function openMarkTDSDeposited() {
       audit('Accounting','TDS Deposit', today(), `${fmt(amount)} (${normalizedMethod})`);
       saveDB();
       toast('TDS deposit recorded','success');
+    }
+  });
+}
+
+// Separate from openMarkTDSDeposited above — this settles account 2061 (Employee Salary TDS),
+// kept apart from 2060 (Vendor/Contractor TDS) for the same category-separation reason noted on
+// the Tax Deduction Report itself.
+function openMarkPayrollTDSDeposited() {
+  if (!(session?.role==='admin' || hasPermission('Edit Accounting'))) { toast("You don't have permission to record TDS deposits",'error'); return; }
+  const outstanding = +accountBalanceAsOf('2061', today()).toFixed(2);
+  if (outstanding <= 0.004) { toast('No outstanding TDS Payable balance to deposit','warning'); return; }
+  openDepositConfirmModal({
+    title: 'Deposit Employee Salary TDS to IRD',
+    message: `Deposit withheld employee salary TDS to IRD?\nOutstanding TDS Payable (Employee Salary): ${fmt(outstanding)}`,
+    needsAmount: true,
+    defaultAmount: outstanding,
+    onConfirm: (method, amtInput) => {
+      const amount = Math.min(outstanding, Math.max(0, amtInput || 0));
+      if (amount <= 0) { toast('Enter a valid amount','error'); return; }
+      const normalizedMethod = method === 'Cash' ? 'Cash' : 'Bank Transfer';
+      const cashCode = normalizedMethod === 'Bank Transfer' ? '1020' : '1010';
+      postJournalEntry({ date: today(), voucherKind:'Payment', refType:'tds-deposit', refId: today(), reference:`PAYTDS-${today()}`, description:`TDS Deposit to IRD (Employee Salary)`, lines: [
+        { accountCode:'2061', debit: amount, credit:0 },
+        { accountCode: cashCode, debit:0, credit: amount }
+      ]});
+      db.taxDeposits = db.taxDeposits || [];
+      db.taxDeposits.push({ id:uid(), kind:'Payroll TDS', date:today(), amount, method:normalizedMethod, createdBy:session.username, createdAt:now() });
+      audit('Accounting','Payroll TDS Deposit', today(), `${fmt(amount)} (${normalizedMethod})`);
+      saveDB();
+      toast('Payroll TDS deposit recorded','success');
     }
   });
 }
@@ -10804,7 +10963,7 @@ function renderSalaryHistory() {
       <td class="mono">${esc(periodMonthLabel(e.month))}</td><td>${esc(e.empName)}</td>
       <td class="mono amt-neutral">${fmt(e.salary)}</td>
       <td class="mono text-success">+${fmt(e.totalEarnings||0)}</td>
-      <td class="mono text-danger">-${fmt(e.totalDeductions||0)}${e.employeeSSF?` <span style="font-size:11px;color:#999">(incl. SSF ${fmt(e.employeeSSF)})</span>`:''}</td>
+      <td class="mono text-danger">-${fmt((e.totalDeductions||0)+(e.employeeSSF||0))}${e.employeeSSF?` <span style="font-size:11px;color:#999">(incl. SSF ${fmt(e.employeeSSF)})</span>`:''}</td>
       <td class="mono font-bold">${fmt(e.netPay)}</td>
       <td>${e.paid ? `<span class="badge badge-success">Paid ${fmtDate(e.paidDate)}</span>` : `<span class="badge badge-warning">Unpaid</span>`}</td>
       <td style="display:flex;gap:6px">
@@ -10846,6 +11005,8 @@ function showPaySlip(entry) {
   sc.earnings.slice(1).forEach(earn => { const a=entry.earnings?.[earn]||0; if(a) eHTML+=`<tr><td>${esc(earn)}</td><td class="text-right mono">${fmt(a)}</td></tr>`; });
   let dHTML = '';
   sc.deductions.forEach(ded => { const a=entry.deductions?.[ded]||0; if(a) dHTML+=`<tr><td>${esc(ded)}</td><td class="text-right mono amt-expense">-${fmt(a)}</td></tr>`; });
+  if (entry.employeeSSF) dHTML += `<tr><td>Social Security Fund (SSF)</td><td class="text-right mono amt-expense">-${fmt(entry.employeeSSF)}</td></tr>`;
+  const totalDeductionsShown = (entry.totalDeductions||0) + (entry.employeeSSF||0);
   const slipContent = `
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-size:22px;font-weight:700">${esc(s.orgName)}</div>
@@ -10858,7 +11019,7 @@ function showPaySlip(entry) {
     </div>
     <table style="width:100%"><thead><tr style="background:var(--elevated)"><th style="padding:8px">Earnings</th><th style="padding:8px;text-align:right">Amount</th></tr></thead>
     <tbody>${eHTML}</tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--border)"><td style="padding:8px">Total Earnings</td><td style="padding:8px;text-align:right">${fmt((entry.salary||0)+(entry.totalEarnings||0))}</td></tr></tfoot></table>
-    ${dHTML?`<table style="width:100%;margin-top:10px"><thead><tr style="background:var(--elevated)"><th style="padding:8px">Deductions</th><th style="padding:8px;text-align:right">Amount</th></tr></thead><tbody>${dHTML}</tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--border)"><td style="padding:8px">Total Deductions</td><td style="padding:8px;text-align:right;color:var(--danger)">-${fmt(entry.totalDeductions||0)}</td></tr></tfoot></table>`:''}
+    ${dHTML?`<table style="width:100%;margin-top:10px"><thead><tr style="background:var(--elevated)"><th style="padding:8px">Deductions</th><th style="padding:8px;text-align:right">Amount</th></tr></thead><tbody>${dHTML}</tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--border)"><td style="padding:8px">Total Deductions</td><td style="padding:8px;text-align:right;color:var(--danger)">-${fmt(totalDeductionsShown)}</td></tr></tfoot></table>`:''}
     <div style="margin-top:16px;padding:12px;background:var(--accent-dim);border-radius:8px;display:flex;justify-content:space-between;font-size:19px;font-weight:700">
       <span>NET PAY</span><span class="mono amt-balance">${fmt(entry.netPay)}</span>
     </div>`;
@@ -12116,6 +12277,7 @@ const REPORT_CATEGORIES = [
     {v:'account-ledger', label:'Account Ledger (Cash, Bank, any account)'},
     {v:'receivables-aging', label:'Receivables Aging'},
     {v:'payables-aging', label:'Payables Aging'},
+    {v:'employee-advances', label:'Employee Advances'},
     {v:'cash-flow-forecast', label:'📅 Cash Flow Forecast'},
     {v:'fixed-asset-register', label:'Fixed Asset Register'}
   ]},
@@ -12412,6 +12574,38 @@ function generateReport() {
       ${aging.parties.length?aging.parties.map(p=>`<tr><td>${esc(p.name)}</td>${bucketCell(p.total)}${bucketCell(p.notDue)}${bucketCell(p.d30)}${bucketCell(p.d60)}${bucketCell(p.d90)}${bucketCell(p.d90plus)}</tr>`).join(''):'<tr><td colspan="7">No outstanding payables</td></tr>'}
       <tr style="background:#f0f0f0"><td><strong>TOTAL</strong></td>${bucketCell(aging.totals.total)}${bucketCell(aging.totals.notDue)}${bucketCell(aging.totals.d30)}${bucketCell(aging.totals.d60)}${bucketCell(aging.totals.d90)}${bucketCell(aging.totals.d90plus)}</tr>
     </tbody></table>`;
+  } else if (type==='employee-advances') {
+    // Per-employee balance: advances given (Accounting entries tagged with this employee, in
+    // category "Staff Advance/Loan Given") minus what's been recovered through payroll ("Loan
+    // Recovery"/"Advance Adjustment" deductions, matched by empId across Payroll History). The
+    // GL control account (1035) is the source of truth for the total; this report exists to show
+    // WHO that total is made up of, which the aggregate account balance alone can't show.
+    const asOf = to || today();
+    const balances = {};
+    db.employees.forEach(e => { balances[e.id] = { name: e.name, given: 0, recovered: 0 }; });
+    db.accounting.filter(a => a.category==='Staff Advance/Loan Given' && a.employeeId && a.date<=asOf).forEach(a => {
+      if (!balances[a.employeeId]) balances[a.employeeId] = { name: db.employees.find(e=>e.id===a.employeeId)?.name || 'Unknown', given: 0, recovered: 0 };
+      balances[a.employeeId].given += a.amount;
+    });
+    db.payrollHistory.filter(p => p.month <= asOf.slice(0,7)).forEach(p => {
+      (p.entries||[]).forEach(e => {
+        if (!balances[e.empId]) balances[e.empId] = { name: e.empName, given: 0, recovered: 0 };
+        balances[e.empId].recovered += (e.loanRecovered || 0);
+      });
+    });
+    const rows = Object.values(balances).filter(b => Math.abs(b.given) > 0.004 || Math.abs(b.recovered) > 0.004)
+      .map(b => ({ ...b, outstanding: +(b.given - b.recovered).toFixed(2) }))
+      .sort((a,b) => b.outstanding - a.outstanding);
+    const totalOutstanding = rows.reduce((a,r)=>a+r.outstanding, 0);
+    const glBalance = +accountBalanceAsOf('1035', asOf).toFixed(2);
+    const reconciles = Math.abs(totalOutstanding - glBalance) < 1;
+    bodyHtml = `<h2>Employee Advances<span class="help-tip" data-tip="What each employee currently owes from cash advances/loans given, net of what's been recovered through payroll.">?</span></h2>
+    <p style="font-size:15px;color:#555">As of ${fmtDate(asOf)}</p>
+    <table><thead><tr><th>Employee</th><th style="text-align:right">Given</th><th style="text-align:right">Recovered</th><th style="text-align:right">Outstanding</th></tr></thead><tbody>
+      ${rows.length?rows.map(r=>`<tr><td>${esc(r.name)}</td><td style="text-align:right" class="mono">${fmt(r.given)}</td><td style="text-align:right" class="mono">${fmt(r.recovered)}</td><td style="text-align:right" class="mono"><strong>${fmt(r.outstanding)}</strong></td></tr>`).join(''):'<tr><td colspan="4">No advances given</td></tr>'}
+      <tr style="background:#f0f0f0"><td><strong>TOTAL</strong></td><td></td><td></td><td style="text-align:right"><strong>${fmt(totalOutstanding)}</strong></td></tr>
+    </tbody></table>
+    <p style="margin-top:10px;font-size:13px;color:${reconciles?'#2a2':'#c00'}">${reconciles?'✓':'⚠'} ${reconciles?'Matches':'Does NOT match'} the Employee Advances Receivable account balance (${fmt(glBalance)}).${reconciles?'':' An advance may have been given through a category other than "Staff Advance/Loan Given", or without an employee tagged — check Advanced Ledger.'}</p>`;
   } else if (type==='cash-flow-forecast') {
     const fc = computeCashFlowForecast(to || today());
     const row = (label, w) => `<tr><td>${label}</td><td style="text-align:right" class="mono text-success">+${fmt(w.inflow)}</td><td style="text-align:right" class="mono text-danger">-${fmt(w.outflow)}</td><td style="text-align:right" class="mono"><strong>${fmt(w.projected)}</strong></td></tr>`;
@@ -12878,11 +13072,14 @@ function generateReport() {
       <p>This is a planning estimate only — have your accountant confirm the final figure before filing.</p>
     </div>`;
   } else if (type==='tax-deduction') {
+    const outstandingPayrollTDS = +accountBalanceAsOf('2061', to||today()).toFixed(2);
     bodyHtml = `<h2>Tax Deduction Report</h2>
     <p style="font-size:17px;margin-bottom:12px">Employee tax deductions for the selected period.</p>
     <table><thead><tr><th>Employee</th><th>Month</th><th>Tax Deducted</th></tr></thead><tbody>
       ${db.payrollHistory.flatMap(p=>(p.entries||[]).filter(e=>e.deductions?.Tax>0).map(e=>`<tr><td>${esc(e.empName)}</td><td>${esc(periodMonthLabel(p.month))}</td><td>${fmt(e.deductions.Tax)}</td></tr>`)).join('')||'<tr><td colspan="3">No tax deductions recorded</td></tr>'}
-    </tbody></table>`;
+    </tbody></table>
+    <p style="font-size:15px;margin-top:12px">Outstanding TDS Payable — Employee Salary on the books (all-time, undeposited): <strong>${fmt(outstandingPayrollTDS)}</strong> ${(outstandingPayrollTDS>0.004&&(session.role==='admin'||hasPermission('Edit Accounting')))?`<button class="btn btn-xs btn-primary" onclick="openMarkPayrollTDSDeposited()">Record Deposit to IRD</button>`:(outstandingPayrollTDS>0.004?'':'<span class="badge badge-success">Nothing outstanding</span>')}</p>
+    <p style="font-size:14px;color:#777;margin-top:6px">Kept separate from the Purchase Register's Vendor/Contractor TDS (account 2060) — Nepal's TDS return breaks withholding down by income-head category, so these stay auditable separately rather than blended into one number.</p>`;
   } else if (type==='govt-submission') {
     // BUG FIXED: this used to compute VAT completely independently of the ledger and the VAT
     // Sales/Purchase Registers above — pulling raw db.sales (never netting Credit Notes) for
@@ -13126,6 +13323,7 @@ function setSettingsSection(id, el) {
   // Section-specific loads
   if (id==='roles') renderRolesList();
   if (id==='salary-comp') renderSalaryComponentsSettings();
+  if (id==='tax-slabs') renderTaxSlabsSettings();
   if (id==='accounting-sec') {
     const pinChk = document.getElementById('st-acct-pin-enabled');
     if (pinChk) { pinChk.checked = !!db.settings.accountingPINEnabled; toggleAcctPINSection(); }
@@ -15876,6 +16074,80 @@ function addSalaryComponent(type) {
 function removeSalaryComponent(type, i) {
   db.settings.salaryComponents[type].splice(i,1);
   saveDB(); renderSalaryComponentsSettings();
+}
+
+/* ══ INCOME TAX SLABS SETTINGS (TDS on Salary) ══ */
+function renderTaxSlabsSettings() {
+  const cfg = db.settings.incomeTaxSlabs || { enabled:false, ssfDeductible:true, tiers:[] };
+  const enabledChk = document.getElementById('tax-slabs-enabled');
+  if (enabledChk) enabledChk.checked = !!cfg.enabled;
+  const ssfChk = document.getElementById('tax-slabs-ssf-deductible');
+  if (ssfChk) ssfChk.checked = cfg.ssfDeductible !== false;
+  toggleTaxSlabsEnabled();
+  renderTaxSlabTiersList();
+}
+
+function toggleTaxSlabsEnabled() {
+  const on = document.getElementById('tax-slabs-enabled')?.checked;
+  const el = document.getElementById('tax-slabs-config');
+  if (el) el.style.display = on ? '' : 'none';
+}
+
+function renderTaxSlabTiersList() {
+  const cfg = db.settings.incomeTaxSlabs || { tiers:[] };
+  const list = document.getElementById('tax-slabs-list');
+  if (!list) return;
+  if (!cfg.tiers.length) { list.innerHTML = '<div class="form-hint">No slab tiers yet — add one below.</div>'; return; }
+  list.innerHTML = cfg.tiers.map((t,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span style="font-size:14px;color:var(--text-muted);min-width:60px">Up to</span>
+      <input class="form-control" type="number" placeholder="no limit" value="${t.upTo==null?'':t.upTo}" style="max-width:150px" onchange="updateTaxSlabTier(${i},'upTo',this.value)">
+      <span style="font-size:14px;color:var(--text-muted)">at</span>
+      <input class="form-control" type="number" step="0.1" value="${t.rate||0}" style="max-width:90px" onchange="updateTaxSlabTier(${i},'rate',this.value)">
+      <span style="font-size:14px;color:var(--text-muted)">%</span>
+      <button class="btn btn-xs btn-danger" onclick="removeTaxSlabTier(${i})">✕</button>
+    </div>`).join('');
+}
+
+function addTaxSlabTier() {
+  if (!db.settings.incomeTaxSlabs) db.settings.incomeTaxSlabs = { enabled:false, ssfDeductible:true, tiers:[] };
+  db.settings.incomeTaxSlabs.tiers.push({ upTo:null, rate:0 });
+  renderTaxSlabTiersList();
+}
+
+function updateTaxSlabTier(i, field, val) {
+  const tier = db.settings.incomeTaxSlabs.tiers[i];
+  if (!tier) return;
+  if (field==='upTo') tier.upTo = val==='' ? null : (parseFloat(val)||0);
+  else tier.rate = parseFloat(val)||0;
+}
+
+function removeTaxSlabTier(i) {
+  db.settings.incomeTaxSlabs.tiers.splice(i,1);
+  renderTaxSlabTiersList();
+}
+
+function saveTaxSlabsSettings() {
+  if (!db.settings.incomeTaxSlabs) db.settings.incomeTaxSlabs = { enabled:false, ssfDeductible:true, tiers:[] };
+  db.settings.incomeTaxSlabs.enabled = !!document.getElementById('tax-slabs-enabled')?.checked;
+  db.settings.incomeTaxSlabs.ssfDeductible = !!document.getElementById('tax-slabs-ssf-deductible')?.checked;
+  saveDB();
+  toast('Tax slabs saved','success');
+}
+
+function testTaxSlabCalc() {
+  const salary = parseFloat(document.getElementById('tax-slab-test-salary')?.value)||0;
+  const estSSF = db.settings.incomeTaxSlabs?.ssfDeductible!==false ? salary * (db.settings.acctMappings.ssfEmployeeRate ?? 0.11) : 0;
+  // Uses whatever is in the form right now (even if unsaved) so someone can experiment with
+  // tiers before committing to them.
+  const savedEnabled = db.settings.incomeTaxSlabs?.enabled;
+  const savedSSF = db.settings.incomeTaxSlabs?.ssfDeductible;
+  db.settings.incomeTaxSlabs.enabled = true;
+  db.settings.incomeTaxSlabs.ssfDeductible = !!document.getElementById('tax-slabs-ssf-deductible')?.checked;
+  const monthlyTax = computeMonthlyIncomeTax(salary, estSSF);
+  db.settings.incomeTaxSlabs.enabled = savedEnabled;
+  db.settings.incomeTaxSlabs.ssfDeductible = savedSSF;
+  document.getElementById('tax-slab-test-result').textContent = `Monthly tax: ${fmt(monthlyTax)} (annual: ${fmt(monthlyTax*12)})`;
 }
 
 function saveSalaryComponents() {

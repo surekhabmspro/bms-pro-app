@@ -39,17 +39,29 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   --border-light:#4C4470;
   --text:        #F4F2FC;
   --text-muted:  #ABA6CC;
-  --text-dim:    #726C9C;
+  --text-dim:    #8880B4;  /* lightened from #726C9C — was 2.9–3.9:1 on --bg, now ~5.2:1, passes WCAG AA for real text (.form-hint, .kpi-label use this) */
   --success: #34D399;  --success-dim: rgba(52,211,153,0.16);
   --warning: #FCD34D;  --warning-dim: rgba(252,211,77,0.16);
   --danger:  #F87171;  --danger-dim:  rgba(248,113,113,0.16);
   --info:    #67E8F9;  --info-dim:    rgba(103,232,249,0.16);
+  /* ── Solid-fill contrast pairs ──
+     --success/--warning/--danger above are pastel hues tuned to sit as dim
+     badge backgrounds behind colored text (8–11:1 there) — too light for a
+     solid button fill with white text. These "-solid" shades are darker
+     versions of the same hue, picked so white text on top clears WCAG AA
+     (4.5:1). Used by .btn-danger/.btn-success and any other solid-fill
+     chip that needs to stay readable. --warning has no readable white-text
+     shade at any reasonable darkness without losing the color's identity,
+     so warning surfaces use dark text (--warning-ink) instead. */
+  --danger-solid:  #DC2626;  --danger-solid-hover:  #B91C1C;
+  --success-solid: #047857;  --success-solid-hover: #065F46;
+  --warning-ink:   #78350F;
   --sidebar-w: 240px;  --topbar-h: 56px;
   --radius: 16px;  --radius-sm: 10px;  --radius-xs: 6px;
   --shadow:    0 8px 32px rgba(0,0,0,0.70);
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.50);
   --transition: 0.18s ease;
-  --accent-grad: linear-gradient(135deg,#7C6BF5,#C084FC);
+  --accent-grad: linear-gradient(135deg,#7C6BF5,#9333EA);
   --sidebar-grad: linear-gradient(190deg,#221D3E 0%,#1B1730 55%,#150F26 100%);
   --teal: #2DD4BF;  --teal-dim: rgba(45,212,191,0.18);
   --font-display: 'Outfit','DM Sans',system-ui,sans-serif;
@@ -71,7 +83,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   --border-light:#E9E1F9;
   --text:        #191325;   /* near-black with a violet cast — maximum contrast */
   --text-muted:  #564F79;
-  --text-dim:    #948DBD;
+  --text-dim:    #5C5488;  /* darkened from #948DBD — was 2.6:1 on --bg, now ~5.7:1, passes WCAG AA for real text (.form-hint, .kpi-label use this) */
   --success: #059669;
   --shadow:    0 4px 20px rgba(76,29,149,0.10);
   --shadow-sm: 0 1px 5px rgba(76,29,149,0.07);
@@ -89,7 +101,23 @@ body{height:100%;overflow:hidden;font-family:'DM Sans','Inter',system-ui,-apple-
 h1,h2,h3,h4{font-family:var(--font-display);letter-spacing:-0.01em}
 button{cursor:pointer;font-family:inherit;border:none;outline:none}
 input,select,textarea{font-family:inherit;outline:none}
+/* ══ FOCUS-VISIBLE (KEYBOARD NAVIGATION) ══
+   outline:none above (needed so mouse clicks on rounded buttons don't show a boxy native
+   ring) was silently removing the focus ring for keyboard users too — tabbing through the
+   app left no visible indicator of where you were, especially on icon-only buttons, table
+   row links, and custom elements like the clickable status badges. :focus-visible restores
+   a clear ring ONLY for keyboard/programmatic focus, leaving mouse clicks unaffected. */
+button:focus-visible, .btn:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible,
+.badge.clickable:focus-visible, .modal-close:focus-visible, .input-clear:focus-visible,
+.chip:focus-visible, .chip-x:focus-visible {
+  outline: 2.5px solid var(--accent) !important;
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+.form-control:focus-visible{box-shadow:0 0 0 3px var(--accent-glow)}
 a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
 /* ══ SCROLLBAR ══ */
 ::-webkit-scrollbar{width:7px;height:7px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -114,7 +142,7 @@ a{color:var(--accent);text-decoration:none}
 .nav-item.active::before{content:'';position:absolute;left:-6px;top:4px;bottom:4px;width:3px;background:var(--accent-grad);border-radius:0 3px 3px 0}
 .nav-icon{font-size:22px;flex-shrink:0;width:20px;text-align:center}
 .nav-label{font-size:17px;font-weight:600;overflow:hidden}
-.nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:13px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--danger-solid);color:#fff;font-size:13px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;flex-shrink:0}
 .user-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:#fff;flex-shrink:0;box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--border-light)}
 .sidebar-user{border-top:1px solid var(--border);padding:14px 12px;display:flex;align-items:center;gap:8px;overflow:hidden}
 .user-info{overflow:hidden;flex:1;min-width:0}
@@ -133,6 +161,9 @@ a{color:var(--accent);text-decoration:none}
 .topbar-toggle{background:none;color:var(--text-muted);font-size:22px;padding:6px;border-radius:6px}
 .topbar-toggle:hover{background:var(--elevated);color:var(--text)}
 .topbar-breadcrumb{font-weight:600;font-size:19px;white-space:nowrap;flex-shrink:0;font-family:var(--font-display)}
+.breadcrumb-sep{margin:0 6px;color:var(--text-muted);font-weight:400}
+.breadcrumb-sub{color:var(--text-muted);font-weight:500;font-size:16px}
+.mobile-breadcrumb{display:none}
 /* ══ SEARCH ══ */
 .search-wrap{flex:1;max-width:480px;position:relative;transition:max-width .18s ease}
 @media(max-width:768px){
@@ -162,7 +193,7 @@ a{color:var(--accent);text-decoration:none}
 .live-clock{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--text-muted);white-space:nowrap}
 .btn-icon{width:36px;height:36px;border-radius:8px;background:none;color:var(--text-muted);font-size:22px;display:flex;align-items:center;justify-content:center;position:relative;transition:background var(--transition)}
 .btn-icon:hover{background:var(--elevated);color:var(--text)}
-.notif-badge{position:absolute;top:4px;right:4px;width:16px;height:16px;background:var(--danger);color:#fff;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.notif-badge{position:absolute;top:4px;right:4px;width:16px;height:16px;background:var(--danger-solid);color:#fff;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
 /* ══ DROPDOWN ══ */
 .dropdown{position:relative}
 .dropdown-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);min-width:180px;max-width:calc(100vw - 24px);box-sizing:border-box;z-index:999;display:none;overflow:hidden}
@@ -259,26 +290,60 @@ a{color:var(--accent);text-decoration:none}
 .donut-legend-pct{font-weight:700;font-family:'JetBrains Mono',monospace;font-size:13px}
 .kpi-change.up{color:var(--success)}
 .kpi-change.down{color:var(--danger)}
+.kpi-spark{margin-top:6px;line-height:0;opacity:.85}
+.kpi-spark svg{display:block}
+/* ══ SKELETON LOADERS ══
+   Shown for a moment while a heavy table (Accounting, Transactions, Payroll) is being
+   built, instead of the table just popping in empty then filling in. */
+@keyframes skeletonShimmer{0%{background-position:-200px 0}100%{background-position:calc(200px + 100%) 0}}
+.skeleton-bar{display:inline-block;height:14px;border-radius:5px;background:linear-gradient(90deg,var(--elevated) 25%,var(--border) 37%,var(--elevated) 63%);background-size:200px 100%;animation:skeletonShimmer 1.3s ease-in-out infinite}
+td .skeleton-bar{width:100%;max-width:120px}
+.skeleton-block{border-radius:var(--radius);background:linear-gradient(90deg,var(--elevated) 25%,var(--border) 37%,var(--elevated) 63%);background-size:200px 100%;animation:skeletonShimmer 1.3s ease-in-out infinite}
 /* ══ TABLES ══ */
 .table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
 table{width:100%;border-collapse:collapse;background:var(--surface)}
 thead th{padding:10px 14px;text-align:left;font-size:14px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;background:var(--elevated);border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+thead th[data-sort]:hover{color:var(--text)}
+thead th.sorted{color:var(--accent)}
+.sort-arrow{display:inline-block;margin-left:2px;opacity:.55}
+thead th.sorted .sort-arrow{opacity:1;font-weight:700}
 thead th:hover{color:var(--text)}
 tbody tr{border-bottom:1px solid var(--border);transition:background var(--transition)}
 tbody tr:last-child{border-bottom:none}
 tbody tr:nth-child(even){background:rgba(255,255,255,0.015)}
 tbody tr:hover{background:var(--elevated);cursor:default}
+/* A row's own hover only means "you're on this line" — most rows have no single click
+   target of their own, only specific cells inside them (a name link, an edit button, a
+   status badge). Those interactive cells get their own hover/press feedback below so it's
+   clear which part of the row is actually actionable, instead of the whole row looking
+   clickable when it isn't. */
+tbody tr:active{background:var(--border)}
+.table-wrap td a:hover{color:var(--accent-hover)}
+.table-wrap td a:active{opacity:.75}
+.badge.clickable{cursor:pointer;transition:filter var(--transition),transform .1s ease}
+.badge.clickable:hover{filter:brightness(1.3)}
+.badge.clickable:active{transform:scale(.93)}
 tbody tr.row-danger{background:var(--danger-dim)!important}
 td{padding:10px 14px;font-size:17px;vertical-align:middle}
 td.mono{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700}
-/* ══ BADGES ══ */
-.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:14px;font-weight:700;letter-spacing:0.03em}
+/* ══ BADGES ══
+   Status/type badges used to rely on color alone (green/amber/red) to tell success,
+   pending, and danger states apart — unusable for color-blind users. Each variant now
+   also carries its own icon shape via ::before, so the distinction survives even in
+   grayscale. */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:14px;font-weight:700;letter-spacing:0.03em}
 .badge-success{background:var(--success-dim);color:var(--success)}
+.badge-success::before{content:'✓'}
 .badge-warning{background:var(--warning-dim);color:var(--warning)}
+.badge-warning::before{content:'!'}
 .badge-danger{background:var(--danger-dim);color:var(--danger)}
+.badge-danger::before{content:'✕'}
 .badge-info{background:var(--info-dim);color:var(--info)}
+.badge-info::before{content:'i'}
 .badge-muted{background:var(--elevated);color:var(--text-muted)}
+.badge-muted::before{content:'•'}
 .badge-accent{background:var(--accent-dim);color:var(--accent)}
+.badge-accent::before{content:'★'}
 /* ══ BUTTONS ══ */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);font-size:17px;font-weight:600;cursor:pointer;transition:all var(--transition);border:none;white-space:nowrap;letter-spacing:0.01em}
 .btn:active{transform:scale(.97)}
@@ -301,10 +366,10 @@ td.mono{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700}
 .btn-secondary.btn-adjust{background:rgba(168,85,247,.12);color:#A855F7;border-color:rgba(168,85,247,.35)}
 .btn-secondary.btn-adjust:hover{background:rgba(168,85,247,.22)}
 .btn-secondary:hover{background:var(--elevated);border-color:var(--border-light)}
-.btn-danger{background:var(--danger);color:#fff}
-.btn-danger:hover{background:#dc2626;box-shadow:0 0 0 3px var(--danger-dim)}
-.btn-success{background:var(--success);color:#fff}
-.btn-success:hover{box-shadow:0 0 0 3px var(--success-dim)}
+.btn-danger{background:var(--danger-solid);color:#fff}
+.btn-danger:hover{background:var(--danger-solid-hover);box-shadow:0 0 0 3px var(--danger-dim)}
+.btn-success{background:var(--success-solid);color:#fff}
+.btn-success:hover{background:var(--success-solid-hover);box-shadow:0 0 0 3px var(--success-dim)}
 .btn-sm{padding:5px 10px;font-size:15px;font-weight:500}
 .btn-xs{padding:3px 8px;font-size:14px;font-weight:500;border-radius:var(--radius-xs)}
 .btn-xs{padding:3px 8px;font-size:14px}
@@ -312,6 +377,7 @@ td.mono{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700}
 .form-group{margin-bottom:14px}
 .form-label{display:block;font-size:15px;font-weight:600;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
 .form-control{width:100%;background:var(--elevated);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-size:17px;transition:all var(--transition);outline:none}
+.field-invalid{border-color:var(--danger-solid)!important;box-shadow:0 0 0 3px var(--danger-dim)!important}
 .form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
 .form-control:hover:not(:focus){border-color:var(--border-light)}
 .form-control::placeholder{color:var(--text-dim)}
@@ -345,17 +411,28 @@ textarea.form-control{resize:vertical;min-height:80px}
 .modal-body{padding:20px;overflow-y:auto;flex:1}
 .modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-shrink:0}
 /* ══ TOASTS ══ */
-#toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+#toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 40px)}
 .toast{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;min-width:260px;max-width:360px;display:flex;align-items:flex-start;gap:10px;box-shadow:var(--shadow);animation:toastIn .2s ease}
 @keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
 .toast-icon{font-size:22px;flex-shrink:0;margin-top:1px}
 .toast-content{flex:1}
-.toast-title{font-weight:600;font-size:17px}
+.toast-title{display:flex;align-items:center;gap:6px;font-weight:600;font-size:17px}
 .toast-msg{font-size:15px;color:var(--text-muted);margin-top:2px}
 .toast.success .toast-icon{color:var(--success)}
 .toast.error .toast-icon{color:var(--danger)}
 .toast.warning .toast-icon{color:var(--warning)}
 .toast.info .toast-icon{color:var(--info)}
+/* Repeat count badge — shown instead of stacking duplicate toasts on top of each other
+   during rapid/bulk actions (e.g. the same warning firing per row of an import). */
+.toast-count{background:var(--elevated);color:var(--text-muted);font-size:12px;font-weight:700;border-radius:10px;padding:1px 7px}
+/* Overflow summary row shown when more toasts are queued than the stack shows at once. */
+.toast-overflow{text-align:center;font-size:13px;color:var(--text-muted);padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);animation:toastIn .2s ease}
+/* ══ CELEBRATION (big moments: payroll approved, backup restored, etc.) ══ */
+.toast.celebrate{border-color:var(--success);box-shadow:0 0 0 3px var(--success-dim),var(--shadow);animation:toastIn .2s ease,toastPulse 1.4s ease .2s 2}
+@keyframes toastPulse{0%,100%{box-shadow:0 0 0 3px var(--success-dim),var(--shadow)}50%{box-shadow:0 0 0 7px var(--success-dim),var(--shadow)}}
+#confetti-layer{position:fixed;inset:0;pointer-events:none;z-index:10000;overflow:hidden}
+.confetti-piece{position:absolute;top:-12px;width:8px;height:14px;opacity:0.9;animation:confettiFall linear forwards}
+@keyframes confettiFall{to{transform:translateY(105vh) rotate(540deg);opacity:0.3}}
 /* ══ TABS ══ */
 .tabs{display:flex;gap:2px;background:var(--elevated);padding:4px;border-radius:var(--radius-sm);margin-bottom:16px;flex-wrap:wrap}
 .tab{padding:6px 14px;border-radius:6px;font-size:17px;font-weight:500;cursor:pointer;color:var(--text-muted);transition:all var(--transition);white-space:nowrap}
@@ -568,6 +645,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 /* ══ CUSTOMER SCREEN ══ */
 /* ══ FILTER BAR ══ */
 .filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.filter-bar.sticky-filter{position:sticky;top:0;z-index:6;background:var(--bg);padding:8px 0;box-shadow:0 6px 10px -8px rgba(0,0,0,.3)}
 .filter-bar .form-control{flex:1;min-width:120px;max-width:200px}
 /* ══ PROFILE VIEW ══ */
 .profile-header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
@@ -579,15 +657,15 @@ textarea.form-control{resize:vertical;min-height:80px}
 .info-item p{font-size:17px;margin-top:2px}
 /* ══ BACKUP BANNER ══ */
 #backup-banner{background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);padding:8px 16px;display:none;align-items:center;flex-wrap:wrap;gap:8px 10px;font-size:17px;color:var(--warning);overflow-wrap:anywhere;box-sizing:border-box;max-width:100%}
-#backup-banner button{margin-left:auto;background:var(--warning);color:#fff;padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
+#backup-banner button{margin-left:auto;background:var(--warning);color:var(--warning-ink);padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
 #recurring-banner{background:rgba(99,102,241,.1);border-bottom:1px solid rgba(99,102,241,.3);padding:8px 16px;display:none;align-items:center;flex-wrap:wrap;gap:8px 10px;font-size:17px;color:var(--accent);overflow-wrap:anywhere;box-sizing:border-box;max-width:100%}
 #recurring-banner button{background:var(--accent);color:#fff;padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
 #recurring-banner button:last-child{margin-left:auto;background:none;color:var(--accent)}
 #filing-banner{background:rgba(239,68,68,.1);border-bottom:1px solid rgba(239,68,68,.3);padding:8px 16px;display:none;align-items:center;flex-wrap:wrap;gap:8px 10px;font-size:17px;color:var(--danger);overflow-wrap:anywhere;box-sizing:border-box;max-width:100%}
-#filing-banner button{background:var(--danger);color:#fff;padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
+#filing-banner button{background:var(--danger-solid);color:#fff;padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
 #filing-banner button:last-child{margin-left:auto;background:none;color:var(--danger)}
 #ict-banner{background:rgba(16,185,129,.1);border-bottom:1px solid rgba(16,185,129,.3);padding:8px 16px;display:none;align-items:center;flex-wrap:wrap;gap:8px 10px;font-size:17px;color:var(--success);overflow-wrap:anywhere;box-sizing:border-box;max-width:100%}
-#ict-banner button{background:var(--success);color:#fff;padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
+#ict-banner button{background:var(--success-solid);color:#fff;padding:4px 12px;border-radius:4px;font-size:15px;font-weight:500}
 #ict-banner button:last-child{margin-left:auto;background:none;color:var(--success)}
 /* ══ ADVANCED SEARCH ══ */
 #adv-search{background:var(--elevated);border-bottom:1px solid var(--border);padding:14px 16px;display:none}
@@ -652,6 +730,8 @@ textarea.form-control{resize:vertical;min-height:80px}
   .kpi-label{white-space:normal;font-size:12px;line-height:1.25;margin-bottom:4px}
   .kpi-value{font-size:20px}
   .kpi-change{white-space:normal;font-size:11.5px}
+  .kpi-spark{display:none}
+  #acct-filter-bar{position:static;box-shadow:none}
   /* Modals: slide up from bottom */
   .modal-overlay{align-items:flex-end!important;padding:0!important}
   .modal{max-width:100%!important;border-radius:16px 16px 0 0!important;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -663,6 +743,9 @@ textarea.form-control{resize:vertical;min-height:80px}
   .search-wrap{flex:1;max-width:100%!important}
   .search-kbd,.live-clock{display:none}
   .topbar-breadcrumb{display:none}
+  .mobile-breadcrumb{display:block;font-size:13px;font-weight:600;color:var(--text-muted);padding:0 0 10px;white-space:nowrap;overflow-x:auto}
+  .mobile-breadcrumb .breadcrumb-sub{color:var(--text);font-weight:700;font-size:13px}
+  .mobile-breadcrumb:empty{display:none}
   /* Tabs: scroll horizontally */
   .tabs,#hr-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap!important}
   .tab{flex-shrink:0;white-space:nowrap}
@@ -678,6 +761,11 @@ textarea.form-control{resize:vertical;min-height:80px}
   /* Bigger tap targets for accent color swatches/picker on small screens */
   .color-swatch{width:34px;height:34px}
   #custom-accent-wheel{width:48px;height:40px}
+  /* Row action buttons (Edit/Del/View in every table) are the most-tapped controls in the
+     app on mobile, but were sized for a mouse pointer (padding:3px 8px). Bump them toward
+     the ~44px touch-target guideline without blowing up desktop's compact table rows. */
+  .btn-xs{padding:7px 12px;font-size:15px}
+  td .btn-xs + .btn-xs{margin-left:4px}
   /* Dropdown/notification panels: these are positioned with right:0 relative to their own
      small icon-button wrapper, not to the topbar. When that wrapper isn't the rightmost
      element on screen (e.g. notif bell, quick-add), a wide panel extends left, can go past
@@ -803,7 +891,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <div id="print-target"></div>
 
 <!-- ══ TOAST CONTAINER ══ -->
-<div id="toast-container"></div>
+<div id="toast-container" aria-live="polite" aria-atomic="false"></div>
 
 <!-- ══ CALENDAR OVERLAY ══ -->
 <div class="cal-overlay" id="cal-overlay" onclick="closeCal(event)">
@@ -905,7 +993,7 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="topbar-breadcrumb" id="topbar-title">Dashboard</div>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input class="search-input" id="global-search" placeholder="Search everything... (Ctrl+K)" oninput="onGlobalSearch()" onfocus="showSearchHistory()" onblur="setTimeout(()=>hideSearch(),200)">
+        <input class="search-input" id="global-search" placeholder="Search everything... (Ctrl+K)" oninput="debounceRender(&apos;onGlobalSearch&apos;)" onfocus="showSearchHistory()" onblur="setTimeout(()=>hideSearch(),200)">
         <span class="search-kbd">Ctrl+K</span>
         <div id="search-results"></div>
       </div>
@@ -991,6 +1079,7 @@ textarea.form-control{resize:vertical;min-height:80px}
     </div>
     <!-- CONTENT -->
     <div id="content">
+      <div id="mobile-breadcrumb" class="mobile-breadcrumb"></div>
       <!-- DASHBOARD -->
       <div class="module-view active" id="view-dashboard">
         <div id="dashboard-greeting" style="font-size:25px;font-weight:700;margin-bottom:4px"></div>
@@ -1044,7 +1133,7 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="pos-products" id="pos-products">
             <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
               <div class="input-wrap" style="flex:1;min-width:160px">
-                <input class="form-control" id="pos-search" placeholder="🔍 Search products..." oninput="renderPOS()">
+                <input class="form-control" id="pos-search" placeholder="🔍 Search products..." oninput="debounceRender(&apos;renderPOS&apos;)">
                 <button class="input-clear" onclick="clearInput('pos-search');renderPOS()">✕</button>
               </div>
               <div id="pos-customer-select" style="min-width:160px">
@@ -1052,7 +1141,7 @@ textarea.form-control{resize:vertical;min-height:80px}
                   <input class="form-control" id="pos-customer-input" placeholder="Select customer...">
                 </div>
               </div>
-              <select class="form-control" id="pos-customer-type" style="width:120px" onchange="renderCart()">
+              <select class="form-control" id="pos-customer-type" style="width:120px" onchange="onCustomerTypeChange()">
                 <option value="Retail">Retail</option>
                 <option value="Wholesale">Wholesale</option>
               </select>
@@ -1127,19 +1216,19 @@ textarea.form-control{resize:vertical;min-height:80px}
       <!-- RECORDS / PRODUCTS -->
       <div class="module-view" id="view-records">
         <div class="filter-bar">
-          <input class="form-control" id="rec-search" placeholder="🔍 Search products..." oninput="renderRecords()">
+          <input class="form-control" id="rec-search" placeholder="🔍 Search products..." oninput="debounceRender(&apos;renderRecords&apos;)">
           <select class="form-control" id="rtx-cat-filter" onchange="renderRecords()"><option value="">All Categories</option></select>
           <button class="btn btn-secondary btn-sm" onclick="exportCSV('records')">📤 Export CSV</button>
           <button class="btn btn-secondary btn-sm" onclick="importCSV('records')">📥 Import CSV</button>
           <button class="btn btn-primary btn-sm" onclick="openRecordModal()">+ Add Product</button>
         </div>
-        <div class="table-wrap"><table id="records-table"><thead><tr><th onclick="sortTable('records','name')">Name ↕</th><th onclick="sortTable('records','sku')">SKU ↕</th><th>Category</th><th>Stock</th><th>Retail Price</th><th>Wholesale Price</th><th>Status</th><th>Actions</th></tr></thead><tbody id="records-tbody"></tbody></table></div>
+        <div class="table-wrap"><table id="records-table"><thead><tr><th data-sort="records:name" onclick="sortTable('records','name')">Name <span class="sort-arrow">↕</span></th><th data-sort="records:sku" onclick="sortTable('records','sku')">SKU <span class="sort-arrow">↕</span></th><th>Category</th><th>Stock</th><th>Retail Price</th><th>Wholesale Price</th><th>Status</th><th>Actions</th></tr></thead><tbody id="records-tbody"></tbody></table></div>
         <div class="pagination" id="records-pagination"></div>
       </div>
       <!-- RAW MATERIALS -->
       <div class="module-view" id="view-rawmaterials">
         <div class="filter-bar">
-          <input class="form-control" id="rm-search" placeholder="🔍 Search raw materials..." oninput="renderRawMaterials()">
+          <input class="form-control" id="rm-search" placeholder="🔍 Search raw materials..." oninput="debounceRender(&apos;renderRawMaterials&apos;)">
           <select class="form-control" id="rm-cat-filter" onchange="renderRawMaterials()"><option value="">All Categories</option></select>
           <button class="btn btn-secondary btn-sm" onclick="exportCSV('rawMaterials')">📤 Export</button>
           <button class="btn btn-primary btn-sm" onclick="openMaterialModal()">+ Add Material</button>
@@ -1157,11 +1246,11 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="tab" onclick="setInvTab('reorder',this)">⚠️ Reorder Alerts</div>
         </div>
         <div id="inv-products">
-          <div class="filter-bar"><input class="form-control" id="inv-prod-search" placeholder="🔍 Search..." oninput="renderInvProducts()"><button class="btn btn-secondary btn-sm" onclick="exportCSV('records')">📤 Export</button></div>
+          <div class="filter-bar"><input class="form-control" id="inv-prod-search" placeholder="🔍 Search..." oninput="debounceRender(&apos;renderInvProducts&apos;)"><button class="btn btn-secondary btn-sm" onclick="exportCSV('records')">📤 Export</button></div>
           <div class="table-wrap"><table><thead><tr><th>Name</th><th>SKU</th><th>Stock</th><th>Unit</th><th>Value</th><th>Actions</th></tr></thead><tbody id="inv-prod-tbody"></tbody></table></div>
         </div>
         <div id="inv-materials" style="display:none">
-          <div class="filter-bar"><input class="form-control" id="inv-mat-search" placeholder="🔍 Search..." oninput="renderInvMaterials()"><button class="btn btn-secondary btn-sm" onclick="exportCSV('rawMaterials')">📤 Export</button></div>
+          <div class="filter-bar"><input class="form-control" id="inv-mat-search" placeholder="🔍 Search..." oninput="debounceRender(&apos;renderInvMaterials&apos;)"><button class="btn btn-secondary btn-sm" onclick="exportCSV('rawMaterials')">📤 Export</button></div>
           <div class="table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Stock</th><th>Unit</th><th>Value</th><th>Actions</th></tr></thead><tbody id="inv-mat-tbody"></tbody></table></div>
         </div>
         <div id="inv-warehouses" style="display:none">
@@ -1188,7 +1277,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         </div>
         <div id="prod-bom">
           <div class="filter-bar">
-            <input class="form-control" id="bom-search" placeholder="🔍 Search recipes..." oninput="renderBOMs()">
+            <input class="form-control" id="bom-search" placeholder="🔍 Search recipes..." oninput="debounceRender(&apos;renderBOMs&apos;)">
             <button class="btn btn-primary btn-sm" onclick="openBOMModal()">+ New Recipe</button>
           </div>
           <div class="form-hint" style="margin-bottom:10px">A recipe (BOM) lists which raw materials go into one finished product. Click "🏭 Make Now" any time you've produced a batch — it instantly updates stock.</div>
@@ -1227,15 +1316,15 @@ textarea.form-control{resize:vertical;min-height:80px}
       </div>
       <!-- TRANSACTIONS -->
       <div class="module-view" id="view-transactions">
-        <div class="filter-bar">
-          <input class="form-control" id="txn-search" placeholder="🔍 Search..." oninput="renderTransactions()">
+        <div class="filter-bar sticky-filter">
+          <input class="form-control" id="txn-search" placeholder="🔍 Search..." oninput="debounceRender(&apos;renderTransactions&apos;)">
           <select class="form-control" id="txn-status-filter" onchange="renderTransactions()"><option value="">All Statuses</option></select>
           <input class="form-control" id="txn-from" placeholder="From Date" style="width:130px" onfocus="openCalendar('txn-from','standard')">
           <input class="form-control" id="txn-to" placeholder="To Date" style="width:130px" onfocus="openCalendar('txn-to','standard')">
           <button class="btn btn-secondary btn-sm" onclick="exportCSV('transactions')">📤 Export</button>
           <button class="btn btn-primary btn-sm" onclick="openTransactionModal()">+ Add</button>
         </div>
-        <div class="table-wrap"><table id="txn-table"><thead><tr><th>ID</th><th onclick="sortTable('txn','entityName')">Entity ↕</th><th onclick="sortTable('txn','amount')">Amount ↕</th><th>Status</th><th onclick="sortTable('txn','date')">Date ↕</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="txn-tbody"></tbody></table></div>
+        <div class="table-wrap"><table id="txn-table"><thead><tr><th>ID</th><th data-sort="txn:entityName" onclick="sortTable('txn','entityName')">Entity <span class="sort-arrow">↕</span></th><th data-sort="txn:amount" onclick="sortTable('txn','amount')">Amount <span class="sort-arrow">↕</span></th><th>Status</th><th data-sort="txn:date" onclick="sortTable('txn','date')">Date <span class="sort-arrow">↕</span></th><th>Notes</th><th>Actions</th></tr></thead><tbody id="txn-tbody"></tbody></table></div>
         <div class="pagination" id="txn-pagination"></div>
       </div>
       <!-- ENTITIES / CUSTOMERS -->
@@ -1247,8 +1336,8 @@ textarea.form-control{resize:vertical;min-height:80px}
         </div>
         <div id="ent-list-section">
           <div class="filter-bar">
-            <input class="form-control" id="ent-search" placeholder="🔍 Search..." oninput="renderEntities()">
-            <select class="form-control" id="ent-cat-filter" onchange="renderEntities()"><option value="">All Types</option><option value="Retail Customer">Retail</option><option value="Wholesale Customer">Wholesale</option></select>
+            <input class="form-control" id="ent-search" placeholder="🔍 Search..." oninput="debounceRender(&apos;renderEntities&apos;)">
+            <select class="form-control" id="ent-cat-filter" onchange="renderEntities()"><option value="">All Types</option></select>
             <button class="btn btn-secondary btn-sm" onclick="exportCSV('entities')">📤 Export</button>
             <button class="btn btn-primary btn-sm" onclick="openEntityModal()">+ Add</button>
           </div>
@@ -1257,7 +1346,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         </div>
         <div id="ent-due-section" style="display:none">
           <div class="filter-bar">
-            <input class="form-control" id="due-search" placeholder="🔍 Search customer..." oninput="renderDueLedger()">
+            <input class="form-control" id="due-search" placeholder="🔍 Search customer..." oninput="debounceRender(&apos;renderDueLedger&apos;)">
             <select class="form-control" id="due-status-filter" onchange="renderDueLedger()"><option value="">All</option><option value="outstanding">Outstanding</option><option value="settled">Settled</option></select>
             <button class="btn btn-secondary btn-sm" onclick="exportCSV('creditSales')">📤 Export</button>
           </div>
@@ -1266,7 +1355,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         </div>
         <div id="ent-payments-section" style="display:none">
           <div class="filter-bar">
-            <input class="form-control" id="pay-search" placeholder="🔍 Search..." oninput="renderPaymentHistory()">
+            <input class="form-control" id="pay-search" placeholder="🔍 Search..." oninput="debounceRender(&apos;renderPaymentHistory&apos;)">
           </div>
           <div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Receipt</th><th>Amount</th><th>Method</th><th>Notes</th><th>Action</th></tr></thead><tbody id="pay-tbody"></tbody></table></div>
         </div>
@@ -1274,7 +1363,7 @@ textarea.form-control{resize:vertical;min-height:80px}
       <!-- SECONDARY CONTACTS -->
       <div class="module-view" id="view-secondary">
         <div class="filter-bar">
-          <input class="form-control" id="sec-search" placeholder="🔍 Search..." oninput="renderSecondary()">
+          <input class="form-control" id="sec-search" placeholder="🔍 Search..." oninput="debounceRender(&apos;renderSecondary&apos;)">
           <button class="btn btn-secondary btn-sm" onclick="exportCSV('secondary')">📤 Export</button>
           <button class="btn btn-primary btn-sm" onclick="openSecondaryModal()">+ Add</button>
         </div>
@@ -1284,8 +1373,8 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="module-view" id="view-accounting">
         <div id="acct-integrity-banner"></div>
         <div class="kpi-grid" id="acct-kpi"></div>
-        <div class="filter-bar">
-          <input class="form-control" id="acct-search" placeholder="🔍 Search..." oninput="renderAccounting()">
+        <div class="filter-bar sticky-filter" id="acct-filter-bar">
+          <input class="form-control" id="acct-search" placeholder="🔍 Search..." oninput="debounceRender(&apos;renderAccounting&apos;)">
           <select class="form-control" id="acct-type-filter" onchange="renderAccounting()"><option value="">All Types</option><option value="income">Income</option><option value="expense">Expense</option></select>
           <select class="form-control" id="acct-cat-filter" onchange="renderAccounting()"><option value="">All Categories</option></select>
           <input class="form-control" id="acct-from" placeholder="From" style="width:120px" onfocus="openCalendar('acct-from','standard')">
@@ -1308,7 +1397,7 @@ textarea.form-control{resize:vertical;min-height:80px}
           <button class="btn btn-secondary btn-sm" onclick="openVoiceEntry()" title="Speak an entry, e.g. '5000 rupees diesel expense'">🎤 Voice Entry</button>
           <button class="btn btn-primary btn-sm" onclick="openAccountingModal()">+ Add Entry</button>
         </div>
-        <div class="table-wrap"><table><thead><tr><th onclick="sortTable('acct','date')">Date ↕</th><th>Type</th><th onclick="sortTable('acct','category')">Category ↕</th><th>Description</th><th onclick="sortTable('acct','amount')">Amount ↕</th><th>Reference</th><th>Balance</th><th>Actions</th></tr></thead><tbody id="acct-tbody"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th data-sort="acct:date" onclick="sortTable('acct','date')">Date <span class="sort-arrow">↕</span></th><th>Type</th><th data-sort="acct:category" onclick="sortTable('acct','category')">Category <span class="sort-arrow">↕</span></th><th>Description</th><th data-sort="acct:amount" onclick="sortTable('acct','amount')">Amount <span class="sort-arrow">↕</span></th><th>Reference</th><th>Balance</th><th>Actions</th></tr></thead><tbody id="acct-tbody"></tbody></table></div>
         <div class="pagination" id="acct-pagination"></div>
       </div>
       <!-- HR -->
@@ -1322,8 +1411,8 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="tab" onclick="setHRTab('salary-history',this)">📋 Salary History</div>
         </div>
         <div id="hr-employees">
-          <div class="filter-bar">
-            <input class="form-control" id="emp-search" placeholder="🔍 Search..." oninput="renderEmployees()">
+          <div class="filter-bar sticky-filter">
+            <input class="form-control" id="emp-search" placeholder="🔍 Search..." oninput="debounceRender(&apos;renderEmployees&apos;)">
             <select class="form-control" id="emp-dept-filter" onchange="renderEmployees()"><option value="">All Departments</option></select>
             <button class="btn btn-secondary btn-sm" onclick="exportCSV('employees')">📤 Export</button>
             <button class="btn btn-primary btn-sm" onclick="openEmployeeModal()">+ Add Employee</button>
@@ -1364,15 +1453,15 @@ textarea.form-control{resize:vertical;min-height:80px}
         </div>
         <div id="hr-salary-history" style="display:none">
           <div class="filter-bar">
-            <input class="form-control" id="sh-emp-filter" placeholder="Filter by employee..." oninput="renderSalaryHistory()">
-            <input class="form-control" id="sh-month-filter" placeholder="e.g. BS-2083-04" style="width:150px" oninput="renderSalaryHistory()">
+            <input class="form-control" id="sh-emp-filter" placeholder="Filter by employee..." oninput="debounceRender(&apos;renderSalaryHistory&apos;)">
+            <input class="form-control" id="sh-month-filter" placeholder="e.g. BS-2083-04" style="width:150px" oninput="debounceRender(&apos;renderSalaryHistory&apos;)">
           </div>
           <div id="sh-ssf-summary" style="margin-bottom:12px"></div>
           <div class="table-wrap"><table><thead><tr><th>Month</th><th>Employee</th><th>Basic</th><th>Allowances</th><th>Deductions</th><th>Net Pay</th><th>Status</th><th>Actions</th></tr></thead><tbody id="sh-tbody"></tbody></table></div>
         </div>
         <div id="hr-leave" style="display:none">
           <div class="filter-bar">
-            <input class="form-control" id="leave-search" placeholder="🔍 Search employee..." oninput="renderLeaveRecords()">
+            <input class="form-control" id="leave-search" placeholder="🔍 Search employee..." oninput="debounceRender(&apos;renderLeaveRecords&apos;)">
             <select class="form-control" id="leave-status-filter" onchange="renderLeaveRecords()"><option value="">All Status</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
             <button class="btn btn-primary btn-sm" onclick="openLeaveModal()">+ New Leave Request</button>
           </div>
@@ -1380,7 +1469,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         </div>
         <div id="hr-performance" style="display:none">
           <div class="filter-bar">
-            <input class="form-control" id="perf-search" placeholder="🔍 Search employee..." oninput="renderPerformanceRecords()">
+            <input class="form-control" id="perf-search" placeholder="🔍 Search employee..." oninput="debounceRender(&apos;renderPerformanceRecords&apos;)">
             <button class="btn btn-primary btn-sm" onclick="openPerfModal()">+ New Review</button>
           </div>
           <div class="table-wrap"><table><thead><tr><th>Employee</th><th>Date</th><th>Rating</th><th>Reviewer</th><th>Notes</th></tr></thead><tbody id="perf-tbody"></tbody></table></div>
@@ -1488,7 +1577,7 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="tab" onclick="setArchiveTab('auditlog',this)">🔍 Audit Log</div>
         </div>
         <div class="filter-bar">
-          <input class="form-control" id="arch-search" placeholder="🔍 Search archive..." oninput="renderArchive()">
+          <input class="form-control" id="arch-search" placeholder="🔍 Search archive..." oninput="debounceRender(&apos;renderArchive&apos;)">
           <input class="form-control" id="arch-from" placeholder="From" style="width:120px;display:none" onfocus="openCalendar('arch-from','standard')">
           <input class="form-control" id="arch-to" placeholder="To" style="width:120px;display:none" onfocus="openCalendar('arch-to','standard')">
           <button class="btn btn-secondary btn-sm" onclick="exportArchiveCSV()">📤 Export CSV</button>
@@ -1961,7 +2050,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Record/Product Modal -->
 <div class="modal-overlay" id="record-modal-overlay" onclick="closeModalOnOverlay(event,'record-modal-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title" id="record-modal-title">Add Product</div><button class="modal-close" onclick="closeModal('record-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="record-modal-title">Add Product</div><button class="modal-close" onclick="closeModalGuarded('record-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="tabs" style="margin-bottom:16px">
         <div class="tab active" onclick="setRecTab('basic',this)">📦 Basic Info</div>
@@ -2019,7 +2108,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Stock Adjust Modal -->
 <div class="modal-overlay" id="stock-adj-overlay" onclick="closeModalOnOverlay(event,'stock-adj-overlay')">
   <div class="modal modal-sm">
-    <div class="modal-header"><div class="modal-title">Stock Adjustment</div><button class="modal-close" onclick="closeModal('stock-adj-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Stock Adjustment</div><button class="modal-close" onclick="closeModalGuarded('stock-adj-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Current Stock: <span id="adj-current"></span></label></div>
       <div class="form-group">
@@ -2039,7 +2128,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Transaction Modal -->
 <div class="modal-overlay" id="txn-modal-overlay" onclick="closeModalOnOverlay(event,'txn-modal-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title" id="txn-modal-title">Add Transaction</div><button class="modal-close" onclick="closeModal('txn-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="txn-modal-title">Add Transaction</div><button class="modal-close" onclick="closeModalGuarded('txn-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-hint" style="margin-bottom:10px">Record any money owed to you or that you owe. For immediate cash sales, use POS instead.</div>
       <div class="form-row">
@@ -2063,7 +2152,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Entity Modal -->
 <div class="modal-overlay" id="ent-modal-overlay" onclick="closeModalOnOverlay(event,'ent-modal-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title" id="ent-modal-title">Add Customer</div><button class="modal-close" onclick="closeModal('ent-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="ent-modal-title">Add Customer</div><button class="modal-close" onclick="closeModalGuarded('ent-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label class="form-label">Customer Name *</label><div class="input-wrap"><input class="form-control" id="ent-name" placeholder="Full name or company name"><button class="input-clear" onclick="clearInput('ent-name')">✕</button></div></div>
@@ -2084,7 +2173,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Accounting Modal -->
 <div class="modal-overlay" id="acct-modal-overlay" onclick="closeModalOnOverlay(event,'acct-modal-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title" id="acct-modal-title">Add Accounting Entry</div><button class="modal-close" onclick="closeModal('acct-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="acct-modal-title">Add Accounting Entry</div><button class="modal-close" onclick="closeModalGuarded('acct-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group">
         <label class="form-label">Entry Type *</label>
@@ -2129,7 +2218,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Advanced Ledger Modal (tucked away — edge cases only, never required for normal use) -->
 <div class="modal-overlay" id="advanced-ledger-overlay" onclick="closeModalOnOverlay(event,'advanced-ledger-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">⚙️ Advanced Ledger</div><button class="modal-close" onclick="closeModal('advanced-ledger-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">⚙️ Advanced Ledger</div><button class="modal-close" onclick="closeModalGuarded('advanced-ledger-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-hint" style="margin-bottom:10px">Every sale, purchase, payment, and expense already posts itself automatically. Use this screen only for corrections, opening balances, or depreciation.</div>
       <div class="tabs" style="margin-bottom:14px">
@@ -2174,7 +2263,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Correct an Invoice — guided Credit Note / Debit Note flow -->
 <div class="modal-overlay" id="correct-invoice-overlay" onclick="closeModalOnOverlay(event,'correct-invoice-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title" id="correct-inv-title">Correct an Invoice</div><button class="modal-close" onclick="closeModal('correct-invoice-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="correct-inv-title">Correct an Invoice</div><button class="modal-close" onclick="closeModalGuarded('correct-invoice-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-hint" style="margin-bottom:12px">The original invoice number and amount stay exactly as they were — nothing is deleted. This creates a small adjustment document instead.</div>
 
@@ -2211,7 +2300,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Bank Reconciliation -->
 <div class="modal-overlay" id="bank-recon-overlay" onclick="closeModalOnOverlay(event,'bank-recon-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">🏦 Bank Reconciliation<span class="help-tip" data-tip="Making sure your books and your actual bank statement agree — catches anything missed or entered wrong.">?</span></div><button class="modal-close" onclick="closeModal('bank-recon-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">🏦 Bank Reconciliation<span class="help-tip" data-tip="Making sure your books and your actual bank statement agree — catches anything missed or entered wrong.">?</span></div><button class="modal-close" onclick="closeModalGuarded('bank-recon-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="tabs" style="margin-bottom:14px">
         <div class="tab active" id="recon-tab-new" onclick="setReconTab('new',this)">📋 New Reconciliation</div>
@@ -2262,7 +2351,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- My Equipment (Fixed Asset Register) -->
 <div class="modal-overlay" id="equipment-overlay" onclick="closeModalOnOverlay(event,'equipment-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">🏗️ My Equipment<span class="help-tip" data-tip="Machinery, vehicles, furniture, computers — anything the business owns long-term. Enter it once; its value reduces automatically every month (called depreciation) with nothing more for you to do.">?</span></div><button class="modal-close" onclick="closeModal('equipment-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">🏗️ My Equipment<span class="help-tip" data-tip="Machinery, vehicles, furniture, computers — anything the business owns long-term. Enter it once; its value reduces automatically every month (called depreciation) with nothing more for you to do.">?</span></div><button class="modal-close" onclick="closeModalGuarded('equipment-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-hint" style="margin-bottom:12px">Enter what you own, once. Its book value updates by itself every month after that.</div>
       <div class="form-row">
@@ -2307,12 +2396,12 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- RECURRING TRANSACTIONS -->
 <div class="modal-overlay" id="recurring-overlay" onclick="closeModalOnOverlay(event,'recurring-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title" id="recurring-modal-title">🔁 Recurring Transactions<span class="help-tip" data-tip="Set up rent, loan EMIs, fixed salaries, or any bill that repeats. Nothing posts by itself — when one is due, you'll see it here and just tap Post to confirm the amount and book it, same as adding it by hand.">?</span></div><button class="modal-close" onclick="closeModal('recurring-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="recurring-modal-title">🔁 Recurring Transactions<span class="help-tip" data-tip="Set up rent, loan EMIs, fixed salaries, or any bill that repeats. Nothing posts by itself — when one is due, you'll see it here and just tap Post to confirm the amount and book it, same as adding it by hand.">?</span></div><button class="modal-close" onclick="closeModalGuarded('recurring-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-hint" style="margin-bottom:12px">Set it up once. When it's due, you'll get a reminder here — tap Post to confirm and it books exactly like a normal Accounting entry.</div>
       <div style="display:flex;gap:10px;margin-bottom:14px">
         <button type="button" id="rtx-type-income" onclick="setRecType('income')" style="flex:1;padding:10px;border-radius:8px;border:2px solid var(--success);background:transparent;color:var(--success);font-weight:700;font-size:18px;cursor:pointer">💰 Income</button>
-        <button type="button" id="rtx-type-expense" onclick="setRecType('expense')" style="flex:1;padding:10px;border-radius:8px;border:2px solid var(--danger);background:var(--danger);color:#fff;font-weight:700;font-size:18px;cursor:pointer">💸 Expense</button>
+        <button type="button" id="rtx-type-expense" onclick="setRecType('expense')" style="flex:1;padding:10px;border-radius:8px;border:2px solid var(--danger-solid);background:var(--danger-solid);color:#fff;font-weight:700;font-size:18px;cursor:pointer">💸 Expense</button>
       </div>
       <input type="hidden" id="rtx-type-sel" value="expense">
       <input type="hidden" id="rtx-edit-id" value="">
@@ -2369,7 +2458,7 @@ textarea.form-control{resize:vertical;min-height:80px}
       <button class="modal-close" onclick="closeVoiceEntry()">✕</button>
     </div>
     <div class="modal-body">
-      <div id="voice-mic-icon" style="width:80px;height:80px;border-radius:50%;background:var(--danger);color:#fff;font-size:34px;display:flex;align-items:center;justify-content:center;margin:10px auto;animation:micPulse 1.5s infinite">🎤</div>
+      <div id="voice-mic-icon" style="width:80px;height:80px;border-radius:50%;background:var(--danger-solid);color:#fff;font-size:34px;display:flex;align-items:center;justify-content:center;margin:10px auto;animation:micPulse 1.5s infinite">🎤</div>
       <div id="voice-status" style="font-size:16px;color:var(--text-muted);margin-bottom:10px">Listening... try "5000 rupees diesel expense"</div>
       <div id="voice-transcript" style="min-height:44px;font-size:18px;font-weight:600;padding:10px;background:var(--bg-secondary,rgba(0,0,0,.04));border-radius:8px"></div>
     </div>
@@ -2383,7 +2472,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- COMBINED DASHBOARD (all companies) -->
 <div class="modal-overlay" id="combined-dashboard-overlay" onclick="closeModalOnOverlay(event,'combined-dashboard-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">📊 Combined Dashboard<span class="help-tip" data-tip="A read-only side-by-side snapshot of cash, receivables, and payables across every company you administer. Switch into a company for full detail.">?</span></div><button class="modal-close" onclick="closeModal('combined-dashboard-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">📊 Combined Dashboard<span class="help-tip" data-tip="A read-only side-by-side snapshot of cash, receivables, and payables across every company you administer. Switch into a company for full detail.">?</span></div><button class="modal-close" onclick="closeModalGuarded('combined-dashboard-overlay')">✕</button></div>
     <div class="modal-body">
       <button class="btn btn-secondary btn-sm" onclick="refreshCombinedDashboard()" style="margin-bottom:12px">🔄 Refresh</button>
       <div id="combined-dashboard-body"></div>
@@ -2395,7 +2484,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- INTER-COMPANY TRANSFER (send) -->
 <div class="modal-overlay" id="ict-overlay" onclick="closeModalOnOverlay(event,'ict-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">🏢➡️ Inter-Company Transfer<span class="help-tip" data-tip="Books an outgoing entry in THIS company right now. The destination company's admin then reviews and posts the matching incoming entry on their own end — never posted for you into books you're not signed into.">?</span></div><button class="modal-close" onclick="closeModal('ict-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">🏢➡️ Inter-Company Transfer<span class="help-tip" data-tip="Books an outgoing entry in THIS company right now. The destination company's admin then reviews and posts the matching incoming entry on their own end — never posted for you into books you're not signed into.">?</span></div><button class="modal-close" onclick="closeModalGuarded('ict-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Send To *</label><select class="form-control" id="ict-to-company"></select></div>
       <div class="form-row">
@@ -2414,7 +2503,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- INTER-COMPANY TRANSFER (incoming review) -->
 <div class="modal-overlay" id="ict-incoming-overlay" onclick="closeModalOnOverlay(event,'ict-incoming-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">🏢⬅️ Incoming Transfers</div><button class="modal-close" onclick="closeModal('ict-incoming-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">🏢⬅️ Incoming Transfers</div><button class="modal-close" onclick="closeModalGuarded('ict-incoming-overlay')">✕</button></div>
     <div class="modal-body"><div id="ict-incoming-body"></div></div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('ict-incoming-overlay')">Close</button></div>
   </div>
@@ -2423,7 +2512,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Owner/Partner Transaction (money in/out from the owner(s), not a sale or expense) -->
 <div class="modal-overlay" id="owner-txn-overlay" onclick="closeModalOnOverlay(event,'owner-txn-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Owner/Partner Transaction<span class="help-tip" data-tip="Use this when you (or a partner) put personal money into the business, or take money out for personal use — not a sale, not a business expense.">?</span></div><button class="modal-close" onclick="closeModal('owner-txn-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Owner/Partner Transaction<span class="help-tip" data-tip="Use this when you (or a partner) put personal money into the business, or take money out for personal use — not a sale, not a business expense.">?</span></div><button class="modal-close" onclick="closeModalGuarded('owner-txn-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group">
         <label class="form-label">What happened?</label>
@@ -2452,7 +2541,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Post-Dated Cheque Tracker -->
 <div class="modal-overlay" id="pdc-overlay" onclick="closeModalOnOverlay(event,'pdc-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">📝 Post-Dated Cheques<span class="help-tip" data-tip="Cheques you've received or issued dated for the future — track them here until they actually clear the bank.">?</span></div><button class="modal-close" onclick="closeModal('pdc-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">📝 Post-Dated Cheques<span class="help-tip" data-tip="Cheques you've received or issued dated for the future — track them here until they actually clear the bank.">?</span></div><button class="modal-close" onclick="closeModalGuarded('pdc-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label class="form-label">Type</label><select class="form-control" id="pdc-type"><option value="received">Received from Customer</option><option value="issued">Issued to Supplier</option></select></div>
@@ -2474,7 +2563,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Employee Modal -->
 <div class="modal-overlay" id="emp-modal-overlay" onclick="closeModalOnOverlay(event,'emp-modal-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title" id="emp-modal-title">Add Employee</div><button class="modal-close" onclick="closeModal('emp-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="emp-modal-title">Add Employee</div><button class="modal-close" onclick="closeModalGuarded('emp-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-hint" style="margin-bottom:10px">Only Full Name is required — fill in other tabs now or come back later by editing this employee.</div>
       <div class="tabs" style="margin-bottom:14px">
@@ -2543,7 +2632,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- User Modal -->
 <div class="modal-overlay" id="user-modal-overlay" onclick="closeModalOnOverlay(event,'user-modal-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title" id="user-modal-title">Add User</div><button class="modal-close" onclick="closeModal('user-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="user-modal-title">Add User</div><button class="modal-close" onclick="closeModalGuarded('user-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label class="form-label">Full Name *</label><input class="form-control" id="usr-name" placeholder="Full name"></div>
@@ -2592,7 +2681,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- QR Code Modal -->
 <div class="modal-overlay" id="qr-modal-overlay" onclick="closeModalOnOverlay(event,'qr-modal-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title" id="qr-modal-title">Add QR Code</div><button class="modal-close" onclick="closeModal('qr-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="qr-modal-title">Add QR Code</div><button class="modal-close" onclick="closeModalGuarded('qr-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Label / Service Name *</label><input class="form-control" id="qr-label" placeholder="e.g. eSewa, Khalti, FonePay, Bank Transfer"></div>
       <div class="tabs" style="margin-bottom:14px">
@@ -2640,7 +2729,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Profile View Modal -->
 <div class="modal-overlay" id="profile-view-overlay" onclick="closeModalOnOverlay(event,'profile-view-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title" id="profile-view-title">Profile</div><button class="modal-close" onclick="closeModal('profile-view-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="profile-view-title">Profile</div><button class="modal-close" onclick="closeModalGuarded('profile-view-overlay')">✕</button></div>
     <div class="modal-body" id="profile-view-body"></div>
     <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
       <button class="btn btn-secondary" onclick="closeModal('profile-view-overlay')">Close</button>
@@ -2655,7 +2744,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Change Password Modal -->
 <div class="modal-overlay" id="chpw-overlay" onclick="closeModalOnOverlay(event,'chpw-overlay')">
   <div class="modal modal-sm">
-    <div class="modal-header"><div class="modal-title">Change Password</div><button class="modal-close" onclick="closeModal('chpw-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Change Password</div><button class="modal-close" onclick="closeModalGuarded('chpw-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Current Password</label><input class="form-control" type="password" id="chpw-current"></div>
       <div class="form-group"><label class="form-label">New Password</label><input class="form-control" type="password" id="chpw-new"></div>
@@ -2668,7 +2757,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Secondary Contact Modal -->
 <div class="modal-overlay" id="sec-modal-overlay" onclick="closeModalOnOverlay(event,'sec-modal-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title" id="sec-modal-title">Add Supplier</div><button class="modal-close" onclick="closeModal('sec-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="sec-modal-title">Add Supplier</div><button class="modal-close" onclick="closeModalGuarded('sec-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label class="form-label">Supplier Name *</label><input class="form-control" id="sec-name" placeholder="Company or individual name"></div>
@@ -2704,7 +2793,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Raw Material Modal -->
 <div class="modal-overlay" id="material-modal-overlay" onclick="closeModalOnOverlay(event,'material-modal-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title" id="material-modal-title">Add Raw Material</div><button class="modal-close" onclick="closeModal('material-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="material-modal-title">Add Raw Material</div><button class="modal-close" onclick="closeModalGuarded('material-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label class="form-label">Material Code *</label><input class="form-control" id="mat-code" placeholder="Auto-generated if empty"></div>
@@ -2735,7 +2824,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Warehouse Modal -->
 <div class="modal-overlay" id="warehouse-modal-overlay" onclick="closeModalOnOverlay(event,'warehouse-modal-overlay')">
   <div class="modal modal-sm">
-    <div class="modal-header"><div class="modal-title">Add Warehouse</div><button class="modal-close" onclick="closeModal('warehouse-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Add Warehouse</div><button class="modal-close" onclick="closeModalGuarded('warehouse-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Warehouse Name *</label><input class="form-control" id="wh-name" placeholder="e.g. Main Store, Production Floor"></div>
       <div class="form-group"><label class="form-label">Location</label><input class="form-control" id="wh-location" placeholder="Optional location/address"></div>
@@ -2748,7 +2837,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Stock Transfer Modal -->
 <div class="modal-overlay" id="transfer-modal-overlay" onclick="closeModalOnOverlay(event,'transfer-modal-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">New Stock Transfer</div><button class="modal-close" onclick="closeModal('transfer-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">New Stock Transfer</div><button class="modal-close" onclick="closeModalGuarded('transfer-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label class="form-label">From Warehouse *</label><select class="form-control" id="tr-from"></select></div>
@@ -2766,7 +2855,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- BOM Modal -->
 <div class="modal-overlay" id="bom-modal-overlay" onclick="closeModalOnOverlay(event,'bom-modal-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title" id="bom-modal-title">New Recipe</div><button class="modal-close" onclick="closeModal('bom-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="bom-modal-title">New Recipe</div><button class="modal-close" onclick="closeModalGuarded('bom-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label class="form-label">Recipe Name *</label><input class="form-control" id="bom-name" placeholder="e.g. Steel Nail 2 inch — Standard Recipe"></div>
@@ -2785,7 +2874,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Make Now Modal (simple one-step production) -->
 <div class="modal-overlay" id="makenow-modal-overlay" onclick="closeModalOnOverlay(event,'makenow-modal-overlay')">
   <div class="modal modal-sm">
-    <div class="modal-header"><div class="modal-title">🏭 Make Now</div><button class="modal-close" onclick="closeModal('makenow-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">🏭 Make Now</div><button class="modal-close" onclick="closeModalGuarded('makenow-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div id="makenow-recipe-info" style="margin-bottom:12px;font-weight:600"></div>
       <div class="form-group"><label class="form-label">Number of Batches *<span class="help-tip" data-tip="How many times you're running this recipe — decides how much raw material gets used.">?</span></label><input class="form-control" type="number" id="makenow-batches" value="1" min="0.1" step="0.1" oninput="previewMakeNowMaterials()"></div>
@@ -2800,7 +2889,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Online Sync Setup Modal -->
 <div class="modal-overlay" id="sync-setup-modal-overlay" onclick="closeModalOnOverlay(event,'sync-setup-modal-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">🌐 Online Sync Setup</div><button class="modal-close" onclick="closeModal('sync-setup-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">🌐 Online Sync Setup</div><button class="modal-close" onclick="closeModalGuarded('sync-setup-modal-overlay')">✕</button></div>
     <div class="modal-body" id="sync-setup-body"></div>
   </div>
 </div>
@@ -2815,7 +2904,7 @@ textarea.form-control{resize:vertical;min-height:80px}
      prompt() shows the typed password in plain text with no masking. -->
 <div class="modal-overlay" id="text-prompt-modal-overlay" onclick="closeModalOnOverlay(event,'text-prompt-modal-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title" id="text-prompt-title">Enter Value</div><button class="modal-close" onclick="closeModal('text-prompt-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="text-prompt-title">Enter Value</div><button class="modal-close" onclick="closeModalGuarded('text-prompt-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div id="text-prompt-message" style="font-size:17px;margin-bottom:12px;white-space:pre-line"></div>
       <div class="form-group">
@@ -2831,7 +2920,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 
 <div class="modal-overlay" id="deposit-confirm-modal-overlay" onclick="closeModalOnOverlay(event,'deposit-confirm-modal-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title" id="deposit-confirm-title">Confirm</div><button class="modal-close" onclick="closeModal('deposit-confirm-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="deposit-confirm-title">Confirm</div><button class="modal-close" onclick="closeModalGuarded('deposit-confirm-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div id="deposit-confirm-message" style="font-size:17px;margin-bottom:12px;white-space:pre-line"></div>
       <div class="form-group" id="deposit-confirm-amount-group" style="display:none">
@@ -2855,7 +2944,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 
 <div class="modal-overlay" id="sync-conflict-modal-overlay" onclick="closeModalOnOverlay(event,'sync-conflict-modal-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title" style="color:var(--danger)">⚠️ Sync Conflict</div><button class="modal-close" onclick="closeModal('sync-conflict-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" style="color:var(--danger)">⚠️ Sync Conflict</div><button class="modal-close" onclick="closeModalGuarded('sync-conflict-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div style="font-size:17px;margin-bottom:10px">Another device (or company user) saved data to the server before this device could send its own changes. This app can't merge two devices' offline edits automatically, so <b>this device's unsynced changes were not sent</b> — but they were not deleted either.</div>
       <div style="font-size:17px;margin-bottom:10px">A backup of exactly what was on this device is saved below. Please review it and manually re-enter anything that's missing now.</div>
@@ -2868,7 +2957,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Production Order Modal -->
 <div class="modal-overlay" id="prodorder-modal-overlay" onclick="closeModalOnOverlay(event,'prodorder-modal-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">New Production Order</div><button class="modal-close" onclick="closeModal('prodorder-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">New Production Order</div><button class="modal-close" onclick="closeModalGuarded('prodorder-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Bill of Materials *</label><select class="form-control" id="po-bom" onchange="onPOBOMChange()"></select></div>
       <div class="form-group"><label class="form-label">Number of Batches *<span class="help-tip" data-tip="How many times to run this recipe — decides how much raw material gets set aside. The actual finished quantity you end up with is recorded separately when you complete this order, since real output always varies a bit from the estimate.">?</span></label><input class="form-control" type="number" id="po-batches" value="1" min="0.1" step="0.1" oninput="previewMaterialNeeds()"></div>
@@ -2882,7 +2971,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Complete Production Modal — captures the real, actual yield -->
 <div class="modal-overlay" id="complete-production-overlay" onclick="closeModalOnOverlay(event,'complete-production-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Complete Production Order</div><button class="modal-close" onclick="closeModal('complete-production-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Complete Production Order</div><button class="modal-close" onclick="closeModalGuarded('complete-production-overlay')">✕</button></div>
     <div class="modal-body">
       <div id="cp-summary" class="form-hint" style="margin-bottom:10px"></div>
       <div class="form-group"><label class="form-label">Actual Quantity Produced *<span class="help-tip" data-tip="How many finished units actually came out of this run — real yield, not the estimate. This is what goes into stock and decides this batch's true cost per unit.">?</span></label><input class="form-control" type="number" id="cp-actual-qty" min="0" step="0.01"></div>
@@ -2894,7 +2983,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Orphan Journal Entry Correction Modal -->
 <div class="modal-overlay" id="orphan-correction-overlay" onclick="closeModalOnOverlay(event,'orphan-correction-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Correct Orphan Entry</div><button class="modal-close" onclick="closeModal('orphan-correction-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Correct Orphan Entry</div><button class="modal-close" onclick="closeModalGuarded('orphan-correction-overlay')">✕</button></div>
     <div class="modal-body">
       <div id="oc-summary" class="form-hint" style="margin-bottom:12px"></div>
       <div class="form-group"><label class="form-label">Repost this entry against *</label><select class="form-control" id="oc-replacement"></select></div>
@@ -2907,7 +2996,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Purchase Order Modal -->
 <div class="modal-overlay" id="po-modal-overlay" onclick="closeModalOnOverlay(event,'po-modal-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">New Purchase Order</div><button class="modal-close" onclick="closeModal('po-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">New Purchase Order</div><button class="modal-close" onclick="closeModalGuarded('po-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label class="form-label">Supplier *</label><select class="form-control" id="pord-supplier"></select></div>
@@ -2926,7 +3015,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Sales Order Modal -->
 <div class="modal-overlay" id="so-modal-overlay" onclick="closeModalOnOverlay(event,'so-modal-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">New Sales Order</div><button class="modal-close" onclick="closeModal('so-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">New Sales Order</div><button class="modal-close" onclick="closeModalGuarded('so-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label class="form-label">Customer *</label><input class="form-control" id="sord-customer" placeholder="Customer name"></div>
@@ -2945,7 +3034,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Sales Order Detail Modal -->
 <div class="modal-overlay" id="so-detail-overlay" onclick="closeModalOnOverlay(event,'so-detail-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">Sales Order Detail</div><button class="modal-close" onclick="closeModal('so-detail-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Sales Order Detail</div><button class="modal-close" onclick="closeModalGuarded('so-detail-overlay')">✕</button></div>
     <div class="modal-body" id="so-detail-body"></div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('so-detail-overlay')">Close</button></div>
   </div>
@@ -2954,7 +3043,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Budget Settings Modal -->
 <div class="modal-overlay" id="budget-settings-overlay" onclick="closeModalOnOverlay(event,'budget-settings-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">Set Monthly Budget Targets</div><button class="modal-close" onclick="closeModal('budget-settings-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Set Monthly Budget Targets</div><button class="modal-close" onclick="closeModalGuarded('budget-settings-overlay')">✕</button></div>
     <div class="modal-body" id="budget-settings-body"></div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('budget-settings-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveBudgetSettings()">💾 Save Targets</button></div>
   </div>
@@ -2963,7 +3052,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Goods Received Modal -->
 <div class="modal-overlay" id="grn-modal-overlay" onclick="closeModalOnOverlay(event,'grn-modal-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">Receive Goods</div><button class="modal-close" onclick="closeModal('grn-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Receive Goods</div><button class="modal-close" onclick="closeModalGuarded('grn-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div id="grn-po-info" style="margin-bottom:12px;padding:10px;background:var(--elevated);border-radius:8px;font-size:17px"></div>
       <div id="grn-items-list"></div>
@@ -2976,7 +3065,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Supplier Invoice Modal -->
 <div class="modal-overlay" id="sinv-modal-overlay" onclick="closeModalOnOverlay(event,'sinv-modal-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Supplier Invoice</div><button class="modal-close" onclick="closeModal('sinv-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Supplier Invoice</div><button class="modal-close" onclick="closeModalGuarded('sinv-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Invoice Number *</label><input class="form-control" id="sinv-number"></div>
       <div class="form-row">
@@ -2998,7 +3087,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Supplier Payment Modal -->
 <div class="modal-overlay" id="spay-modal-overlay" onclick="closeModalOnOverlay(event,'spay-modal-overlay')">
   <div class="modal modal-sm">
-    <div class="modal-header"><div class="modal-title">Pay Supplier</div><button class="modal-close" onclick="closeModal('spay-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Pay Supplier</div><button class="modal-close" onclick="closeModalGuarded('spay-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div id="spay-info" style="margin-bottom:12px;padding:10px;background:var(--elevated);border-radius:8px;font-size:17px"></div>
       <div class="form-group"><label class="form-label">Payment Type</label>
@@ -3020,7 +3109,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Role/Permission Modal -->
 <div class="modal-overlay" id="role-modal-overlay" onclick="closeModalOnOverlay(event,'role-modal-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title" id="role-modal-title">New Role</div><button class="modal-close" onclick="closeModal('role-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="role-modal-title">New Role</div><button class="modal-close" onclick="closeModalGuarded('role-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-row" style="margin-bottom:16px">
         <div class="form-group"><label class="form-label">Role Name *</label><input class="form-control" id="role-name" placeholder="e.g. Sales Manager"></div>
@@ -3042,7 +3131,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Collect Due Payment Modal -->
 <div class="modal-overlay" id="due-pay-overlay" onclick="closeModalOnOverlay(event,'due-pay-overlay')">
   <div class="modal modal-sm">
-    <div class="modal-header"><div class="modal-title">Collect Payment</div><button class="modal-close" onclick="closeModal('due-pay-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Collect Payment</div><button class="modal-close" onclick="closeModalGuarded('due-pay-overlay')">✕</button></div>
     <div class="modal-body">
       <div id="due-pay-info" style="font-size:17px;margin-bottom:14px;padding:10px;background:var(--elevated);border-radius:8px"></div>
       <div class="form-group"><label class="form-label">Amount Received</label><input class="form-control" type="number" id="due-pay-amount" placeholder="0"></div>
@@ -3056,7 +3145,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Credit Sale Modal -->
 <div class="modal-overlay" id="credit-sale-overlay" onclick="closeModalOnOverlay(event,'credit-sale-overlay')">
   <div class="modal modal-sm">
-    <div class="modal-header"><div class="modal-title">💳 Credit Sale</div><button class="modal-close" onclick="closeModal('credit-sale-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">💳 Credit Sale</div><button class="modal-close" onclick="closeModalGuarded('credit-sale-overlay')">✕</button></div>
     <div class="modal-body">
       <div id="credit-sale-info" style="font-size:17px;margin-bottom:14px;padding:10px;background:var(--elevated);border-radius:8px"></div>
       <div class="form-group"><label class="form-label">Amount Paid Now</label><input class="form-control" id="credit-paid-now" type="number" min="0" value="0" placeholder="0 = Full Credit"></div>
@@ -3070,7 +3159,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Payroll Slip Modal -->
 <div class="modal-overlay" id="payslip-overlay" onclick="closeModalOnOverlay(event,'payslip-overlay')">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">Salary Slip</div><button class="modal-close" onclick="closeModal('payslip-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Salary Slip</div><button class="modal-close" onclick="closeModalGuarded('payslip-overlay')">✕</button></div>
     <div class="modal-body" id="payslip-body"></div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('payslip-overlay')">Close</button><button class="btn btn-primary" onclick="printPaySlip()">🖨️ Print</button></div>
   </div>
@@ -3079,7 +3168,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Attendance Correction Modal -->
 <div class="modal-overlay" id="attcorr-overlay" onclick="closeModalOnOverlay(event,'attcorr-overlay')">
   <div class="modal modal-sm">
-    <div class="modal-header"><div class="modal-title">Correct Attendance Entry</div><button class="modal-close" onclick="closeModal('attcorr-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Correct Attendance Entry</div><button class="modal-close" onclick="closeModalGuarded('attcorr-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Employee *</label><select class="form-control" id="attcorr-emp"></select></div>
       <div class="form-group"><label class="form-label">Date *</label><input class="form-control" id="attcorr-date" onfocus="openCalendar('attcorr-date','standard')"></div>
@@ -3101,7 +3190,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Leave Request Modal -->
 <div class="modal-overlay" id="leave-modal-overlay" onclick="closeModalOnOverlay(event,'leave-modal-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Leave Request</div><button class="modal-close" onclick="closeModal('leave-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Leave Request</div><button class="modal-close" onclick="closeModalGuarded('leave-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Employee *</label><select class="form-control" id="leave-emp"></select></div>
       <div class="form-group"><label class="form-label">Leave Type *</label><select class="form-control" id="leave-type"></select></div>
@@ -3120,7 +3209,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- Performance Review Modal -->
 <div class="modal-overlay" id="perf-modal-overlay" onclick="closeModalOnOverlay(event,'perf-modal-overlay')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Performance Review</div><button class="modal-close" onclick="closeModal('perf-modal-overlay')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">Performance Review</div><button class="modal-close" onclick="closeModalGuarded('perf-modal-overlay')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Employee *</label><select class="form-control" id="perf-emp"></select></div>
       <div class="form-row">
@@ -3385,6 +3474,9 @@ function migrateDB() {
       if (!db.settings.categories) db.settings.categories = def.settings.categories;
       if (!db.settings.labels) db.settings.labels = def.settings.labels;
       if (!db.settings.modules) db.settings.modules = def.settings.modules;
+      // Self-heal any install saved before Settings/Dashboard were made un-disableable —
+      // otherwise someone who already disabled one is stuck with no way back in.
+      db.settings.modules.forEach(m => { if (LOCKED_MODULES.has(m.id)) m.enabled = true; });
       if (!db.settings.reportSettings) db.settings.reportSettings = def.settings.reportSettings;
       if (!db.settings.salaryComponents) db.settings.salaryComponents = def.settings.salaryComponents;
       if (!db.settings.incomeTaxSlabs) db.settings.incomeTaxSlabs = def.settings.incomeTaxSlabs;
@@ -3611,6 +3703,7 @@ const DEFAULT_CHART_OF_ACCOUNTS = [
   { code:'2050', name:'Short-Term Loans', type:'liability', normalBalance:'credit' },
   { code:'2060', name:'TDS Payable (Vendor/Contractor)', type:'liability', normalBalance:'credit' },
   { code:'2061', name:'TDS Payable (Employee Salary)', type:'liability', normalBalance:'credit' },
+  { code:'2065', name:'Goods Received Not Invoiced (GRNI Clearing)', type:'liability', normalBalance:'credit' },
   { code:'2110', name:'Long-Term Loans', type:'liability', normalBalance:'credit' },
   // ── Equity ──
   { code:'3010', name:"Owner's Capital", type:'equity', normalBalance:'credit' },
@@ -3966,13 +4059,32 @@ function finishedGoodsAccountFor(recordId) {
 function postSupplierInvoiceJournal(invoice) {
   const vatAmount = invoice.vatAmount || 0;
   const netAmount = +(invoice.amount - vatAmount).toFixed(2);
+  const lines = [];
   // Perpetual inventory: goods bought sit as an ASSET until sold, not expensed at purchase time.
   // This flow (Purchase Order → Goods Received → Supplier Invoice) is raw-materials only — POs
   // are built exclusively from db.rawMaterials — so this must hit the Raw Materials account
   // (1040), not the Trading/Retail Goods account. Production consumption and stock adjustments
   // already correctly debit/credit 1040 for raw materials; this was the one place purchases
   // went to the wrong account, so 1040 only ever went down and never up.
-  const lines = [ { accountCode: '1040', debit: netAmount, credit: 0 } ];
+  // GRNI FIX: 1040 was already debited once, in full, at GRN time (see saveGRN) against a
+  // provisional GRNI liability (2065) — the goods were on the shelf and usable by Production
+  // before any invoice existed. Debiting 1040 again here for the full net amount would double
+  // it. Instead, reverse exactly the GRNI amount that was cleared at receipt, and only touch
+  // 1040 again for whatever the confirmed invoice differs by (rounding, a late rate correction,
+  // added charges) — the vast majority of the value already sits correctly in 1040 from the GRN.
+  const grn = invoice.grnId ? (db.goodsReceived||[]).find(g=>g.id===invoice.grnId) : null;
+  const grnValue = grn ? +(grn.items||[]).reduce((a,it)=>a+it.qtyReceived*it.rate,0).toFixed(2) : 0;
+  if (grnValue > 0) {
+    lines.push({ accountCode: '2065', debit: grnValue, credit: 0 });
+    const diff = +(netAmount - grnValue).toFixed(2);
+    if (diff > 0.004) lines.push({ accountCode: '1040', debit: diff, credit: 0 });
+    else if (diff < -0.004) lines.push({ accountCode: '1040', debit: 0, credit: -diff });
+  } else {
+    // No linked GRN (shouldn't happen via the normal PO → GRN → Invoice flow, since the "Create
+    // Invoice" button only ever appears on a GRN row — kept as a safe fallback) — book the full
+    // net amount straight to Raw Materials, same as before this fix.
+    lines.push({ accountCode: '1040', debit: netAmount, credit: 0 });
+  }
   if (vatAmount > 0) lines.push({ accountCode: db.settings.acctMappings.vatInputAccount, debit: vatAmount, credit: 0 });
   lines.push({ accountCode: db.settings.acctMappings.apAccount, debit: 0, credit: invoice.amount });
   return postJournalEntry({ date: invoice.date, voucherKind:'Purchase', refType:'supplier-invoice', refId: invoice.id, reference: invoice.invoiceNumber, description: `Supplier Invoice ${invoice.invoiceNumber}`, lines });
@@ -4111,7 +4223,7 @@ function updateAdvJEBalance() {
 function saveAdvancedJournalEntry() {
   const date = document.getElementById('adv-je-date').value || today();
   const description = document.getElementById('adv-je-desc').value.trim();
-  if (!description) { toast('Description is required','error'); return; }
+  if (!description) { toastInvalid('adv-je-desc','Description is required'); return; }
   const rows = document.querySelectorAll('#adv-je-lines .adv-je-row');
   const lineInputs = Array.from(rows).map(r=>({
     accountCode: r.querySelector('.adv-je-acc').value,
@@ -5938,7 +6050,7 @@ function refreshViews() {
       records: renderRecords, rawmaterials: renderRawMaterials,
       inventory: renderInventory, production: renderProduction,
       purchase: renderPurchase, transactions: renderTransactions,
-      entities: renderEntities, secondary: renderSecondary,
+      entities: renderEntitiesActiveTab, secondary: renderSecondary,
       accounting: renderAccounting, hr: renderHR
     };
     const fn = renders[currentModule];
@@ -5952,6 +6064,15 @@ function refreshViews() {
 function refreshDashboardKPIs() {
   const kpiGrid = document.getElementById('kpi-grid');
   if (!kpiGrid) return; // dashboard not mounted yet
+  // Snapshot the currently-displayed value of each KPI BEFORE we overwrite the grid's
+  // innerHTML below — the rebuild below replaces every node, so this is the only chance
+  // to know what number the user was just looking at. Keyed by data-kpi-key so the
+  // count-up animation after the rebuild knows where to start from.
+  const prevKpiRaw = {};
+  kpiGrid.querySelectorAll('.kpi-value[data-kpi-key]').forEach(el => {
+    const raw = parseFloat(el.dataset.raw);
+    if (!isNaN(raw)) prevKpiRaw[el.dataset.kpiKey] = raw;
+  });
   const t = today();
   const monthPrefix = t.slice(0, 7);
   // Last month — use local date math, NOT toISOString() (UTC offset bug)
@@ -5985,17 +6106,89 @@ function refreshDashboardKPIs() {
   const outstandingSales = (db.creditSales||[]).filter(c => c.status === 'outstanding');
   const outstandingDue   = outstandingSales.reduce((a,c) => a + (c.dueAmount||0), 0);
 
+  // 7-day sparkline data for the revenue/expense KPI cards. Deliberately built from
+  // db.sales/db.accounting in one pass each (not computePLPeriod, which re-scans the whole
+  // ledger) since this whole function runs after every single save — a sparkline is a quick
+  // visual trend, not a figure anyone reconciles against the books, so the same VAT-inclusive
+  // approximation the rest of the app moved away from for the headline numbers is fine here.
+  const last7Dates = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    last7Dates.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
+  }
+  const salesByDay = {};
+  db.sales.forEach(s => { if (s.date) salesByDay[s.date] = (salesByDay[s.date]||0) + (s.total||0); });
+  const expByDay = {};
+  db.accounting.forEach(a => { if (a.type === 'expense' && a.date) expByDay[a.date] = (expByDay[a.date]||0) + (a.amount||0); });
+  const revSpark = sparklineSVG(last7Dates.map(d => salesByDay[d]||0), 'var(--success)');
+  const expSpark = sparklineSVG(last7Dates.map(d => expByDay[d]||0), 'var(--danger)');
+
   kpiGrid.innerHTML = `
-    <div class="kpi-card" style="cursor:pointer" onclick="scrollToRecentSales()" title="View recent sales"><div class="kpi-icon kpi-icon-revenue">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue <span style="font-weight:400;color:var(--text-muted);font-size:12px">(excl. VAT)</span></div><div class="kpi-value amt-revenue">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="scrollToRecentSales()" title="View recent sales"><div class="kpi-icon kpi-icon-revenue">📅</div><div class="kpi-body"><div class="kpi-label">Month Revenue <span style="font-weight:400;color:var(--text-muted);font-size:12px">(excl. VAT)</span></div><div class="kpi-value amt-revenue">${fmtWhole(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="goToExpenseLedger()" title="Open Accounting → Expenses"><div class="kpi-icon kpi-icon-expense">💸</div><div class="kpi-body"><div class="kpi-label">Today's Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpToday)}</div><div class="kpi-change">${todayExpenseEntries} ${todayExpenseEntries===1?'entry':'entries'} today</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="goToExpenseLedger()" title="Open Accounting → Expenses"><div class="kpi-icon kpi-icon-expense">🧾</div><div class="kpi-body"><div class="kpi-label">Month Expense</div><div class="kpi-value amt-expense">${fmtWhole(totalExpMonth)}</div><div class="kpi-change">${monthPL.expense.length} categories · salary, raw material &amp; other</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="openModule('accounting')" title="Open Accounting"><div class="kpi-icon ${netBalance>=0?'kpi-icon-revenue':'kpi-icon-expense'}">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value ${netBalance>=0?'amt-revenue':'amt-expense'}">${fmtWhole(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="goToDueLedger()" title="Open Due Ledger">${outstandingSales.length?`<span class="kpi-pin">${outstandingSales.length>99?'99+':outstandingSales.length}</span>`:''}<div class="kpi-icon kpi-icon-warning">💳</div><div class="kpi-body"><div class="kpi-label">Outstanding Due</div><div class="kpi-value amt-expense">${fmtWhole(outstandingDue)}</div><div class="kpi-change">${outstandingSales.length} unpaid credit sales</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="openModule('records')" title="Open ${esc(db.settings.labels.records||'Records')}"><div class="kpi-icon kpi-icon-neutral">📦</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.records||'Records')}</div><div class="kpi-value">${db.records.length}</div><div class="kpi-change">In inventory</div></div></div>
-    <div class="kpi-card" style="cursor:pointer" onclick="openModule('records')" title="Open ${esc(db.settings.labels.records||'Records')}">${lowStockCnt?`<span class="kpi-pin">${lowStockCnt>99?'99+':lowStockCnt}</span>`:''}<div class="kpi-icon kpi-icon-warning">⚠️</div><div class="kpi-body"><div class="kpi-label">Low Stock</div><div class="kpi-value" style="color:var(--warning)">${lowStockCnt}</div><div class="kpi-change">Items to reorder</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="scrollToRecentSales()" title="View recent sales"><div class="kpi-icon kpi-icon-revenue">💰</div><div class="kpi-body"><div class="kpi-label">Today's Revenue <span style="font-weight:400;color:var(--text-muted);font-size:12px">(excl. VAT)</span></div><div class="kpi-value amt-revenue" data-kpi-key="revToday" data-raw="${totalRevToday}" data-fmt="currency">${fmtWhole(totalRevToday)}</div><div class="kpi-change">${todaySales.length} sales today</div><div class="kpi-spark" title="Last 7 days">${revSpark}</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="scrollToRecentSales()" title="View recent sales"><div class="kpi-icon kpi-icon-revenue">📅</div><div class="kpi-body"><div class="kpi-label">Month Revenue <span style="font-weight:400;color:var(--text-muted);font-size:12px">(excl. VAT)</span></div><div class="kpi-value amt-revenue" data-kpi-key="revMonth" data-raw="${totalRevMonth}" data-fmt="currency">${fmtWhole(totalRevMonth)}</div><div class="kpi-change">${monthSales.length} transactions</div><div class="kpi-spark" title="Last 7 days">${revSpark}</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="goToExpenseLedger()" title="Open Accounting → Expenses"><div class="kpi-icon kpi-icon-expense">💸</div><div class="kpi-body"><div class="kpi-label">Today's Expense</div><div class="kpi-value amt-expense" data-kpi-key="expToday" data-raw="${totalExpToday}" data-fmt="currency">${fmtWhole(totalExpToday)}</div><div class="kpi-change">${todayExpenseEntries} ${todayExpenseEntries===1?'entry':'entries'} today</div><div class="kpi-spark" title="Last 7 days">${expSpark}</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="goToExpenseLedger()" title="Open Accounting → Expenses"><div class="kpi-icon kpi-icon-expense">🧾</div><div class="kpi-body"><div class="kpi-label">Month Expense</div><div class="kpi-value amt-expense" data-kpi-key="expMonth" data-raw="${totalExpMonth}" data-fmt="currency">${fmtWhole(totalExpMonth)}</div><div class="kpi-change">${monthPL.expense.length} categories · salary, raw material &amp; other</div><div class="kpi-spark" title="Last 7 days">${expSpark}</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="openModule('accounting')" title="Open Accounting"><div class="kpi-icon ${netBalance>=0?'kpi-icon-revenue':'kpi-icon-expense'}">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value ${netBalance>=0?'amt-revenue':'amt-expense'}" data-kpi-key="netBalance" data-raw="${netBalance}" data-fmt="currency">${fmtWhole(netBalance)}</div><div class="kpi-change ${netBalance>=0?'up':'down'}">${netBalance>=0?'▲ Surplus':'▼ Deficit'}</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="goToDueLedger()" title="Open Due Ledger">${outstandingSales.length?`<span class="kpi-pin">${outstandingSales.length>99?'99+':outstandingSales.length}</span>`:''}<div class="kpi-icon kpi-icon-warning">💳</div><div class="kpi-body"><div class="kpi-label">Outstanding Due</div><div class="kpi-value amt-expense" data-kpi-key="outstandingDue" data-raw="${outstandingDue}" data-fmt="currency">${fmtWhole(outstandingDue)}</div><div class="kpi-change">${outstandingSales.length} unpaid credit sales</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="openModule('records')" title="Open ${esc(db.settings.labels.records||'Records')}"><div class="kpi-icon kpi-icon-neutral">📦</div><div class="kpi-body"><div class="kpi-label">${esc(db.settings.labels.records||'Records')}</div><div class="kpi-value" data-kpi-key="recordCount" data-raw="${db.records.length}" data-fmt="int">${db.records.length}</div><div class="kpi-change">In inventory</div></div></div>
+    <div class="kpi-card" style="cursor:pointer" onclick="openModule('records')" title="Open ${esc(db.settings.labels.records||'Records')}">${lowStockCnt?`<span class="kpi-pin">${lowStockCnt>99?'99+':lowStockCnt}</span>`:''}<div class="kpi-icon kpi-icon-warning">⚠️</div><div class="kpi-body"><div class="kpi-label">Low Stock</div><div class="kpi-value" style="color:var(--warning)" data-kpi-key="lowStock" data-raw="${lowStockCnt}" data-fmt="int">${lowStockCnt}</div><div class="kpi-change">Items to reorder</div></div></div>
   `;
+  // Count up/down from whatever was previously on screen to the new value, rather than
+  // just popping in the new text. First-ever render (nothing in prevKpiRaw yet) skips the
+  // animation and shows the final number immediately — animating from 0 on initial page
+  // load would misleadingly imply everything just changed.
+  kpiGrid.querySelectorAll('.kpi-value[data-kpi-key]').forEach(el => {
+    const key = el.dataset.kpiKey;
+    const to = parseFloat(el.dataset.raw);
+    const from = prevKpiRaw.hasOwnProperty(key) ? prevKpiRaw[key] : to;
+    const formatter = el.dataset.fmt === 'currency' ? fmtWhole : (v => Math.round(v).toLocaleString());
+    animateKpiValue(el, from, to, formatter);
+  });
   setTimeout(fitKpiValues, 0);
+}
+
+// Animates a KPI's displayed text from `from` to `to` using ease-out easing, cancelling
+// any in-flight animation already running on that element (e.g. two saves in quick
+// succession) so they don't fight each other and leave the number stuck mid-count.
+// Tiny inline trend line for a KPI card — not a full chart, just a quick "is this going up
+// or down lately" glance. `values` is plotted left (oldest) to right (newest); the last point
+// gets a dot so today's position on the trend is obvious at a glance.
+function sparklineSVG(values, color, w = 64, h = 22) {
+  if (!values || values.length < 2) return '';
+  const max = Math.max(...values, 0);
+  const min = Math.min(...values, 0);
+  const range = (max - min) || 1;
+  const step = w / (values.length - 1);
+  const pts = values.map((v, i) => `${(i*step).toFixed(1)},${(h - ((v-min)/range)*h).toFixed(1)}`);
+  const lastPt = pts[pts.length - 1].split(',');
+  return `<svg class="kpi-sparkline" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none">
+    <polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${lastPt[0]}" cy="${lastPt[1]}" r="2" fill="${color}"/>
+  </svg>`;
+}
+
+function animateKpiValue(el, from, to, formatter) {
+  if (el._kpiAnimFrame) cancelAnimationFrame(el._kpiAnimFrame);
+  if (from === to || isNaN(from)) { el.textContent = formatter(to); return; }
+  const duration = 600;
+  const startTime = performance.now();
+  function tick(now) {
+    const p = Math.min(1, (now - startTime) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = formatter(from + (to - from) * eased);
+    if (p < 1) {
+      el._kpiAnimFrame = requestAnimationFrame(tick);
+    } else {
+      el._kpiAnimFrame = null;
+      el.textContent = formatter(to);
+      // The initial setTimeout(fitKpiValues,0) right after render fires while this
+      // animation is still mid-count, so it sizes fonts to the wrong (in-between) text
+      // width. Re-run it now that every card holds its true final value.
+      clearTimeout(window._kpiAnimFitDebounce);
+      window._kpiAnimFitDebounce = setTimeout(fitKpiValues, 30);
+    }
+  }
+  el._kpiAnimFrame = requestAnimationFrame(tick);
 }
 
 /* ══ UTILITIES ══ */
@@ -6514,10 +6707,11 @@ function downloadConflictBackup() {
 }
 
 function discardConflictBackup() {
-  if (!confirm('Only dismiss this once you have reviewed the backup and re-entered anything that was missing. Continue?')) return;
-  localStorage.removeItem(scopedKey('bms_conflict_backup'));
-  renderConflictBackupSection();
-  toast('Conflict backup dismissed.', 'success');
+  confirm('Only dismiss this once you have reviewed the backup and re-entered anything that was missing. Continue?', () => {
+    localStorage.removeItem(scopedKey('bms_conflict_backup'));
+    renderConflictBackupSection();
+    toast('Conflict backup dismissed.', 'success');
+  });
 }
 
 
@@ -6796,7 +6990,7 @@ async function submitInterCompanyTransfer() {
   const date = document.getElementById('ict-date').value || today();
   const desc = document.getElementById('ict-desc').value.trim();
   if (!toCompanyId) { toast('Select a destination company','error'); return; }
-  if (!amount || amount<=0) { toast('Valid amount required','error'); return; }
+  if (!amount || amount<=0) { toastInvalid('ict-amount','Valid amount required'); return; }
 
   confirm(`Send ${fmt(amount)} to "${toCompanyName}"? This books an outgoing entry here now. "${toCompanyName}"'s admin will see it waiting to review and post on their end.`, async () => {
     try {
@@ -7231,14 +7425,92 @@ function fitKpiValues() {
 }
 window.addEventListener('resize', () => { clearTimeout(window._kpiFitDebounce); window._kpiFitDebounce = setTimeout(fitKpiValues, 150); });
 
-function toast(msg, type='success', title='') {
+/* Rapid actions (bulk imports, repeated validation errors) used to stack an unbounded pile
+   of toasts straight up the screen. Now: identical messages merge into a "×N" counter on
+   the existing toast, and only TOAST_MAX_VISIBLE show at once — anything beyond that waits
+   in _toastPending and is summarized as "+N more" until a slot frees up. */
+const TOAST_MAX_VISIBLE = 4;
+let _toastPending = [];
+// Same as toast('...', 'error') but also marks the offending field so a long form doesn't
+// leave the person hunting for which input the toast was about — red outline, focus, and
+// scroll into view, clearing itself the moment the person edits or leaves the field.
+function toastInvalid(fieldId, msg) {
+  const el = document.getElementById(fieldId);
+  if (el) {
+    el.classList.add('field-invalid');
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.focus({ preventScroll: true });
+    const clear = () => el.classList.remove('field-invalid');
+    el.addEventListener('input', clear, { once: true });
+    el.addEventListener('change', clear, { once: true });
+  }
+  toast(msg, 'error');
+}
+function toast(msg, type='success', title='', opts={}) {
+  const container = document.getElementById('toast-container');
+  const dupe = [...container.querySelectorAll('.toast')].find(t => t.dataset.msg === msg && t.dataset.type === type);
+  if (dupe) {
+    const count = parseInt(dupe.dataset.count||'1', 10) + 1;
+    dupe.dataset.count = count;
+    let countEl = dupe.querySelector('.toast-count');
+    if (!countEl) { countEl = document.createElement('span'); countEl.className = 'toast-count'; dupe.querySelector('.toast-title').appendChild(countEl); }
+    countEl.textContent = `×${count}`;
+    clearTimeout(dupe._dismissTimer);
+    dupe._dismissTimer = setTimeout(() => dismissToast(dupe), 3500);
+    return;
+  }
+  if (container.querySelectorAll('.toast').length >= TOAST_MAX_VISIBLE) {
+    _toastPending.push({ msg, type, title, opts });
+    updateToastOverflowLabel();
+    return;
+  }
+  renderToast(msg, type, title, opts);
+}
+function renderToast(msg, type, title, opts={}) {
   const icons = { success:'✅', error:'❌', warning:'⚠️', info:'ℹ️' };
   const titles = { success:'Success', error:'Error', warning:'Warning', info:'Info' };
   const el = document.createElement('div');
-  el.className = `toast ${type}`;
+  el.className = `toast ${type}${opts.celebrate ? ' celebrate' : ''}`;
+  el.dataset.msg = msg; el.dataset.type = type; el.dataset.count = '1';
+  // Errors/warnings are announced more assertively (role="alert") than routine success/info
+  // toasts (role="status"), since a screen reader user won't otherwise know a save failed.
+  el.setAttribute('role', (type === 'error' || type === 'warning') ? 'alert' : 'status');
   el.innerHTML = `<div class="toast-icon">${icons[type]||'ℹ️'}</div><div class="toast-content"><div class="toast-title">${esc(title||titles[type])}</div><div class="toast-msg">${esc(msg)}</div></div>`;
   document.getElementById('toast-container').appendChild(el);
-  setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 3500);
+  el._dismissTimer = setTimeout(() => dismissToast(el), 3500);
+  if (opts.celebrate) fireConfetti();
+}
+function dismissToast(el) {
+  if (!el || !el.isConnected) return;
+  el.style.opacity = '0'; el.style.transition = 'opacity .3s';
+  setTimeout(() => {
+    el.remove();
+    if (_toastPending.length) { const next = _toastPending.shift(); renderToast(next.msg, next.type, next.title, next.opts); updateToastOverflowLabel(); }
+  }, 300);
+}
+function updateToastOverflowLabel() {
+  const container = document.getElementById('toast-container');
+  let label = container.querySelector('.toast-overflow');
+  if (_toastPending.length > 0) {
+    if (!label) { label = document.createElement('div'); label.className = 'toast-overflow'; container.insertBefore(label, container.firstChild); }
+    label.textContent = `+${_toastPending.length} more`;
+  } else if (label) label.remove();
+}
+function fireConfetti() {
+  let layer = document.getElementById('confetti-layer');
+  if (!layer) { layer = document.createElement('div'); layer.id = 'confetti-layer'; document.body.appendChild(layer); }
+  const colors = ['#7C6BF5', '#34D399', '#FCD34D', '#67E8F9', '#C084FC'];
+  for (let i = 0; i < 40; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + 'vw';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = (1.8 + Math.random() * 1.2) + 's';
+    piece.style.animationDelay = (Math.random() * 0.3) + 's';
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    layer.appendChild(piece);
+    setTimeout(() => piece.remove(), 3500);
+  }
 }
 
 /* ══ AUDIT LOG ══ */
@@ -7430,7 +7702,7 @@ function wizSetAccent(color, el) {
 function wizNext() {
   if (wizardStep === 1) {
     const name = document.getElementById('w-orgname').value.trim();
-    if (!name) { toast('Organization name is required', 'error'); return; }
+    if (!name) { toastInvalid('w-orgname','Organization name is required'); return; }
     wizardData.orgName = name;
     wizardData.orgTag = document.getElementById('w-orgtag').value.trim();
     wizardData.logoInit = (document.getElementById('w-logo').value.trim() || name[0]).toUpperCase();
@@ -8012,7 +8284,7 @@ function lgShowSetup() {
       <div class="lg-label">Master Recovery Key</div>
       <input class="lg-input" id="su-key" placeholder="e.g. ABCD1234-WXYZ" style="font-family:monospace" autocomplete="off">
     </div>
-    <button class="lg-btn" style="background:var(--danger)" onclick="lgVerifySetupKey()">Verify & Continue</button>
+    <button class="lg-btn" style="background:var(--danger-solid)" onclick="lgVerifySetupKey()">Verify & Continue</button>
     <button class="lg-ghost" onclick="lgShowMain()">Cancel</button>
     <div style="font-size:13px;color:var(--text-muted);margin-top:14px;text-align:center">Lost the key too? This device's data can't be wiped from here — restore access via a backup, or clear app storage from your browser/phone settings instead.</div>
   `;
@@ -8040,7 +8312,7 @@ function lgShowSetupConfirm() {
       <div style="font-size:17px;color:var(--text-muted);margin-bottom:20px">
         This will <strong style="color:var(--danger)">erase all data</strong> and restart from scratch.
       </div>
-      <button class="lg-btn" style="background:var(--danger);margin-bottom:10px" onclick="lgDoSetup()">Yes — Erase & Setup</button>
+      <button class="lg-btn" style="background:var(--danger-solid);margin-bottom:10px" onclick="lgDoSetup()">Yes — Erase & Setup</button>
       <button class="lg-ghost" onclick="lgShowMain()">Cancel</button>
     </div>
   `;
@@ -8230,7 +8502,7 @@ function section(label, ids) {
     if (!mods.length) return '';
     return `<div class="nav-section-label">${label}</div>` +
       mods.map(m => `
-        <div class="nav-item${currentModule===m.id?' active':''}" onclick="openModule('${m.id}')" id="nav-${m.id}">
+        <div class="nav-item${currentModule===m.id?' active':''}" onclick="openModule('${m.id}')" id="nav-${m.id}"${currentModule===m.id?' aria-current="page"':''}>
           <span class="nav-icon">${m.icon}</span>
           <span class="nav-label">${esc(m.label)}</span>
           ${m.id==='records'?`<span class="nav-badge" id="nav-badge-lowstock" style="display:none">!</span>`:''}
@@ -8242,6 +8514,20 @@ function section(label, ids) {
 }
 
 let currentModule = 'dashboard';
+let currentModuleLabel = 'Dashboard';
+// Updates the "Module › Sub-tab" trail. Writes to both the desktop topbar title and the
+// mobile breadcrumb strip — only one of the two is ever visible at a time (CSS handles that
+// per screen size) so both just always carry the same content rather than needing to know
+// which one is currently on screen.
+function renderBreadcrumb(sub) {
+  const html = sub
+    ? `${esc(currentModuleLabel)}<span class="breadcrumb-sep">›</span><span class="breadcrumb-sub">${esc(sub)}</span>`
+    : esc(currentModuleLabel);
+  const top = document.getElementById('topbar-title');
+  if (top) top.innerHTML = html;
+  const mob = document.getElementById('mobile-breadcrumb');
+  if (mob) mob.innerHTML = html;
+}
 let acctUnlocked = false;
 
 function openModule(id) {
@@ -8263,18 +8549,24 @@ function openModule(id) {
   const contentEl = document.getElementById('content');
   if (contentEl) { contentEl.scrollLeft = 0; contentEl.scrollTop = 0; }
   window.scrollTo(0, 0);
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => { n.classList.remove('active'); n.removeAttribute('aria-current'); });
   const navEl = document.getElementById('nav-' + id);
-  if (navEl) navEl.classList.add('active');
+  if (navEl) { navEl.classList.add('active'); navEl.setAttribute('aria-current', 'page'); }
   const mod = db.settings.modules.find(m=>m.id===id);
-  document.getElementById('topbar-title').textContent = mod ? mod.label : id;
+  currentModuleLabel = mod ? mod.label : id;
+  // Modules that open straight into a specific sub-tab (rather than a single flat view) show
+  // that sub-tab in the breadcrumb from the first render, matching whichever tab is marked
+  // "active" in that module's own markup — kept in sync manually here since there's no single
+  // shared sub-tab registry to read it from automatically.
+  const defaultSub = { hr: 'Employees', entities: 'Customers', settings: 'Business Profile', archive: 'Archived Customers' };
+  renderBreadcrumb(defaultSub[id] || '');
   closeDropdowns();
   if (id !== 'accounting') { acctUnlocked = false; }
   const renders = {
     dashboard: renderDashboard, pos: ()=>{ renderPOS(); initBarcodeScanner(); }, records: renderRecords,
     rawmaterials: renderRawMaterials, inventory: renderInventory, production: renderProduction,
-    purchase: renderPurchase, transactions: renderTransactions, entities: renderEntities, secondary: renderSecondary,
-    accounting: renderAccounting, hr: renderHR, reports: initReportsView,
+    purchase: renderPurchase, transactions: ()=>withTableSkeleton('txn-tbody', 7, renderTransactions), entities: initEntitiesView, secondary: renderSecondary,
+    accounting: ()=>withTableSkeleton('acct-tbody', 8, renderAccounting), hr: ()=>withTableSkeleton('emp-tbody', 9, renderHR), reports: initReportsView,
     archive: ()=>{ renderArchive(); applyArchiveTabGating(); }, settings: initSettingsView
   };
   if (renders[id]) renders[id]();
@@ -8507,13 +8799,79 @@ document.addEventListener('click', e => {
 });
 
 /* ══ MODALS ══ */
+let _modalReturnFocus = null;
+function openModal(id) {
+  const el = document.getElementById(id); if (!el) return;
+  delete el.dataset.dirty; // fresh open — same overlay element is reused for add/edit, don't carry over a stale flag
+  _modalReturnFocus = document.activeElement;
+  el.classList.add('show');
+  const dialog = el.querySelector('.modal');
+  if (dialog) {
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    const titleEl = dialog.querySelector('.modal-title');
+    if (titleEl) dialog.setAttribute('aria-label', titleEl.textContent.trim());
+    if (!dialog.hasAttribute('tabindex')) dialog.setAttribute('tabindex', '-1');
+  }
+  // Wait a tick for the modal's content to actually be in the DOM/visible before focusing.
+  setTimeout(() => {
+    const focusable = el.querySelector('.modal-body input:not([disabled]), .modal-body select:not([disabled]), .modal-body textarea:not([disabled])');
+    (focusable || dialog)?.focus?.();
+  }, 60);
+}
 function closeModal(id) {
   const el=document.getElementById(id); if(el) el.classList.remove('show');
   // A cancelled "Post" on an incoming inter-company transfer must not leave a stale flag that
   // marks the transfer as posted the next time ANY accounting entry is saved (see accounting audit).
   if (id === 'acct-modal-overlay') _pendingICTMarkPostId = null;
+  if (_modalReturnFocus && typeof _modalReturnFocus.focus === 'function' && document.contains(_modalReturnFocus)) _modalReturnFocus.focus();
+  _modalReturnFocus = null;
 }
-function openModal(id) { const el=document.getElementById(id); if(el) el.classList.add('show'); }
+// Used by the overlay-backdrop click and the ✕ button — the "escape hatches" that can throw
+// away a half-filled form silently. Programmatic closeModal() calls right after a successful
+// save are left alone (nothing to discard by then), so this checks a per-overlay dirty flag
+// set by field edits rather than gating closeModal() itself.
+function closeModalGuarded(id) {
+  const el = document.getElementById(id);
+  if (el && el.dataset.dirty === '1') { confirm('Discard unsaved changes?', () => closeModal(id)); return; }
+  closeModal(id);
+}
+document.addEventListener('input', e => {
+  const overlay = e.target.closest('.modal-overlay.show');
+  if (overlay) overlay.dataset.dirty = '1';
+});
+document.addEventListener('change', e => {
+  const overlay = e.target.closest('.modal-overlay.show');
+  if (overlay) overlay.dataset.dirty = '1';
+});
+// ── Search-input debounce ──
+// List/search filters used to re-render their whole table on every keystroke via oninput.
+// Harmless on short lists, but noticeably laggy once a table (Transactions, Accounting,
+// Products, etc.) grows into the hundreds. Debouncing only the search/filter inputs — never
+// the live-calculation fields (quantities, totals) that must stay instant — keeps typing
+// smooth without changing anything about how those calculations behave.
+function debounce(fn, wait) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+const _debouncedRenders = {};
+function debounceRender(fnName) {
+  if (!_debouncedRenders[fnName]) _debouncedRenders[fnName] = debounce(() => { if (typeof window[fnName] === 'function') window[fnName](); }, 220);
+  _debouncedRenders[fnName]();
+}
+// Save/Post/Process/Delete buttons (.btn-primary, .btn-danger) call straight into saveDB()
+// with no in-flight state of their own. A fast double-click — easy to do on a slow device —
+// used to be able to fire the same handler twice before the modal even closed, creating
+// duplicate transactions/journal entries. This blocks a second click on the SAME button
+// within a short cooldown, without touching every individual save function. Runs in the
+// capture phase so it can veto the click before the button's own onclick handler runs.
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.btn-primary, .btn-danger');
+  if (!btn) return;
+  const now = Date.now();
+  if (btn._guardUntil && now < btn._guardUntil) { e.preventDefault(); e.stopPropagation(); return; }
+  btn._guardUntil = now + 700;
+}, true);
 
 // ── Deposit/Payment Confirm Modal — reusable replacement for prompt()-based method/amount
 // dialogs, used by the SSF/TDS/VAT deposit and payroll-payment functions below. ──
@@ -8563,7 +8921,7 @@ function confirmTextPromptModal() {
   _textPromptCallback = null;
   if (cb) cb(val);
 }
-function closeModalOnOverlay(e, id) { if(e.target === e.currentTarget) closeModal(id); }
+function closeModalOnOverlay(e, id) { if(e.target === e.currentTarget) closeModalGuarded(id); }
 document.addEventListener('keydown', e => {
   if (e.key==='Escape') {
     if (document.getElementById('acct-modal-overlay')?.classList.contains('show')) _pendingICTMarkPostId = null;
@@ -8861,6 +9219,21 @@ function addToCart(id) {
   }
   renderCart();
   updateCustomerScreen();
+}
+
+// BUG FIXED: switching the Retail/Wholesale dropdown used to just call renderCart(), which
+// redraws the cart from each line's already-stored `price` — it never recalculated anything.
+// Only addToCart() refreshed an item's price, and only for the specific item just re-clicked.
+// So switching customer type mid-sale silently left every item already in the cart charging
+// whichever price was in effect when it was added, while newly-added items got the new type's
+// price — a single sale could end up mixing Retail and Wholesale pricing with no visible sign
+// anything was wrong. Re-price every existing line against the new customer type first.
+function onCustomerTypeChange() {
+  cart.forEach(item => {
+    const rec = db.records.find(r=>r.id===item.id);
+    if (rec) item.price = getPriceForItem(rec);
+  });
+  renderCart();
 }
 
 function renderCart() {
@@ -9749,7 +10122,7 @@ function renderTransactions() {
       <td class="mono">#${t.id.slice(-6)}</td>
       <td><a href="#" onclick="viewProfile('transaction','${t.id}');return false">${esc(t.entityName||'—')}</a></td>
       <td class="mono amt-balance">${fmt(t.amount||0)}</td>
-      <td><span class="badge ${statusBadge(t.status)}" onclick="quickStatusUpdate('${t.id}')" style="cursor:pointer">${esc(t.status||'Pending')}</span></td>
+      <td><span class="badge clickable ${statusBadge(t.status)}" onclick="quickStatusUpdate('${t.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickStatusUpdate('${t.id}')}" tabindex="0" role="button" aria-label="Change status, currently ${esc(t.status||'Pending')}">${esc(t.status||'Pending')}</span></td>
       <td>${fmtDate(t.date)}</td>
       <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.notes||'—')}</td>
       <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openTransactionModal('${t.id}')">Edit</button> <button class="btn btn-xs btn-danger" onclick="deleteRecord('transaction','${t.id}')">Del</button></td>
@@ -9799,7 +10172,7 @@ function openTransactionModal(id=null) {
 
 function saveTransaction() {
   const amount = parseFloat(document.getElementById('txn-amount').value);
-  if (!amount) { toast('Amount is required','error'); return; }
+  if (!amount) { toastInvalid('txn-amount','Amount is required'); return; }
   const entityName = document.getElementById('txn-entity').value.trim();
   const data = {
     entityName, entityId: resolveOrCreateCustomerId(entityName),
@@ -9823,6 +10196,31 @@ function showAddTransaction() { openModule('transactions'); setTimeout(()=>openT
 
 /* ══ ENTITIES ══ */
 let entEditId = null;
+// Tracks which Customers sub-tab (list/due/payments) is currently visible, so re-entering the
+// module — or a background refreshViews() tick while the user is on Due Ledger/Payment History —
+// updates what's actually on screen instead of always silently re-rendering the (hidden) list.
+let currentEntTab = 'list';
+function renderEntitiesActiveTab() {
+  if (currentEntTab === 'due') renderDueLedger();
+  else if (currentEntTab === 'payments') renderPaymentHistory();
+  else renderEntities();
+}
+// The Type filter's options used to be hardcoded in the HTML ("Retail Customer"/"Wholesale
+// Customer"), so renaming or adding entries in Settings → Categories → Customers silently broke
+// the filter (it would compare against category text that no longer existed anywhere). Now it's
+// built from the same category list customers are actually tagged with.
+function populateEntCatFilter() {
+  const sel = document.getElementById('ent-cat-filter');
+  if (!sel) return;
+  const current = sel.value;
+  const cats = db.settings.categories?.entities || [];
+  sel.innerHTML = '<option value="">All Types</option>' + cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if (cats.includes(current)) sel.value = current;
+}
+function initEntitiesView() {
+  populateEntCatFilter();
+  renderEntitiesActiveTab();
+}
 
 function openEntityModal(id=null) {
   entEditId = id;
@@ -9864,7 +10262,7 @@ function resolveOrCreateCustomerId(name) {
 
 function saveEntity() {
   const name = document.getElementById('ent-name').value.trim();
-  if (!name) { toast('Name is required','error'); return; }
+  if (!name) { toastInvalid('ent-name','Name is required'); return; }
   if (isDuplicateName(db.entities, name, entEditId)) { toast(`A customer named "${name}" already exists`,'error'); return; }
   const data = { name, category: document.getElementById('ent-cat').value.trim(), phone: document.getElementById('ent-phone').value.trim(), email: document.getElementById('ent-email').value.trim(), address: document.getElementById('ent-address').value.trim(), pan: document.getElementById('ent-pan').value.trim(), notes: document.getElementById('ent-notes').value.trim() };
   if (entEditId) {
@@ -10047,10 +10445,10 @@ function setAcctType(type) {
   const expBtn = document.getElementById('acct-type-expense');
   if (!incBtn || !expBtn) return;
   if (type === 'income') {
-    incBtn.style.background = 'var(--success)'; incBtn.style.color = '#fff'; incBtn.style.borderColor = 'var(--success)';
+    incBtn.style.background = 'var(--success-solid)'; incBtn.style.color = '#fff'; incBtn.style.borderColor = 'var(--success-solid)';
     expBtn.style.background = 'transparent'; expBtn.style.color = 'var(--text-muted)'; expBtn.style.borderColor = 'var(--border)';
   } else {
-    expBtn.style.background = 'var(--danger)'; expBtn.style.color = '#fff'; expBtn.style.borderColor = 'var(--danger)';
+    expBtn.style.background = 'var(--danger-solid)'; expBtn.style.color = '#fff'; expBtn.style.borderColor = 'var(--danger-solid)';
     incBtn.style.background = 'transparent'; incBtn.style.color = 'var(--text-muted)'; incBtn.style.borderColor = 'var(--border)';
   }
   // Populate the Category dropdown with the exact list used everywhere else — no free typing,
@@ -10163,9 +10561,9 @@ function repeatLastAccountingEntry() {
 
 function saveAccounting() {
   const amount = parseFloat(document.getElementById('acct-amount').value);
-  if (!amount || amount<=0) { toast('Valid amount required','error'); return; }
+  if (!amount || amount<=0) { toastInvalid('acct-amount','Valid amount required'); return; }
   const desc = document.getElementById('acct-desc').value.trim();
-  if (!desc) { toast('Description is required','error'); return; }
+  if (!desc) { toastInvalid('acct-desc','Description is required'); return; }
   const tdsOn = document.getElementById('acct-tds-toggle')?.checked && document.getElementById('acct-tds-section').style.display !== 'none';
   const tdsRateKey = tdsOn ? document.getElementById('acct-tds-rate').value : null;
   const tdsRate = tdsOn ? ((db.settings.acctMappings.tdsRates||{})[tdsRateKey] || 0) : 0;
@@ -10203,10 +10601,10 @@ function setRecType(type) {
   const incBtn = document.getElementById('rtx-type-income');
   const expBtn = document.getElementById('rtx-type-expense');
   if (type === 'income') {
-    incBtn.style.background = 'var(--success)'; incBtn.style.color = '#fff'; incBtn.style.borderColor = 'var(--success)';
+    incBtn.style.background = 'var(--success-solid)'; incBtn.style.color = '#fff'; incBtn.style.borderColor = 'var(--success-solid)';
     expBtn.style.background = 'transparent'; expBtn.style.color = 'var(--text-muted)'; expBtn.style.borderColor = 'var(--border)';
   } else {
-    expBtn.style.background = 'var(--danger)'; expBtn.style.color = '#fff'; expBtn.style.borderColor = 'var(--danger)';
+    expBtn.style.background = 'var(--danger-solid)'; expBtn.style.color = '#fff'; expBtn.style.borderColor = 'var(--danger-solid)';
     incBtn.style.background = 'transparent'; incBtn.style.color = 'var(--text-muted)'; incBtn.style.borderColor = 'var(--border)';
   }
   // Reuse the exact same category lists as the manual Accounting entry screen.
@@ -10242,9 +10640,9 @@ function saveRecurringTemplate() {
   const desc = document.getElementById('rtx-desc').value.trim();
   const amount = parseFloat(document.getElementById('rtx-amount').value);
   const nextDue = document.getElementById('rtx-nextdue').value;
-  if (!desc) { toast('Description is required','error'); return; }
-  if (!amount || amount<=0) { toast('Valid amount required','error'); return; }
-  if (!nextDue) { toast('Next due date is required','error'); return; }
+  if (!desc) { toastInvalid('rtx-desc','Description is required'); return; }
+  if (!amount || amount<=0) { toastInvalid('rtx-amount','Valid amount required'); return; }
+  if (!nextDue) { toastInvalid('rtx-nextdue','Next due date is required'); return; }
   const data = {
     type: document.getElementById('rtx-type-sel').value,
     description: desc, amount,
@@ -10420,6 +10818,7 @@ let empEditId = null;
 function renderHR() { renderEmployees(); }
 function setHRTab(t, el) {
   currentHRTab = t;
+  renderBreadcrumb(el.textContent.trim());
   document.querySelectorAll('#hr-employees,#hr-attendance,#hr-leave,#hr-performance,#hr-payroll,#hr-salary-history').forEach(x=>x.style.display='none');
   const el2 = document.getElementById('hr-'+t);
   if (el2) el2.style.display='';
@@ -10429,7 +10828,7 @@ function setHRTab(t, el) {
   if (t==='attendance') initAttendanceMonth();
   if (t==='leave') renderLeaveRecords();
   if (t==='performance') renderPerformanceRecords();
-  if (t==='payroll') renderPayrollTable();
+  if (t==='payroll') withTableSkeleton('payroll-table-wrap', null, renderPayrollTable, false);
   if (t==='salary-history') renderSalaryHistory();
 }
 
@@ -10753,7 +11152,7 @@ function processPayroll() {
     db.payrollHistory = db.payrollHistory.filter(ph=>ph.month!==month);
     db.payrollHistory.push({ id:uid(), month, entries, totalPay, totalSSF, ssfPaid:false, processedBy:session.username, processedAt:now() });
     audit('HR','Payroll',month,`${entries.length} employees, ${fmt(totalPay)} net, ${fmt(totalSSF)} SSF`);
-    saveDB(); toast(`Payroll processed: ${fmt(totalPay)}`,'success'); renderSalaryHistory();
+    saveDB(); toast(`Payroll processed: ${fmt(totalPay)}`,'success','Payroll Approved',{celebrate:true}); renderSalaryHistory();
   });
 }
 
@@ -10968,7 +11367,7 @@ function renderSalaryHistory() {
       <td>${e.paid ? `<span class="badge badge-success">Paid ${fmtDate(e.paidDate)}</span>` : `<span class="badge badge-warning">Unpaid</span>`}</td>
       <td style="display:flex;gap:6px">
         ${e.paid ? '' : `<button class="btn btn-xs btn-success" onclick="openMarkPayrollPaid('${e.month}','${e.empId}')">💰 Mark Paid</button>`}
-        <button class="btn btn-xs btn-secondary btn-view" onclick="showPaySlip(${JSON.stringify(e).replace(/"/g,'\'')})">📄 Slip</button>
+        <button class="btn btn-xs btn-secondary btn-view" onclick="showPaySlipFor('${esc(e.month)}','${esc(e.empId)}')">📄 Slip</button>
       </td>
     </tr>`).join('') : '<tr><td colspan="8"><div class="empty"><div class="empty-icon">💵</div><div class="empty-title">No salary records</div></div></td></tr>';
 }
@@ -10997,6 +11396,17 @@ function openMarkPayrollPaid(month, empId) {
   });
 }
 
+// Looks up the payroll entry by month+empId rather than having the caller serialize the whole
+// record into an inline onclick attribute (the old approach broke — with a JS syntax error that
+// silently killed the button — the moment an employee's name, role, or any deduction label
+// contained an apostrophe, e.g. "O'Brien" or "Driver's Helper", since the naive "-quotes swap
+// used couldn't tell an intentional string delimiter from a real one in the data).
+function showPaySlipFor(month, empId) {
+  const ph = db.payrollHistory.find(p=>p.month===month);
+  const entry = ph?.entries?.find(e=>e.empId===empId);
+  if (!entry) { toast('Payroll record not found','error'); return; }
+  showPaySlip({ ...entry, month, processedBy: ph.processedBy });
+}
 function showPaySlip(entry) {
   if (typeof entry === 'string') try { entry = JSON.parse(entry); } catch(e) { return; }
   const s = db.settings;
@@ -11929,6 +12339,10 @@ function unarchiveFromList(type, id) {
   if (!ARCHIVABLE_MODULE_LABEL[type]) return;
   const item = getArchivableItem(type, id);
   if (!item) return;
+  // Was missing the same edit-permission check archiveCurrentProfile()/quickArchive() already
+  // have — without it, anyone with just View Customers/View Suppliers (e.g. a read-only Viewer
+  // role) could restore an archived customer or supplier straight from the Archive tab.
+  if (!canArchive(type)) { toast('You do not have permission to restore this record','error'); return; }
   setItemArchived(type, item, false);
   audit(ARCHIVABLE_MODULE_LABEL[type], 'Unarchive', id, item.name);
   saveDB();
@@ -12022,6 +12436,7 @@ function setArchiveTab(tab, el) {
   document.querySelectorAll('#archive-tabs .tab').forEach(t=>t.classList.remove('active'));
   const target = el || document.querySelector(`#archive-tabs .tab[onclick*="'${tab}'"]`);
   if (target) target.classList.add('active');
+  renderBreadcrumb(target ? target.textContent.trim() : '');
   applyArchiveTabGating();
   // From/To date filters are only meaningful for the Audit Log; hide them everywhere else to
   // keep each category tab focused on a simple name/details search.
@@ -12154,6 +12569,13 @@ function voidSaleViaDelete(saleId) {
 }
 
 function voidPayrollMonth(month) {
+  // Every other destructive payroll/ledger action here (SSF deposit, TDS deposit, mark-paid,
+  // process payroll itself) requires Admin or "Edit Accounting" — this one didn't, even though
+  // it fully reverses a month's payroll and its ledger postings. Reachable simply by clicking
+  // "Del" on a payroll-sourced accounting row, which the generic view-only lock only hides for
+  // someone with ZERO edit permissions anywhere — a role like the default "Manager" (Edit Sales/
+  // Products/Inventory/Customers/Suppliers/HR, but not Edit Accounting) would still see it.
+  if (!(session?.role==='admin' || hasPermission('Edit Accounting'))) { toast("You don't have permission to void payroll",'error'); return; }
   db.accounting = (db.accounting || []).filter(a => !(a.category === 'Salary' && a.reference === `PAY-${month}`));
   voidJournalEntriesForRef('payroll', month, 'Payroll voided via Delete');
   db.payrollHistory = (db.payrollHistory || []).filter(ph => ph.month !== month);
@@ -12673,7 +13095,7 @@ function generateReport() {
       <tr><td>Opening Cash &amp; Bank Balance</td><td style="text-align:right" class="mono">${fmt(cf.openingCash)}</td></tr>
       <tr><td>Closing Cash &amp; Bank Balance</td><td style="text-align:right" class="mono">${fmt(cf.closingCash)}</td></tr>
     </tbody></table>
-    ${Math.abs(cf.reconcilingDifference)>1 ? `<p style="margin-top:10px;font-weight:700;color:red">⚠ Operating + Investing + Financing (${fmt(cf.computedChange)}) doesn't match the actual cash movement (${fmt(cf.netChange)}) by ${fmt(cf.reconcilingDifference)} — this points to an account type not yet categorized above. The Net Change figure itself is still correct (it's taken directly from actual Cash/Bank balances); the breakdown above it is what's short.</p>` : '<p style="margin-top:10px;font-weight:700;color:green">✓ Reconciles — Operating + Investing + Financing matches the actual Opening→Closing cash movement exactly.</p>'}`;
+    ${Math.abs(cf.reconcilingDifference)>1 ? `<p style="margin-top:10px;font-weight:700;color:var(--danger-solid)">⚠ Operating + Investing + Financing (${fmt(cf.computedChange)}) doesn't match the actual cash movement (${fmt(cf.netChange)}) by ${fmt(cf.reconcilingDifference)} — this points to an account type not yet categorized above. The Net Change figure itself is still correct (it's taken directly from actual Cash/Bank balances); the breakdown above it is what's short.</p>` : '<p style="margin-top:10px;font-weight:700;color:var(--success-solid)">✓ Reconciles — Operating + Investing + Financing matches the actual Opening→Closing cash movement exactly.</p>'}`;
   } else if (type==='owners-equity') {
     const oe = computeOwnersEquityStatement(from, to);
     const equityReconcileNote = `<p style="font-size:13px;color:#777;margin-top:10px">Note: "Closing Capital" above includes this period's profit/loss share for presentation, as a formal Statement of Equity should. This app does not post an automatic year-end closing entry, so the capital account balance you see directly in the Trial Balance or Chart of Accounts will be smaller than this — it only reflects actual cash invested/withdrawn, not the profit share, until you manually record a closing/appropriation entry via Advanced Ledger.</p>`;
@@ -12729,8 +13151,8 @@ function generateReport() {
     </tbody></table>
     <h3 style="margin-top:18px">Self-Check</h3>
     <table><tbody>
-      <tr><td>Trial Balance (Debit = Credit)</td><td style="text-align:right">${tb.balanced?'<span style="color:green">✓ Balanced</span>':'<span style="color:red">⚠ Out of balance</span>'}</td></tr>
-      <tr><td>Balance Sheet (Assets = Liabilities + Equity)</td><td style="text-align:right">${bs.balanced?'<span style="color:green">✓ Balanced</span>':'<span style="color:red">⚠ Out of balance</span>'}</td></tr>
+      <tr><td>Trial Balance (Debit = Credit)</td><td style="text-align:right">${tb.balanced?'<span style="color:var(--success-solid)">✓ Balanced</span>':'<span style="color:var(--danger-solid)">⚠ Out of balance</span>'}</td></tr>
+      <tr><td>Balance Sheet (Assets = Liabilities + Equity)</td><td style="text-align:right">${bs.balanced?'<span style="color:var(--success-solid)">✓ Balanced</span>':'<span style="color:var(--danger-solid)">⚠ Out of balance</span>'}</td></tr>
     </tbody></table>
     ${(!tb.balanced||!bs.balanced)?`<p style="margin-top:10px"><button class="btn btn-danger btn-sm" onclick="openAccountingIntegrityReport()">🔍 Run Accounting Integrity Checker to find the exact cause</button></p>`:''}`;
   } else if (type==='ratio-analysis') {
@@ -12812,14 +13234,14 @@ function generateReport() {
       <strong style="color:#c00">⚠ ${check.postingFailures.length} Entr${check.postingFailures.length===1?'y':'ies'} Failed To Post — NOT In Your Books</strong>
       <p style="font-size:14px;margin:6px 0">These transactions saved on their own screen, but the ledger entry itself was refused because it didn't balance, and was never recorded. Fix the underlying cause, re-enter it manually via Advanced Ledger if needed, then dismiss each one below.</p>
       <table><thead><tr><th>Failed At</th><th>Date</th><th>Description</th><th>Debits</th><th>Credits</th>${isAdmin?'<th></th>':''}</tr></thead><tbody>
-      ${check.postingFailures.map(f=>`<tr><td>${fmtDate(f.failedAt?f.failedAt.slice(0,10):f.date)}</td><td>${fmtDate(f.date)}</td><td>${esc(f.description)} <span style="color:#888">(${esc(f.refType||'')})</span></td><td class="mono">${fmt(f.debitTotal)}</td><td class="mono">${fmt(f.creditTotal)}</td>${isAdmin?`<td><button class="btn btn-xs btn-secondary" onclick="dismissLedgerPostingFailure('${esc(f.id)}')">Dismiss</button></td>`:''}</tr>`).join('')}
+      ${check.postingFailures.map(f=>`<tr><td>${fmtDate(f.failedAt?f.failedAt.slice(0,10):f.date)}</td><td>${fmtDate(f.date)}</td><td>${esc(f.description)} <span style="color:#555">(${esc(f.refType||'')})</span></td><td class="mono">${fmt(f.debitTotal)}</td><td class="mono">${fmt(f.creditTotal)}</td>${isAdmin?`<td><button class="btn btn-xs btn-secondary" onclick="dismissLedgerPostingFailure('${esc(f.id)}')">Dismiss</button></td>`:''}</tr>`).join('')}
       </tbody></table>
     </div>` : ''}
     <table style="margin-top:12px"><tbody>
       <tr><td>Total Debits</td><td style="text-align:right" class="mono">${fmt(check.totalDebits)}</td></tr>
       <tr><td>Total Credits</td><td style="text-align:right" class="mono">${fmt(check.totalCredits)}</td></tr>
       <tr style="background:#f0f0f0"><td><strong>Difference</strong></td><td style="text-align:right"><strong style="color:${Math.abs(check.difference)<0.01?'green':'red'}">${fmt(Math.abs(check.difference))}</strong></td></tr>
-      <tr><td>Trial Balance figure matches raw ledger total</td><td style="text-align:right">${check.trialBalanceMatchesRawLedger?'<span style="color:green">✓ Yes</span>':'<span style="color:orange">⚠ No — see future-dated entries below</span>'}</td></tr>
+      <tr><td>Trial Balance figure matches raw ledger total</td><td style="text-align:right">${check.trialBalanceMatchesRawLedger?'<span style="color:var(--success-solid)">✓ Yes</span>':'<span style="color:var(--warning-ink)">⚠ No — see future-dated entries below</span>'}</td></tr>
     </tbody></table>
     ${check.futureDatedEntries.length ? `<div style="margin-top:10px;padding:8px;background:#fffbe6;border-radius:6px"><strong>Future-Dated Entries (${check.futureDatedEntries.length})</strong> — not a problem by themselves, but they're excluded from "as of ${fmtDate(check.asOf)}" totals, which is why the figure above may not match a raw all-time sum.<table style="margin-top:4px"><thead><tr><th>Voucher</th><th>Date</th><th>Description</th><th>Amount</th></tr></thead><tbody>${check.futureDatedEntries.map(e=>`<tr><td class="mono">${esc(e.voucherNumber)}</td><td>${fmtDate(e.date)}</td><td>${esc(e.description)}</td><td class="mono">${fmt(e.amount)}</td></tr>`).join('')}</tbody></table></div>` : ''}
     <table style="margin-top:14px"><tbody>
@@ -12829,24 +13251,24 @@ function generateReport() {
       <tr style="background:#f0f0f0"><td><strong>Assets − (Liabilities + Equity)</strong></td><td style="text-align:right"><strong style="color:${Math.abs(check.balanceSheetDiff)<1?'green':'red'}">${fmt(check.balanceSheetDiff)}</strong></td></tr>
     </tbody></table>
     <h3 style="margin-top:18px">Orphan Entries ${check.orphanLines.length?`(${check.orphanLines.length})`:''}<span class="help-tip" data-tip="A journal line posted to an account code that no longer exists in the Chart of Accounts — invisible to Balance Sheet and Trial Balance alike until corrected.">?</span></h3>
-    ${check.orphanLines.length ? `<table><thead><tr><th>Voucher</th><th>Date</th><th>Description</th><th>Unknown Account</th><th>Amount</th>${isAdmin?'<th></th>':''}</tr></thead><tbody>${check.orphanLines.map(o=>`<tr><td class="mono">${esc(o.voucherNumber)}</td><td>${fmtDate(o.date)}</td><td>${esc(o.description)}</td><td class="mono" style="color:red">${esc(o.accountCode)}</td><td class="mono">${fmt(o.debit||o.credit)}</td>${isAdmin?`<td><button class="btn btn-xs btn-danger" onclick="openOrphanCorrectionModal('${esc(o.voucherNumber)}')">Fix</button></td>`:''}</tr>`).join('')}</tbody></table>` : '<p style="color:green">✓ None found — every journal line points to a real account.</p>'}
+    ${check.orphanLines.length ? `<table><thead><tr><th>Voucher</th><th>Date</th><th>Description</th><th>Unknown Account</th><th>Amount</th>${isAdmin?'<th></th>':''}</tr></thead><tbody>${check.orphanLines.map(o=>`<tr><td class="mono">${esc(o.voucherNumber)}</td><td>${fmtDate(o.date)}</td><td>${esc(o.description)}</td><td class="mono" style="color:var(--danger-solid)">${esc(o.accountCode)}</td><td class="mono">${fmt(o.debit||o.credit)}</td>${isAdmin?`<td><button class="btn btn-xs btn-danger" onclick="openOrphanCorrectionModal('${esc(o.voucherNumber)}')">Fix</button></td>`:''}</tr>`).join('')}</tbody></table>` : '<p style="color:var(--success-solid)">✓ None found — every journal line points to a real account.</p>'}
     <h3 style="margin-top:18px">Duplicate Postings ${check.duplicateGroups.length?`(${check.duplicateGroups.length})`:''}<span class="help-tip" data-tip="The same transaction posted more than once — usually from reprocessing something without voiding the original entry first.">?</span></h3>
     ${check.duplicateGroups.length ? check.duplicateGroups.map(g=>`
       <div style="margin-bottom:10px;padding:8px;background:#fff3f3;border-radius:6px">
         <strong>${esc(g.refType)}</strong> — ${esc(g.refId)}
         <table style="margin-top:4px"><thead><tr><th>Voucher</th><th>Date</th><th>Description</th><th>Amount</th></tr></thead><tbody>${g.entries.map(e=>`<tr><td class="mono">${esc(e.voucherNumber)}</td><td>${fmtDate(e.date)}</td><td>${esc(e.description)}</td><td class="mono">${fmt(e.amount)}</td></tr>`).join('')}</tbody></table>
         ${isAdmin?`<button class="btn btn-xs btn-danger" style="margin-top:6px" onclick="correctDuplicateGroup('${esc(g.refType)}','${esc(g.refId)}')">Void duplicates, keep earliest</button>`:''}
-      </div>`).join('') : '<p style="color:green">✓ None found — every transaction has exactly one active journal entry.</p>'}
+      </div>`).join('') : '<p style="color:var(--success-solid)">✓ None found — every transaction has exactly one active journal entry.</p>'}
     <h3 style="margin-top:18px">Individually Unbalanced Entries ${check.unbalancedEntries.length?`(${check.unbalancedEntries.length})`:''}<span class="help-tip" data-tip="A single journal entry whose own debit and credit lines don't match — should be impossible through normal use, since every posting path refuses to save one of these.">?</span></h3>
-    ${check.unbalancedEntries.length ? `<table><thead><tr><th>Voucher</th><th>Date</th><th>Description</th></tr></thead><tbody>${check.unbalancedEntries.map(e=>`<tr><td class="mono">${esc(e.voucherNumber)}</td><td>${fmtDate(e.date)}</td><td>${esc(e.description)}</td></tr>`).join('')}</tbody></table><p style="color:red">These likely came from a restored backup or import that bypassed normal entry — review manually.</p>` : '<p style="color:green">✓ None found.</p>'}
+    ${check.unbalancedEntries.length ? `<table><thead><tr><th>Voucher</th><th>Date</th><th>Description</th></tr></thead><tbody>${check.unbalancedEntries.map(e=>`<tr><td class="mono">${esc(e.voucherNumber)}</td><td>${fmtDate(e.date)}</td><td>${esc(e.description)}</td></tr>`).join('')}</tbody></table><p style="color:var(--danger-solid)">These likely came from a restored backup or import that bypassed normal entry — review manually.</p>` : '<p style="color:var(--success-solid)">✓ None found.</p>'}
     <h3 style="margin-top:18px">Misclassified Accounts ${check.misclassifiedAccounts.length?`(${check.misclassifiedAccounts.length})`:''}<span class="help-tip" data-tip="Every account must be typed as exactly Asset, Liability, Equity, Income, or Expense to be counted anywhere. An account with a blank or nonstandard type still posts fine, so the ledger stays balanced — but its balance silently disappears from the Balance Sheet, since it doesn't land in Assets, Liabilities, or Equity.">?</span></h3>
-    ${check.misclassifiedAccounts.length ? `<table><thead><tr><th>Code</th><th>Account Name</th><th>Current Type</th><th>Balance</th></tr></thead><tbody>${check.misclassifiedAccounts.map(a=>`<tr><td class="mono">${esc(a.code)}</td><td>${esc(a.name)}</td><td style="color:red">${esc(a.type)}</td><td>${fmt(a.balance)}</td></tr>`).join('')}</tbody></table><p style="color:red">Go to Chart of Accounts (Admin) and set each of these to the correct type — Asset, Liability, Equity, Income, or Expense — then re-run this check.</p>` : '<p style="color:green">✓ None found — every account is properly typed.</p>'}
+    ${check.misclassifiedAccounts.length ? `<table><thead><tr><th>Code</th><th>Account Name</th><th>Current Type</th><th>Balance</th></tr></thead><tbody>${check.misclassifiedAccounts.map(a=>`<tr><td class="mono">${esc(a.code)}</td><td>${esc(a.name)}</td><td style="color:var(--danger-solid)">${esc(a.type)}</td><td>${fmt(a.balance)}</td></tr>`).join('')}</tbody></table><p style="color:var(--danger-solid)">Go to Chart of Accounts (Admin) and set each of these to the correct type — Asset, Liability, Equity, Income, or Expense — then re-run this check.</p>` : '<p style="color:var(--success-solid)">✓ None found — every account is properly typed.</p>'}
     <h3 style="margin-top:18px">Invalid Normal Balance Flag ${check.invalidNormalBalance.length?`(${check.invalidNormalBalance.length})`:''}<span class="help-tip" data-tip="Every account must be flagged exactly 'debit' or 'credit' as its Normal Balance. This flag controls the +/- sign used everywhere a balance is calculated — if it's blank or misspelled, the account's balance gets counted backwards without tripping any other check.">?</span></h3>
-    ${check.invalidNormalBalance.length ? `<table><thead><tr><th>Code</th><th>Account Name</th><th>Type</th><th>Normal Balance (as stored)</th><th>Balance</th></tr></thead><tbody>${check.invalidNormalBalance.map(a=>`<tr><td class="mono">${esc(a.code)}</td><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td style="color:red">${esc(a.normalBalance||'(blank)')}</td><td>${fmt(a.balance)}</td></tr>`).join('')}</tbody></table><p style="color:red">This is very likely the cause of any Assets ≠ Liabilities + Equity gap — correct each account's Normal Balance in Chart of Accounts (Admin), then re-run this check.</p>` : '<p style="color:green">✓ None found — every account has a valid Normal Balance flag.</p>'}
+    ${check.invalidNormalBalance.length ? `<table><thead><tr><th>Code</th><th>Account Name</th><th>Type</th><th>Normal Balance (as stored)</th><th>Balance</th></tr></thead><tbody>${check.invalidNormalBalance.map(a=>`<tr><td class="mono">${esc(a.code)}</td><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td style="color:var(--danger-solid)">${esc(a.normalBalance||'(blank)')}</td><td>${fmt(a.balance)}</td></tr>`).join('')}</tbody></table><p style="color:var(--danger-solid)">This is very likely the cause of any Assets ≠ Liabilities + Equity gap — correct each account's Normal Balance in Chart of Accounts (Admin), then re-run this check.</p>` : '<p style="color:var(--success-solid)">✓ None found — every account has a valid Normal Balance flag.</p>'}
     <h3 style="margin-top:18px">Full Account Balances (as of ${fmtDate(check.asOf)})<span class="help-tip" data-tip="Every account with any activity, grouped by type, so the actual numbers behind Assets/Liabilities/Equity are visible rather than just the totals.">?</span></h3>
     <table><thead><tr><th>Code</th><th>Account Name</th><th>Type</th><th>Normal Bal.</th><th style="text-align:right">Balance</th></tr></thead><tbody>
       ${['asset','liability','equity','income','expense'].map(t => check.allAccountBalances.filter(a=>a.type===t).map(a=>`<tr><td class="mono">${esc(a.code)}</td><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td>${esc(a.normalBalance||'(blank)')}</td><td style="text-align:right" class="mono">${fmt(a.balance)}</td></tr>`).join('')).join('')}
-      ${check.allAccountBalances.filter(a=>!['asset','liability','equity','income','expense'].includes(a.type)).map(a=>`<tr><td class="mono">${esc(a.code)}</td><td>${esc(a.name)}</td><td style="color:red">${esc(a.type||'(blank)')}</td><td>${esc(a.normalBalance||'(blank)')}</td><td style="text-align:right" class="mono">${fmt(a.balance)}</td></tr>`).join('')}
+      ${check.allAccountBalances.filter(a=>!['asset','liability','equity','income','expense'].includes(a.type)).map(a=>`<tr><td class="mono">${esc(a.code)}</td><td>${esc(a.name)}</td><td style="color:var(--danger-solid)">${esc(a.type||'(blank)')}</td><td>${esc(a.normalBalance||'(blank)')}</td><td style="text-align:right" class="mono">${fmt(a.balance)}</td></tr>`).join('')}
     </tbody></table>
     <p style="margin-top:18px;font-weight:700;color:${check.clean?'green':'red'}">${check.clean?'✓ Books are fully balanced and internally consistent':'⚠ Issues found above — correct them (Admin) and re-run this check'}</p>`;
   } else if (type==='sales') {
@@ -12896,14 +13318,14 @@ function generateReport() {
     const lowM = db.rawMaterials.filter(m=>m.status!=='archived'&&m.stock<=(m.reorderLevel||0));
     bodyHtml = `<h2>Reorder Alert Report</h2>
     <table><thead><tr><th>Item</th><th>Type</th><th>Stock</th><th>Reorder Level</th></tr></thead><tbody>
-      ${[...lowP.map(r=>({name:r.name,type:'Product',stock:r.stock,reorder:r.lowStockThreshold||10})),...lowM.map(m=>({name:m.name,type:'Raw Material',stock:m.stock,reorder:m.reorderLevel}))].map(i=>`<tr><td>${esc(i.name)}</td><td>${esc(i.type)}</td><td style="color:red"><strong>${i.stock}</strong></td><td>${i.reorder}</td></tr>`).join('')||'<tr><td colspan="4">All stock levels healthy</td></tr>'}
+      ${[...lowP.map(r=>({name:r.name,type:'Product',stock:r.stock,reorder:r.lowStockThreshold||10})),...lowM.map(m=>({name:m.name,type:'Raw Material',stock:m.stock,reorder:m.reorderLevel}))].map(i=>`<tr><td>${esc(i.name)}</td><td>${esc(i.type)}</td><td style="color:var(--danger-solid)"><strong>${i.stock}</strong></td><td>${i.reorder}</td></tr>`).join('')||'<tr><td colspan="4">All stock levels healthy</td></tr>'}
     </tbody></table>`;
   } else if (type==='expiring-soon') {
     const cutoff = shiftDate(today(), 30);
     const items = db.records.filter(r=>r.trackExpiry && r.expiryDate && r.stock>0).sort((a,b)=>a.expiryDate.localeCompare(b.expiryDate));
     bodyHtml = `<h2>Expiring Soon<span class="help-tip" data-tip="Anything you've marked for expiry tracking, sorted by soonest first — so you can discount or use it before it's wasted.">?</span></h2>
     <table><thead><tr><th>Item</th><th>Stock on Hand</th><th>Expiry Date</th><th>Status</th></tr></thead><tbody>
-      ${items.length?items.map(r=>{const isPast=r.expiryDate<today(); const isSoon=!isPast&&r.expiryDate<=cutoff; return `<tr><td>${esc(r.name)}</td><td>${r.stock} ${esc(r.unit||'')}</td><td>${fmtDate(r.expiryDate)}</td><td>${isPast?'<span style="color:red;font-weight:700">⚠ EXPIRED</span>':isSoon?'<span style="color:#c77700;font-weight:700">Expiring within 30 days</span>':'OK'}</td></tr>`;}).join(''):'<tr><td colspan="4">No items with expiry tracking, or nothing currently in stock</td></tr>'}
+      ${items.length?items.map(r=>{const isPast=r.expiryDate<today(); const isSoon=!isPast&&r.expiryDate<=cutoff; return `<tr><td>${esc(r.name)}</td><td>${r.stock} ${esc(r.unit||'')}</td><td>${fmtDate(r.expiryDate)}</td><td>${isPast?'<span style="color:var(--danger-solid);font-weight:700">⚠ EXPIRED</span>':isSoon?'<span style="color:var(--warning-ink);font-weight:700">Expiring within 30 days</span>':'OK'}</td></tr>`;}).join(''):'<tr><td colspan="4">No items with expiry tracking, or nothing currently in stock</td></tr>'}
     </tbody></table>`;
   } else if (type==='non-moving-stock') {
     const cutoffDays = 60;
@@ -13313,6 +13735,7 @@ function deleteTemplate(id) {
 /* ══ SETTINGS ══ */
 function setSettingsSection(id, el) {
   if (!canAccessSettingsSection(id)) { toast('You do not have permission to access this settings section', 'error'); return; }
+  renderBreadcrumb(el.textContent.trim());
   document.querySelectorAll('.settings-section').forEach(s=>s.classList.remove('active'));
   const sec = document.getElementById('sec-'+id);
   if (sec) sec.classList.add('active');
@@ -13470,15 +13893,25 @@ function applyLogoEverywhere() {
 
 function setSidebarDefault(val) { db.settings.sidebarDefault=val; saveDB(); toast('Saved','success'); }
 
+// Settings (and Dashboard) must always stay reachable — there is no other way back into
+// Settings once its sidebar entry disappears, so disabling it here would lock everyone out
+// with no UI recovery path. These two ids are permanently pinned "on" and un-toggleable.
+const LOCKED_MODULES = new Set(['settings','dashboard']);
+
 function renderModulesList() {
   const list = document.getElementById('modules-list');
   if (!list) return;
-  list.innerHTML = db.settings.modules.map((m,i)=>`
+  list.innerHTML = db.settings.modules.map((m,i)=>{
+    const locked = LOCKED_MODULES.has(m.id);
+    return `
     <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--elevated);border-radius:8px;margin-bottom:6px">
       <span style="font-size:22px">${m.icon}</span>
       <input class="form-control" value="${esc(m.label)}" id="mod-label-${m.id}" style="flex:1" oninput="saveModuleLabel('${m.id}',this.value)">
-      <label style="white-space:nowrap;font-size:17px"><input type="checkbox" ${m.enabled?'checked':''} onchange="toggleModule('${m.id}',this.checked)"> Enabled</label>
-    </div>`).join('');
+      <label style="white-space:nowrap;font-size:17px;${locked?'opacity:.6':''}" ${locked?'title="Always enabled — required to keep the app reachable"':''}>
+        <input type="checkbox" checked ${locked?'disabled':''} onchange="toggleModule('${m.id}',this.checked)"> Enabled
+      </label>
+    </div>`;
+  }).join('');
 }
 
 function saveModuleLabel(id, val) {
@@ -13487,6 +13920,11 @@ function saveModuleLabel(id, val) {
 }
 
 function toggleModule(id, enabled) {
+  if (LOCKED_MODULES.has(id) && !enabled) {
+    toast('Settings and Dashboard can\'t be disabled — you\'d have no way back in','error');
+    renderModulesList();
+    return;
+  }
   const mod = db.settings.modules.find(m=>m.id===id);
   if (mod) { mod.enabled=enabled; saveDB(); renderSidebar(); }
 }
@@ -13586,7 +14024,8 @@ function savePOSSettings() {
   // Save payment method edits
   (p.paymentMethods||[]).forEach((_, i) => { const el=document.getElementById('pm-'+i); if(el) p.paymentMethods[i]=el.value; });
   p.paymentMethods = p.paymentMethods.filter(Boolean);
-  db.settings.pos.defaultTax && (document.getElementById('cart-tax') ? document.getElementById('cart-tax').value = p.defaultTax : null);
+  const cartTaxEl = document.getElementById('cart-tax');
+  if (cartTaxEl) cartTaxEl.value = p.defaultTax;
   saveDB(); toast('POS settings saved','success');
 }
 
@@ -14063,7 +14502,7 @@ function handleRestoreFile(e) {
             const parsed = JSON.parse(ev.target.result);
             if (!parsed.users || !parsed.settings) { toast('Invalid backup file','error'); return; }
             confirm('Restore this backup? Current data will be overwritten. Type "RESTORE" to confirm.', ()=>{
-              db = parsed; saveDB(); toast('Backup restored! Refreshing...','success');
+              db = parsed; saveDB(); toast('Backup restored! Refreshing...','success','Backup Restored',{celebrate:true});
               setTimeout(()=>location.reload(), 1500);
             }, 'RESTORE');
           } catch { toast('Invalid JSON file','error'); }
@@ -14126,7 +14565,7 @@ function goToExpenseLedger() {
   renderAccounting();
 }
 
-function setEntTab(t, el) {  document.getElementById('ent-list-section').style.display = t==='list' ? '' : 'none';
+function setEntTab(t, el) {  currentEntTab = t; renderBreadcrumb(el.textContent.trim()); document.getElementById('ent-list-section').style.display = t==='list' ? '' : 'none';
   document.getElementById('ent-due-section').style.display = t==='due' ? '' : 'none';
   document.getElementById('ent-payments-section').style.display = t==='payments' ? '' : 'none';
   document.querySelectorAll('#ent-tabs .tab').forEach(x=>x.classList.remove('active'));
@@ -14385,7 +14824,7 @@ function openRecordModal(id=null) {
 
 function saveRecord() {
   const name = document.getElementById('rec-name').value.trim();
-  if (!name) { toast('Product name is required','error'); return; }
+  if (!name) { toastInvalid('rec-name','Product name is required'); return; }
   if (isDuplicateName(db.records, name, recEditId)) { toast(`A product named "${name}" already exists`,'error'); return; }
   const sku = document.getElementById('rec-sku').value.trim();
   if (sku && isDuplicateName(db.records, sku, recEditId, 'sku')) { toast(`SKU "${sku}" is already used by another product`,'error'); return; }
@@ -14551,12 +14990,12 @@ function removeMatSupplierRow(i) {
 
 function saveMaterial() {
   const name = document.getElementById('mat-name').value.trim();
-  if (!name) { toast('Material name is required','error'); return; }
+  if (!name) { toastInvalid('mat-name','Material name is required'); return; }
   if (isDuplicateName(db.rawMaterials, name, matEditId)) { toast(`A raw material named "${name}" already exists`,'error'); return; }
   const code = document.getElementById('mat-code').value.trim() || 'RM-'+Date.now().toString(36).toUpperCase();
   if (isDuplicateName(db.rawMaterials, code, matEditId, 'code')) { toast(`Code "${code}" is already used`,'error'); return; }
   const unit = document.getElementById('mat-unit').value.trim();
-  if (!unit) { toast('Unit is required','error'); return; }
+  if (!unit) { toastInvalid('mat-unit','Unit is required'); return; }
   // Cost is only taken from this form when the material has no purchase history yet (a fresh
   // opening estimate). Once GRNs exist, saveGRN's weighted-average update is the sole writer
   // of m.cost — the field is readonly in the UI as a second layer of protection.
@@ -15646,6 +16085,25 @@ function saveGRN() {
       db.stockHistory.push({ id:uid(), recordId:m.id, recordName:m.name, type:'purchase_receipt', qty:it.qtyReceived, balanceAfter:m.stock, date:grn.date, ref:grn.grnNumber, createdAt:now() });
     }
   });
+  // BUG FIXED: goods received here go straight onto the shelf and become usable by Production
+  // immediately (Complete Production/Make Now check stock from db.rawMaterials, which this just
+  // updated) — but until now, nothing was posted to the ledger at receipt time. The Raw Materials
+  // GL account (1040) was only ever debited later, when a Supplier Invoice got created against
+  // this GRN (postSupplierInvoiceJournal). If a batch was produced using these materials before
+  // the invoice was entered — a very normal sequence for a business where ingredients go straight
+  // into production the day they arrive — Production would CREDIT 1040 for material that was
+  // never DEBITED into it yet, permanently understating Raw Materials on the Balance Sheet with
+  // no way to trace it. Fixed with a standard GRNI (Goods Received Not Invoiced) clearing account:
+  // the receipt now debits 1040 immediately and credits GRNI (2065), a provisional liability that
+  // postSupplierInvoiceJournal reverses once the real invoice — and real Accounts Payable — is
+  // recorded.
+  const grnValue = +items.reduce((a,it)=>a+it.qtyReceived*it.rate,0).toFixed(2);
+  if (grnValue > 0) {
+    postJournalEntry({ date: grn.date, voucherKind:'Journal', refType:'grn', refId: grn.id, reference: grn.grnNumber, description: `Goods Received — ${grn.grnNumber} (${po.poNumber})`, lines: [
+      { accountCode: '1040', debit: grnValue, credit: 0 },
+      { accountCode: '2065', debit: 0, credit: grnValue }
+    ]});
+  }
   // Feed the confirmed rate back onto the PO's own line too, so the PO's "Total" reflects
   // reality even if it was raised with prices unknown, and so any further GRNs against the
   // same PO default to the last confirmed rate instead of asking again from scratch.
@@ -15664,13 +16122,19 @@ function renderGRNList() {
   tbody.innerHTML = db.goodsReceived.length ? [...db.goodsReceived].reverse().map(g=>{
     const po = db.purchaseOrders.find(p=>p.id===g.poId);
     const sp = po ? db.secondary.find(s=>s.id===po.supplierId) : null;
+    // BUG FIXED: this button used to show unconditionally, with nothing stopping a second click
+    // from creating a duplicate invoice (and duplicate Accounts Payable liability) against the
+    // same GRN — and, since the GRNI clearing fix, a second invoice would also reverse the same
+    // GRNI amount twice, leaving 2065 permanently negative. Once a GRN has an invoice, show that
+    // instead of a live button; corrections go through "Correct an Invoice" on the invoice itself.
+    const invoiced = (db.supplierInvoices||[]).some(i=>i.grnId===g.id);
     return `<tr>
       <td class="mono">${esc(g.grnNumber)}</td>
       <td class="mono">${esc(po?.poNumber||'—')}</td>
       <td>${esc(sp?.name||'—')}</td>
       <td>${(g.items||[]).length} item(s)</td>
       <td>${fmtDate(g.date)}</td>
-      <td><button class="btn btn-xs btn-secondary btn-edit" onclick="openSupplierInvoiceModal('${g.poId}','${g.id}')">🧾 Create Invoice</button></td>
+      <td>${invoiced ? '<span class="badge badge-success">Invoiced</span>' : `<button class="btn btn-xs btn-secondary btn-edit" onclick="openSupplierInvoiceModal('${g.poId}','${g.id}')">🧾 Create Invoice</button>`}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📥</div><div class="empty-title">No goods received yet</div></div></td></tr>';
 }
@@ -15702,6 +16166,14 @@ function updateSinvVATPreview() {
 function saveSupplierInvoice() {
   const number = document.getElementById('sinv-number').value.trim();
   if (!number) { toast('Invoice number required','error'); return; }
+  // Guards the GRNI clearing fix above: two invoices against the same GRN would each reverse
+  // the same GRNI amount, leaving 2065 permanently out of balance. The button that opens this
+  // modal is already hidden once a GRN is invoiced (see renderGRNList) — this is the backstop
+  // for another tab/device having just done it, or the modal having been left open since before.
+  if (window._sinvGRN && (db.supplierInvoices||[]).some(i=>i.grnId===window._sinvGRN)) {
+    toast('This goods receipt already has an invoice recorded against it.','error');
+    return;
+  }
   const po = db.purchaseOrders.find(x=>x.id===window._sinvPO);
   const amount = parseFloat(document.getElementById('sinv-amount').value)||0;
   const hasVat = document.getElementById('sinv-has-vat').checked;
@@ -16033,7 +16505,7 @@ function saveAcctPINSettings() {
   if (enabled) {
     const pin = document.getElementById('st-acct-pin')?.value;
     const pin2 = document.getElementById('st-acct-pin2')?.value;
-    if (pin) {
+    if (pin || pin2) {
       if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { toast('PIN must be exactly 4 digits','error'); return; }
       if (pin !== pin2) { toast('PINs do not match','error'); return; }
       db.settings.accountingPIN = pin;
@@ -16424,6 +16896,55 @@ function sortTable(table, key) {
   sortState[table] = { key, asc: cur?.key===key ? !cur.asc : true };
   const renders = { records: renderRecords, txn: renderTransactions, acct: renderAccounting };
   if (renders[table]) renders[table]();
+  updateSortArrows(table);
+}
+// Keeps each sortable column header's ↕/↑/↓ indicator in sync with sortState — the header
+// row is static markup (only the tbody re-renders), so this is the one place that has to
+// touch it whenever the active sort column or direction changes.
+function updateSortArrows(table) {
+  const state = sortState[table];
+  document.querySelectorAll(`th[data-sort^="${table}:"]`).forEach(th => {
+    const key = th.dataset.sort.split(':')[1];
+    const arrow = th.querySelector('.sort-arrow');
+    if (!arrow) return;
+    if (state && state.key === key) {
+      arrow.textContent = state.asc ? '↑' : '↓';
+      th.classList.add('sorted');
+    } else {
+      arrow.textContent = '↕';
+      th.classList.remove('sorted');
+    }
+  });
+}
+
+// ── SKELETON LOADERS ──────────────────────────────────────────────────────
+// Builds `rows` placeholder <tr>s with shimmer bars across `cols` columns, matching
+// the real table's column count so nothing jumps when the actual rows replace it.
+function skeletonTableRows(cols, rows = 6) {
+  const widths = [90, 70, 60, 80, 55, 75, 65, 85]; // varied bar widths so rows don't look identical/robotic
+  let html = '';
+  for (let r = 0; r < rows; r++) {
+    html += '<tr>' + Array.from({length: cols}, (_, c) =>
+      `<td><span class="skeleton-bar" style="width:${widths[(r + c) % widths.length]}%"></span></td>`
+    ).join('') + '</tr>';
+  }
+  return html;
+}
+// For wrapper-based content (like the Payroll table, whose column count varies with
+// salary components) rather than a fixed tbody: a few shimmer blocks standing in for rows.
+function skeletonBlock(rows = 6, rowHeight = 38) {
+  return Array.from({length: rows}, () =>
+    `<div class="skeleton-block" style="height:${rowHeight}px;margin-bottom:8px"></div>`
+  ).join('');
+}
+// Shows a skeleton in `containerId` (a <tbody> for tableMode, or a wrapper div otherwise),
+// then runs `renderFn` on the next frame — giving the browser a chance to actually paint
+// the skeleton first, since the real render below is synchronous and would otherwise block
+// the very paint it's meant to precede.
+function withTableSkeleton(containerId, cols, renderFn, tableMode = true) {
+  const el = document.getElementById(containerId);
+  if (el) el.innerHTML = tableMode ? skeletonTableRows(cols) : skeletonBlock();
+  requestAnimationFrame(() => requestAnimationFrame(renderFn));
 }
 
 function renderPagination(key, total, perPage, current) {
@@ -16688,6 +17209,21 @@ function onGlobalSearch() {
   searchDebounce = setTimeout(doGlobalSearch, 300);
 }
 
+// ── Command palette additions to Global Search ──
+// A small curated set of "do something" shortcuts (as opposed to the data search below,
+// which finds existing records). Reuses the same open*Modal navigation functions the
+// sidebar's own "+ Add" buttons call, so behavior stays identical to using those buttons.
+const QUICK_ACTIONS = [
+  { icon: '🛒', label: 'New Sale', cmd: "openModule('pos')" },
+  { icon: '📦', label: 'Add Product', cmd: 'showAddRecord()' },
+  { icon: '📋', label: 'Add Transaction', cmd: 'showAddTransaction()' },
+  { icon: '👥', label: 'Add Customer', cmd: 'showAddEntity()' },
+  { icon: '💰', label: 'Add Accounting Entry', cmd: 'showAddAccounting()' },
+  { icon: '👤', label: 'Add Employee', cmd: 'showAddEmployee()' },
+  { icon: '🏭', label: 'Add Supplier', cmd: 'showAddSecondary()' },
+  { icon: '⚙️', label: 'Open Settings', cmd: "openModule('settings')" }
+];
+
 function doGlobalSearch() {
   const q = document.getElementById('global-search')?.value?.trim().toLowerCase();
   const resultsEl = document.getElementById('search-results');
@@ -16699,6 +17235,22 @@ function doGlobalSearch() {
   saveDB();
   
   const results = {};
+
+  // Command palette: "jump to" a module, or run a quick action — matched by name and
+  // shown ahead of data results, since picking a destination is usually faster than
+  // scanning records when you already know where you want to go.
+  const cmdItems = [];
+  (db.settings.modules||[]).forEach(m => {
+    if (m.enabled !== false && canAccessModule(m.id) && m.label.toLowerCase().includes(q)) {
+      cmdItems.push({ icon: m.icon||'📂', name: `Go to ${m.label}`, detail: 'Jump to module', module: m.id, id: '' });
+    }
+  });
+  if (typeof hasAnyEditPermission !== 'function' || hasAnyEditPermission()) {
+    QUICK_ACTIONS.filter(a => a.label.toLowerCase().includes(q)).forEach(a => {
+      cmdItems.push({ icon: a.icon, name: a.label, detail: 'Quick action', module: 'action', id: '', cmd: a.cmd });
+    });
+  }
+  if (cmdItems.length) results['⚡ Jump To / Actions'] = cmdItems;
   
   // Records
   const recs = db.records.filter(r=>r.name?.toLowerCase().includes(q)||(r.sku||'').toLowerCase().includes(q)||(r.description||'').toLowerCase().includes(q)||(r.category||'').toLowerCase().includes(q)).slice(0,5);
@@ -16741,8 +17293,10 @@ function doGlobalSearch() {
   let html = '';
   for (const [group, items] of Object.entries(results)) {
     html += `<div class="search-group"><div class="search-group-header">${esc(group)} (${items.length})</div>`;
-    html += items.map(item=>`<div class="search-item" onclick="goToSearchResult('${item.module}','${item.id}')"><div class="search-item-icon">${item.icon}</div><div class="search-item-text"><div class="search-item-name">${esc(item.name)}</div><div class="search-item-detail">${esc(item.detail)}</div></div><span class="badge badge-muted" style="font-size:13px">${esc(item.module)}</span></div>`).join('');
-    html += `<div style="padding:4px 12px"><a href="#" onclick="openModule('${items[0].module}');document.getElementById('global-search').value='';hideSearch();return false" style="font-size:14px">View all in ${esc(group.split(' ').slice(1).join(' '))} →</a></div>`;
+    html += items.map(item=>`<div class="search-item" onclick="${item.cmd ? esc(`hideSearch();document.getElementById('global-search').value='';${item.cmd}`) : `goToSearchResult('${item.module}','${item.id}')`}"><div class="search-item-icon">${item.icon}</div><div class="search-item-text"><div class="search-item-name">${esc(item.name)}</div><div class="search-item-detail">${esc(item.detail)}</div></div><span class="badge badge-muted" style="font-size:13px">${esc(item.module)}</span></div>`).join('');
+    if (group !== '⚡ Jump To / Actions') {
+      html += `<div style="padding:4px 12px"><a href="#" onclick="openModule('${items[0].module}');document.getElementById('global-search').value='';hideSearch();return false" style="font-size:14px">View all in ${esc(group.split(' ').slice(1).join(' '))} →</a></div>`;
+    }
     html += '</div>';
   }
   resultsEl.innerHTML = html;
@@ -16752,6 +17306,8 @@ function doGlobalSearch() {
 function goToSearchResult(module, id) {
   hideSearch();
   document.getElementById('global-search').value = '';
+  // Pure "jump to module" command from the palette (no specific record) — nothing further to open.
+  if (!id) { openModule(module); return; }
   // Sales don't have their own sidebar module — their profile is just a modal, so open it
   // directly without navigating anywhere (the Archive section no longer surfaces sales).
   if (module === 'archive') { setTimeout(()=>viewProfile('sale', id), 200); return; }
@@ -16770,7 +17326,7 @@ function showSearchHistory() {
   const history = db.searchHistory || [];
   const el = document.getElementById('search-results');
   if (!history.length) { el.classList.remove('show'); return; }
-  el.innerHTML = `<div class="search-history-chips"><div class="text-xs text-muted mb-2">Recent searches</div>${history.map(h=>`<span class="chip" onclick="runHistorySearch('${esc(h)}')">${esc(h)} <span class="chip-x" onclick="removeHistorySearch('${esc(h)}');event.stopPropagation()">✕</span></span>`).join('')}<div style="margin-top:6px"><a href="#" onclick="clearSearchHistory();return false" style="font-size:14px;color:var(--text-muted)">Clear all</a></div></div>`;
+  el.innerHTML = `<div class="search-history-chips"><div class="text-xs text-muted mb-2">Recent searches</div>${history.map(h=>`<span class="chip" onclick="runHistorySearch('${esc(h)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();runHistorySearch('${esc(h)}')}" tabindex="0" role="button">${esc(h)} <span class="chip-x" onclick="removeHistorySearch('${esc(h)}');event.stopPropagation()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();removeHistorySearch('${esc(h)}')}" tabindex="0" role="button" aria-label="Remove search">✕</span></span>`).join('')}<div style="margin-top:6px"><a href="#" onclick="clearSearchHistory();return false" style="font-size:14px;color:var(--text-muted)">Clear all</a></div></div>`;
   el.classList.add('show');
 }
 

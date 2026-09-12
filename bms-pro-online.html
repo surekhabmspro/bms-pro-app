@@ -3679,6 +3679,7 @@ const DEFAULT_CHART_OF_ACCOUNTS = [
   { code:'1022', name:'Khalti Wallet', type:'asset', normalBalance:'debit' },
   { code:'1030', name:"Accounts Receivable (Customer Dues)", type:'asset', normalBalance:'debit', isControlAccount:true },
   { code:'1035', name:'Employee Advances Receivable', type:'asset', normalBalance:'debit' },
+  { code:'1036', name:'Supplier Refunds Receivable', type:'asset', normalBalance:'debit' },
   { code:'1040', name:'Inventory – Raw Materials', type:'asset', normalBalance:'debit' },
   { code:'1041', name:'Inventory – Finished Goods', type:'asset', normalBalance:'debit' },
   { code:'1042', name:'Inventory – Trading/Retail Goods', type:'asset', normalBalance:'debit' },
@@ -4735,7 +4736,8 @@ function confirmCorrectInvoice() {
     sale.total = +(sale.total - diff).toFixed(2);
     if (sale.dueAmount != null) sale.dueAmount = Math.max(0, +(sale.dueAmount - diff).toFixed(2));
     audit('Sale','Correction Issued', sale.id, sale.receiptNumber, fmt(original), fmt(newAmt) + (reason?` — ${reason}`:'') + (note?` (${note})`:''));
-    toast(`Credit Note ${noteNumber} created`,'success');
+    if (cn.cashRefundAmount > 0.004) toast(`Credit Note ${noteNumber} created — also refund ${fmt(cn.cashRefundAmount)} in cash to the customer`,'warning');
+    else toast(`Credit Note ${noteNumber} created`,'success');
   } else {
     const inv = db.supplierInvoices.find(i=>i.id===refId);
     if (!inv) { toast('Original invoice not found','error'); return; }
@@ -4750,7 +4752,8 @@ function confirmCorrectInvoice() {
     // staff pay the pre-correction amount. Apply the same reduction here.
     inv.amount = +(inv.amount - diff).toFixed(2);
     audit('Purchase','Correction Issued', inv.id, inv.invoiceNumber, fmt(original), fmt(newAmt) + (reason?` — ${reason}`:'') + (note?` (${note})`:''));
-    toast(`Debit Note ${noteNumber} created`,'success');
+    if (dn.refundDueAmount > 0.004) toast(`Debit Note ${noteNumber} created — supplier now owes you ${fmt(dn.refundDueAmount)} back`,'warning');
+    else toast(`Debit Note ${noteNumber} created`,'success');
   }
   saveDB();
   closeModal('correct-invoice-overlay');
@@ -4767,10 +4770,23 @@ function postCreditNoteJournal(cn, sale) {
   const taxPortion = original > 0 ? +(cn.adjustmentAmount * (taxAmount/original)).toFixed(2) : 0;
   const netPortion = +(cn.adjustmentAmount - taxPortion).toFixed(2);
   const salesCode = resolveSalesAccountCode(sale.customerType);
-  const creditAccount = (sale.dueAmount > 0) ? db.settings.acctMappings.arAccount : resolvePaymentAccountCode(sale.paymentMethod, sale.qrId);
+  // BUG FIXED: this used to send the ENTIRE adjustment to Accounts Receivable whenever any due
+  // amount existed, however small — e.g. a 1,000 sale already paid down to a 100 due, corrected
+  // by 800, used to credit AR the full 800 (driving it to -700 for this customer) while the
+  // subsidiary ledger fix elsewhere correctly capped its own reduction at the 100 actually due.
+  // The GL control account and the customer's subsidiary ledger silently diverged forever, and
+  // the Accounting Integrity Checker doesn't reconcile AR against its subsidiaries, so nothing
+  // would ever flag it. Cap the AR portion at what's actually still outstanding; anything beyond
+  // that means the customer already paid cash for value they're no longer being charged for, so
+  // it's a genuine cash refund, not an AR adjustment.
+  const outstanding = Math.max(0, sale.dueAmount || 0);
+  const arPortion = Math.min(cn.adjustmentAmount, outstanding);
+  const cashRefund = +(cn.adjustmentAmount - arPortion).toFixed(2);
   const lines = [ { accountCode: salesCode, debit: netPortion, credit: 0 } ];
   if (taxPortion > 0) lines.push({ accountCode: db.settings.acctMappings.vatOutputAccount, debit: taxPortion, credit: 0 });
-  lines.push({ accountCode: creditAccount, debit: 0, credit: cn.adjustmentAmount });
+  if (arPortion > 0) lines.push({ accountCode: db.settings.acctMappings.arAccount, debit: 0, credit: arPortion });
+  if (cashRefund > 0.004) lines.push({ accountCode: resolvePaymentAccountCode(sale.paymentMethod, sale.qrId) || '1010', debit: 0, credit: cashRefund });
+  cn.cashRefundAmount = cashRefund; // surfaced to the user so they know to hand back cash
   const je = postJournalEntry({ date: cn.date, voucherKind:'Journal', refType:'credit-note', refId: cn.id, reference: cn.noteNumber, description: `Credit Note ${cn.noteNumber} — ${cn.reason}`, lines });
 
   // BUG FIXED: this used to only reverse Sales Revenue/VAT/Cash-AR. When the reason is goods
@@ -4834,9 +4850,21 @@ function postDebitNoteJournal(dn, invoice) {
   const netPortion = +(dn.adjustmentAmount - vatPortion).toFixed(2);
   const isFixedAsset = invoice.category === 'fixed-asset';
   const assetAccountCode = isFixedAsset ? (db.fixedAssets.find(a=>a.id===invoice.assetId)?.assetCode || '1040') : '1040';
-  const lines = [ { accountCode: db.settings.acctMappings.apAccount, debit: dn.adjustmentAmount, credit: 0 } ];
+  // BUG FIXED: mirror of the Credit Note fix above — this used to debit the FULL adjustment to
+  // Accounts Payable regardless of how much had already been paid to the supplier. If we'd
+  // already paid more than the corrected invoice amount, this drove AP negative for that supplier
+  // instead of recognizing that the supplier now owes US the excess back. Cap the AP reduction at
+  // what's actually still owed; book any excess as a receivable instead.
+  const paidSoFar = (db.supplierPayments||[]).filter(p=>p.invoiceId===invoice.id).reduce((a,p)=>a+p.amount,0);
+  const stillOwed = Math.max(0, original - paidSoFar);
+  const apPortion = Math.min(dn.adjustmentAmount, stillOwed);
+  const refundDue = +(dn.adjustmentAmount - apPortion).toFixed(2);
+  const lines = [];
+  if (apPortion > 0) lines.push({ accountCode: db.settings.acctMappings.apAccount, debit: apPortion, credit: 0 });
+  if (refundDue > 0.004) lines.push({ accountCode: '1036', debit: refundDue, credit: 0 }); // Supplier Refunds Receivable
   lines.push({ accountCode: assetAccountCode, debit: 0, credit: netPortion });
   if (vatPortion > 0) lines.push({ accountCode: db.settings.acctMappings.vatInputAccount, debit: 0, credit: vatPortion });
+  dn.refundDueAmount = refundDue; // surfaced to the user so they know to chase the supplier for it
   return postJournalEntry({ date: dn.date, voucherKind:'Journal', refType:'debit-note', refId: dn.id, reference: dn.noteNumber, description: `Debit Note ${dn.noteNumber} — ${dn.reason}`, lines });
 }
 
@@ -10341,10 +10369,18 @@ function getFilteredAccountingItems() {
   const sorted = [...items].sort((a,b)=>a.date>b.date?1:a.date<b.date?-1:0);
   let running = 0;
   const withBal = sorted.map(a=>{ running += a.type==='income'?a.amount:-a.amount; return {...a, runningBal:running}; });
+  // Row-level totals — sum of exactly the cash entries shown in the table/print below.
   const totalIncome = items.filter(a=>a.type==='income').reduce((sm,x)=>sm+x.amount,0);
   const totalExp = items.filter(a=>a.type==='expense').reduce((sm,x)=>sm+x.amount,0);
+  // BUG FIXED: the KPI cards and Print/Export summary used to headline these same row totals as
+  // "Total Income"/"Total Expenses" — but db.accounting overstates income by including VAT
+  // collected (not actually income, it's owed to the government) and understates credit-sale
+  // income until it's actually collected (cash-basis). This is the exact issue already fixed on
+  // the Dashboard's Net Balance — ledgerIncome/ledgerExpense reuse that same ledger-based source
+  // so this screen's headline figures can never disagree with the P&L Statement/Balance Sheet.
+  const pl = computePLPeriod(from || null, to || today());
   const filterDesc = [type?`Type: ${type}`:'', cat?`Category: ${cat}`:'', from?`From: ${fmtDate(from)}`:'', to?`To: ${fmtDate(to)}`:'', s?`Search: "${s}"`:''].filter(Boolean).join(' · ') || 'All records';
-  return { withBal, totalIncome, totalExp, filterDesc };
+  return { withBal, totalIncome, totalExp, ledgerIncome: pl.totalIncome, ledgerExpense: pl.totalExpense, filterDesc };
 }
 
 function renderAccounting() {
@@ -10373,14 +10409,17 @@ function renderAccounting() {
   }
   
   // KPI
-  const totalIncome = db.accounting.filter(a=>a.type==='income').reduce((s,x)=>s+x.amount,0);
-  const totalExp = db.accounting.filter(a=>a.type==='expense').reduce((s,x)=>s+x.amount,0);
+  // BUG FIXED: these used to sum db.accounting directly — VAT-inclusive and cash-basis, the same
+  // issue already fixed on the Dashboard (see computePLPeriod usage there). Pull from the real
+  // ledger instead so this screen's headline figures always match the P&L Statement/Balance Sheet
+  // for the same period, and label them the same way the Dashboard does.
+  const { ledgerIncome: totalIncome, ledgerExpense: totalExp } = getFilteredAccountingItems();
   const net = totalIncome - totalExp;
   const month = today().slice(0,7);
-  const mInc = db.accounting.filter(a=>a.type==='income'&&a.date?.startsWith(month)).reduce((s,x)=>s+x.amount,0);
-  const mExp = db.accounting.filter(a=>a.type==='expense'&&a.date?.startsWith(month)).reduce((s,x)=>s+x.amount,0);
+  const monthPL = computePLPeriod(month+'-01', today());
+  const mInc = monthPL.totalIncome, mExp = monthPL.totalExpense;
   document.getElementById('acct-kpi').innerHTML = `
-    <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-body"><div class="kpi-label">Total Income</div><div class="kpi-value">${fmt(totalIncome)}</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-body"><div class="kpi-label">Total Income <span style="font-weight:400;color:var(--text-muted);font-size:12px">(excl. VAT)</span></div><div class="kpi-value">${fmt(totalIncome)}</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">📉</div><div class="kpi-body"><div class="kpi-label">Total Expenses</div><div class="kpi-value">${fmt(totalExp)}</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">💼</div><div class="kpi-body"><div class="kpi-label">Net Balance</div><div class="kpi-value ${net>=0?'amt-revenue':'amt-expense'}">${fmt(net)}</div></div></div>
     <div class="kpi-card"><div class="kpi-icon">📅</div><div class="kpi-body"><div class="kpi-label">This Month Net</div><div class="kpi-value ${(mInc-mExp)>=0?'amt-revenue':'amt-expense'}">${fmt(mInc-mExp)}</div></div></div>
@@ -10412,13 +10451,18 @@ function renderAccounting() {
 
 // ── Accounting Print / Export PDF ──
 function buildAccountingPrintHtml() {
-  const { withBal: items, totalIncome, totalExp, filterDesc } = getFilteredAccountingItems();
+  const { withBal: items, totalIncome, totalExp, ledgerIncome, ledgerExpense, filterDesc } = getFilteredAccountingItems();
   const rows = items.map(a=>`<tr><td>${fmtDate(a.date)}</td><td>${esc(a.type)}</td><td>${esc(a.category||'—')}</td><td>${esc(a.description||'—')}</td><td style="text-align:right" class="mono ${a.type==='income'?'amt-revenue':'amt-expense'}">${a.type==='income'?'':'-'}${fmt(a.amount)}</td><td class="mono">${esc(a.reference||'—')}</td><td style="text-align:right" class="mono">${fmt(a.runningBal)}</td></tr>`).join('');
+  // BUG FIXED: the footer summary used to headline these same rows' raw sum as "Total Income" —
+  // VAT-inclusive and cash-basis (see getFilteredAccountingItems). Now shows the ledger-based
+  // figure (matches P&L Statement) as the headline, with the cash total kept alongside for
+  // reference since it's still a legitimate record of cash actually logged in this register.
   return `
     <p style="font-size:15px;color:#555;margin-bottom:10px">Filters applied: ${esc(filterDesc)} &nbsp;·&nbsp; Generated: ${today()}</p>
     <table style="width:100%;border-collapse:collapse;font-size:15px"><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th>Reference</th><th style="text-align:right">Balance</th></tr></thead>
     <tbody>${rows || '<tr><td colspan="7" style="text-align:center">No accounting records match the current filters</td></tr>'}</tbody></table>
-    <p style="font-size:15px;margin-top:12px">Total Income: <strong>${fmt(totalIncome)}</strong> &nbsp;|&nbsp; Total Expense: <strong>${fmt(totalExp)}</strong> &nbsp;|&nbsp; Net: <strong>${fmt(totalIncome-totalExp)}</strong></p>`;
+    <p style="font-size:15px;margin-top:12px">Total Income (excl. VAT): <strong>${fmt(ledgerIncome)}</strong> &nbsp;|&nbsp; Total Expense: <strong>${fmt(ledgerExpense)}</strong> &nbsp;|&nbsp; Net: <strong>${fmt(ledgerIncome-ledgerExpense)}</strong></p>
+    <p style="font-size:13px;color:#777;margin-top:4px">Cash entries shown above total: ${fmt(totalIncome)} in / ${fmt(totalExp)} out (raw log, includes VAT collected on sales).</p>`;
 }
 
 function previewAccountingPrint() {
@@ -13435,18 +13479,26 @@ function generateReport() {
     </tbody></table>
     <p style="font-size:15px;margin-top:12px">Outstanding TDS Payable on the books (all-time, undeposited): <strong>${fmt(outstandingTDS)}</strong> ${(outstandingTDS>0.004&&(session.role==='admin'||hasPermission('Edit Accounting')))?`<button class="btn btn-xs btn-primary" onclick="openMarkTDSDeposited()">Record Deposit to IRD</button>`:(outstandingTDS>0.004?'':'<span class="badge badge-success">Nothing outstanding</span>')}</p>`;
   } else if (type==='ssf-register') {
-    const payrolls = (db.payrollHistory||[]).filter(ph=>(ph.totalSSF||0)>0 && periodMonthOverlapsRange(ph.month, from, to));
+    const payrolls = (db.payrollHistory||[]).filter(ph=>((ph.totalSSF||0)>0 || (ph.entries||[]).some(e=>e.ssfShortfall>0.004)) && periodMonthOverlapsRange(ph.month, from, to));
     let rows = [];
-    payrolls.forEach(ph => (ph.entries||[]).filter(e=>e.employeeSSF>0).forEach(e => rows.push({ month:ph.month, empName:e.empName, basic:e.salary, employeeSSF:e.employeeSSF, employerSSF:e.employerSSF, total:e.employeeSSF+e.employerSSF })));
+    // BUG FIXED: this used to only include entries with employeeSSF>0, and never surfaced
+    // ssfShortfall anywhere past the one-time toast shown when payroll was approved. An employee
+    // whose pay was too thin to cover any SSF that month (fully capped to 0) was silently dropped
+    // from this register entirely, and even a partial shortfall for someone who WAS listed never
+    // showed up here — so the actual statutory SSF liability could be understated on the one
+    // report meant to support the SSF filing, with no lasting record once the toast was gone.
+    payrolls.forEach(ph => (ph.entries||[]).filter(e=>e.employeeSSF>0 || e.ssfShortfall>0.004).forEach(e => rows.push({ month:ph.month, empName:e.empName, basic:e.salary, employeeSSF:e.employeeSSF||0, employerSSF:e.employerSSF||0, total:(e.employeeSSF||0)+(e.employerSSF||0), shortfall:e.ssfShortfall||0 })));
     const totalDue = rows.reduce((a,r)=>a+r.total,0);
+    const totalShortfall = rows.reduce((a,r)=>a+r.shortfall,0);
     const ssfEmpPct = Math.round((db.settings.acctMappings.ssfEmployeeRate ?? 0.11)*100);
     const ssfErPct = Math.round((db.settings.acctMappings.ssfEmployerRate ?? 0.20)*100);
     bodyHtml = `<h2>SSF Register — Social Security Fund</h2>
     <p style="font-size:15px;color:#555;margin-bottom:12px">${ssfEmpPct}% employee + ${ssfErPct}% employer of basic salary, deposited monthly — this is what your SSF filing needs. Rates set in Settings ▸ Nepal Tax &amp; VAT.</p>
-    <table><thead><tr><th>Month</th><th>Employee</th><th style="text-align:right">Basic Salary</th><th style="text-align:right">Employee (${ssfEmpPct}%)</th><th style="text-align:right">Employer (${ssfErPct}%)</th><th style="text-align:right">Total</th></tr></thead><tbody>
-      ${rows.length?rows.map(r=>`<tr><td>${esc(periodMonthLabel(r.month))}</td><td>${esc(r.empName)}</td><td style="text-align:right" class="mono">${fmt(r.basic)}</td><td style="text-align:right" class="mono">${fmt(r.employeeSSF)}</td><td style="text-align:right" class="mono">${fmt(r.employerSSF)}</td><td style="text-align:right" class="mono"><strong>${fmt(r.total)}</strong></td></tr>`).join(''):'<tr><td colspan="6">No SSF-enrolled payroll in this period</td></tr>'}
-      <tr style="background:#f0f0f0"><td colspan="5"><strong>TOTAL SSF DUE</strong></td><td style="text-align:right"><strong>${fmt(totalDue)}</strong></td></tr>
-    </tbody></table>`;
+    <table><thead><tr><th>Month</th><th>Employee</th><th style="text-align:right">Basic Salary</th><th style="text-align:right">Employee (${ssfEmpPct}%)</th><th style="text-align:right">Employer (${ssfErPct}%)</th><th style="text-align:right">Total</th><th style="text-align:right">Shortfall</th></tr></thead><tbody>
+      ${rows.length?rows.map(r=>`<tr><td>${esc(periodMonthLabel(r.month))}</td><td>${esc(r.empName)}</td><td style="text-align:right" class="mono">${fmt(r.basic)}</td><td style="text-align:right" class="mono">${fmt(r.employeeSSF)}</td><td style="text-align:right" class="mono">${fmt(r.employerSSF)}</td><td style="text-align:right" class="mono"><strong>${fmt(r.total)}</strong></td><td style="text-align:right" class="mono ${r.shortfall>0.004?'amt-expense':''}">${r.shortfall>0.004?fmt(r.shortfall):'—'}</td></tr>`).join(''):'<tr><td colspan="7">No SSF-enrolled payroll in this period</td></tr>'}
+      <tr style="background:#f0f0f0"><td colspan="5"><strong>TOTAL SSF DUE</strong></td><td style="text-align:right"><strong>${fmt(totalDue)}</strong></td><td style="text-align:right"><strong>${totalShortfall>0.004?fmt(totalShortfall):'—'}</strong></td></tr>
+    </tbody></table>
+    ${totalShortfall>0.004?`<p style="font-size:14px;color:var(--danger-solid);margin-top:10px">⚠ ${fmt(totalShortfall)} in employee SSF couldn't be withheld in the month(s) it was due, because that month's pay didn't cover it — this is not automatically recovered from a later paycheck. Deposit the shortfall separately or arrange recovery with the employee, and check with your SSF office on how it should be filed.</p>`:''}`;
   } else if (type==='correction-notes') {
     const notes = (db.correctionNotes||[]).filter(n=>(!from||n.date>=from)&&(!to||n.date<=to)).sort((a,b)=>a.date.localeCompare(b.date));
     bodyHtml = `<h2>Credit &amp; Debit Notes (Invoice Corrections)</h2>
@@ -16247,6 +16299,17 @@ function saveSupplierPayment() {
   const amount = parseFloat(document.getElementById('spay-amount').value)||0;
   if (amount <= 0) { toast('Enter a valid amount','error'); return; }
   const type = document.getElementById('spay-type').value;
+  // BUG FIXED: unlike saveDuePayment (customer collections), which has always blocked collecting
+  // more than a customer's outstanding due, this had no equivalent check — a typo in the amount
+  // field for a "Full"/"Partial" payment could silently overpay a supplier past what's actually
+  // owed on the invoice, marking it "Paid" while quietly pushing that supplier's ledger negative
+  // with nothing flagging it. "Advance" payments (no invoice yet, or paying ahead) are exempt —
+  // paying more than the current due is the whole point of an advance.
+  if (type !== 'advance') {
+    const paidAlready = db.supplierPayments.filter(p=>p.invoiceId===inv.id).reduce((a,p)=>a+p.amount,0);
+    const due = +(inv.amount - paidAlready).toFixed(2);
+    if (amount > due + 0.004) { toast(`Amount exceeds what's due (${fmt(due)}) — use "Advance" if you intend to pay ahead`,'error'); return; }
+  }
   const method = document.getElementById('spay-method').value;
   const notes = document.getElementById('spay-notes').value.trim();
   const spay = { id:uid(), invoiceId, supplierId:inv.supplierId, amount, type, method, notes, date:today(), createdAt:now(), createdBy:session.username };

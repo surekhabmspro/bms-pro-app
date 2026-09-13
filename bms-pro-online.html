@@ -8239,7 +8239,17 @@ async function lgDoLogin() {
     }
     if (!result.ok) {
       if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-      lgFail(); lgSetErr('Incorrect username or password.'); return;
+      lgFail();
+      // TEMP DEBUG: surface the real reason instead of a generic message,
+      // so we can tell "wrong credentials" apart from "couldn't reach server"
+      // or "server rejected for another reason". Revert to the generic
+      // 'Incorrect username or password.' message once the cause is found.
+      if (result.error === 'Could not reach server') {
+        lgSetErr('DEBUG: Could not reach the server (' + SYNC.apiBase + '). This is likely a network/CORS issue or the server is asleep — try again in ~30s.');
+      } else {
+        lgSetErr('DEBUG: Server said: ' + (result.error || 'unknown error, no message returned') + ' (endpoint: ' + SYNC.apiBase + '/api/login)');
+      }
+      return;
     }
     const pulled = await syncPull({ force: true });
     if (!pulled.ok) {
@@ -8249,10 +8259,10 @@ async function lgDoLogin() {
     user = db.users.find(u => u.username.toLowerCase() === un.toLowerCase() && u.status === 'active');
     if (!user) {
       if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-      lgSetErr('Incorrect username or password.'); return;
+      lgSetErr('DEBUG: Logged into server OK and pulled data, but no active user named "' + un + '" was found afterward — check spelling/case or account status.'); return;
     }
   } else if (!user) {
-    lgFail(); lgSetErr('Incorrect username or password.'); return;
+    lgFail(); lgSetErr('DEBUG: No local account on this device, and no server is configured (SYNC.apiBase is empty) — sync can\'t run.'); return;
   }
 
   if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }

@@ -2119,7 +2119,8 @@ textarea.form-control{resize:vertical;min-height:80px}
         </div>
       </div>
       <div class="form-group"><label class="form-label">Quantity</label><input class="form-control" type="number" id="adj-amount" placeholder="0" min="0"></div>
-      <div class="form-group"><label class="form-label">Reason</label><input class="form-control" id="adj-reason" placeholder="e.g. Damage, Theft, Count correction, Found extra stock"></div>
+      <div class="form-group" id="adj-cost-group"><label class="form-label">Cost Per Unit for this stock<span class="help-tip" data-tip="Leave blank if this is a correction (count fix, found extra stock at the same value it's already carried at) rather than a real restock. Fill it in when you're actually adding newly-purchased stock, so the average cost used for COGS/Inventory stays accurate — otherwise every unit, old and new, keeps being costed at whatever price was last set.">?</span></label><input class="form-control" type="number" id="adj-cost" placeholder="Leave blank = correction at current cost" min="0"></div>
+      <div class="form-group"><label class="form-label">Reason</label><input class="form-control" id="adj-reason" placeholder="e.g. Damage, Theft, Count correction, Found extra stock, Restocked"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('stock-adj-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveStockAdj()">✅ Apply</button></div>
   </div>
@@ -2311,6 +2312,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div id="recon-step-paste">
           <div class="form-row">
             <div class="form-group"><label class="form-label">Statement Period Label</label><input class="form-control" id="recon-period" placeholder="e.g. June 2026"></div>
+            <div class="form-group"><label class="form-label">Statement As-Of Date<span class="help-tip" data-tip="The closing date printed on the bank statement — not today's date, unless you're reconciling right up through today. This is what your book balance gets compared as of.">?</span></label><input class="form-control" type="date" id="recon-asof-date"></div>
             <div class="form-group"><label class="form-label">Statement Closing Balance</label><input class="form-control" type="number" id="recon-closing-balance" placeholder="From your bank passbook/app"></div>
           </div>
           <div class="form-group">
@@ -2597,9 +2599,11 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="form-group"><label class="form-label">Contract Type</label><select class="form-control" id="emp-contract"><option value="permanent">Permanent</option><option value="contract">Contract</option><option value="temporary">Temporary</option><option value="probation">Probation</option></select></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Status</label><select class="form-control" id="emp-status"><option value="active">Active</option><option value="inactive">Inactive</option><option value="resigned">Resigned</option><option value="terminated">Terminated</option></select></div>
+          <div class="form-group"><label class="form-label">Status</label><select class="form-control" id="emp-status" onchange="onEmpStatusChange()"><option value="active">Active</option><option value="inactive">Inactive</option><option value="resigned">Resigned</option><option value="terminated">Terminated</option></select></div>
+          <div class="form-group" id="emp-leftdate-group" style="display:none"><label class="form-label">Last Working Day<span class="help-tip" data-tip="Needed so this employee still shows up on Payroll for the month they actually worked through, even after their status is changed to Resigned/Terminated/Inactive. Without it, marking someone as left before running their final month's payroll would silently drop them from that month with no salary recorded at all.">?</span></label><input class="form-control" id="emp-leftdate" oninput="onEmpStatusChange()" onfocus="openCalendar('emp-leftdate','standard')"></div>
           <div class="form-group"><label class="form-label">Bank Account No.</label><input class="form-control" id="emp-bank" placeholder="For salary transfer"></div>
         </div>
+        <div class="form-hint" id="emp-nolastday-warning" style="display:none;color:var(--danger-solid)">⚠ No Last Working Day set — if this employee hasn't been paid for their final month yet, they won't appear on Payroll once you save. Set one if that's still owed.</div>
       </div>
       <div id="emp-tab-salary" style="display:none">
         <div class="form-row">
@@ -3842,12 +3846,32 @@ function runAccountingIntegrityCheck(asOf) {
     return Math.abs(d-c) > 0.01;
   }).map(j=>({ voucherNumber:j.voucherNumber, date:j.date, description:j.description }));
 
+  // (6) AR/AP control accounts vs their subsidiary ledgers. Every check above confirms the ledger
+  // is internally consistent (balanced, correctly typed, correctly summed) — none of them can
+  // catch a GL account moving out of step with the subsidiary records that are supposed to add up
+  // to it (e.g. a credit/debit note whose GL adjustment doesn't match how much the linked
+  // sale/invoice's own due amount actually moved — see the Credit/Debit Note fix). This would
+  // still post a perfectly balanced, correctly-typed entry, so it's invisible to every check
+  // above; comparing the control account's balance against the sum of what customers/suppliers
+  // are actually shown as owing is the only way to catch it.
+  const arCode = db.settings.acctMappings.arAccount, apCode = db.settings.acctMappings.apAccount;
+  const arControlBalance = accountBalanceAsOf(arCode, date);
+  const arSubsidiaryTotal = +((db.creditSales||[]).filter(c=>c.date<=date).reduce((a,c)=>a+Math.max(0,c.dueAmount||0),0)).toFixed(2);
+  const arDiff = +(arControlBalance - arSubsidiaryTotal).toFixed(2);
+  const apControlBalance = accountBalanceAsOf(apCode, date);
+  const apSubsidiaryTotal = +((db.supplierInvoices||[]).filter(i=>i.date<=date).reduce((a,i)=>{
+    const paid = (db.supplierPayments||[]).filter(p=>p.invoiceId===i.id && p.date<=date).reduce((s,p)=>s+p.amount,0);
+    return a + Math.max(0, (i.amount||0) - paid);
+  },0)).toFixed(2);
+  const apDiff = +(apControlBalance - apSubsidiaryTotal).toFixed(2);
+
   return {
     asOf: date,
     totalDebits: +rawDebit.toFixed(2), totalCredits: +rawCredit.toFixed(2), difference: +(rawDebit-rawCredit).toFixed(2),
     trialBalanceMatchesRawLedger: Math.abs(tb.totalDebit - rawDebit) < 0.01 && Math.abs(tb.totalCredit - rawCredit) < 0.01,
     totalAssets: bs.totalAssets, totalLiabilities: bs.totalLiabilities, totalEquity: bs.totalEquity, balanceSheetDiff: bsDiff,
-    clean: orphanLines.length===0 && duplicateGroups.length===0 && unbalancedEntries.length===0 && misclassifiedAccounts.length===0 && invalidNormalBalance.length===0 && Math.abs(rawDebit-rawCredit)<0.01 && Math.abs(bsDiff)<1 && (db.ledgerPostingFailures||[]).length===0,
+    arControlBalance, arSubsidiaryTotal, arDiff, apControlBalance, apSubsidiaryTotal, apDiff,
+    clean: orphanLines.length===0 && duplicateGroups.length===0 && unbalancedEntries.length===0 && misclassifiedAccounts.length===0 && invalidNormalBalance.length===0 && Math.abs(rawDebit-rawCredit)<0.01 && Math.abs(bsDiff)<1 && Math.abs(arDiff)<1 && Math.abs(apDiff)<1 && (db.ledgerPostingFailures||[]).length===0,
     orphanLines, duplicateGroups, unbalancedEntries, futureDatedEntries, misclassifiedAccounts, invalidNormalBalance, allAccountBalances,
     postingFailures: db.ledgerPostingFailures||[]
   };
@@ -4940,6 +4964,7 @@ function openBankRecon() {
   window._reconState = null;
   window._reconManualLines = [];
   document.getElementById('recon-period').value = '';
+  document.getElementById('recon-asof-date').value = today();
   document.getElementById('recon-closing-balance').value = '';
   document.getElementById('recon-paste-area').value = '';
   document.getElementById('recon-manual-lines').innerHTML = '';
@@ -4995,8 +5020,20 @@ function parseBankStatement() {
   const manual = (window._reconManualLines||[]).map(l=>({ id:l.id, date:l.date, description:l.description, amount:l.amount, status:'unmatched', matchedJE:null, candidates:[] }));
   const parsed = [...pasted, ...manual];
   if (!parsed.length) { toast('Paste at least one statement line, or add one manually','error'); return; }
+  const asOfDate = document.getElementById('recon-asof-date').value || today();
+  // BUG FIXED: the book side of this reconciliation used to be pulled as of TODAY no matter what
+  // period the pasted statement actually covered — so reconciling, say, June's statement any day
+  // after June meant comparing June's bank figures against a book balance that already included
+  // every July/August/September posting since, with no matching statement lines to offset them.
+  // The "Adjusted Balance" would then almost never agree with the statement, or could coincidentally
+  // net out and falsely show "Reconciled". Statement As-Of Date now drives both the book balance and
+  // the matching window below, so only activity actually relevant to this statement is considered.
+  if (parsed.some(l => l.date > asOfDate)) {
+    toast('One or more statement lines are dated after the Statement As-Of Date — check the date is correct','warning');
+  }
   window._reconState = {
     period: document.getElementById('recon-period').value.trim() || nepaliFiscalYearLabel(today()),
+    asOfDate,
     closingBalance: parseFloat(document.getElementById('recon-closing-balance').value) || 0,
     statementLines: parsed
   };
@@ -5038,7 +5075,12 @@ function renderReconManualLines() {
 function runAutoMatch() {
   const st = window._reconState;
   const dates = st.statementLines.map(l=>l.date).sort();
-  const from = shiftDate(dates[0], -20), to = shiftDate(dates[dates.length-1], 20);
+  const from = shiftDate(dates[0], -20);
+  // Capped at the statement's own as-of date — anything the books picked up AFTER that date is
+  // this period's normal future activity, not an "outstanding" item for THIS reconciliation, and
+  // including it would misclassify it as still-clearing when it simply hasn't happened yet from
+  // the statement's point of view.
+  const to = shiftDate(dates[dates.length-1], 20) > st.asOfDate ? st.asOfDate : shiftDate(dates[dates.length-1], 20);
   const gl = computeGLLedger('1020', from, to);
   const bookLines = gl.rows.map(r => ({ ...r, consumed:false }));
   st.statementLines.forEach(line => {
@@ -5142,7 +5184,7 @@ function renderReconMatches() {
 
 function renderReconSummary() {
   const st = window._reconState;
-  const bookBalance = accountBalanceAsOf('1020', today());
+  const bookBalance = accountBalanceAsOf('1020', st.asOfDate);
   const bankUnmatchedNet = st.statementLines.filter(l=>l.status==='unmatched').reduce((a,l)=>a+l.amount,0);
   const bookUnmatchedLines = st.bookLines.filter(bl=>!bl.consumed);
   const bookUnmatchedNet = bookUnmatchedLines.reduce((a,bl)=>a+(bl.debit-bl.credit),0);
@@ -5151,7 +5193,7 @@ function renderReconSummary() {
   const reconciled = Math.abs(adjusted - stated) < 1;
   document.getElementById('recon-summary').innerHTML = `
     <table><tbody>
-      <tr><td>Balance per your Books (Bank Account, today)</td><td style="text-align:right" class="mono">${fmt(bookBalance)}</td></tr>
+      <tr><td>Balance per your Books (Bank Account, as of ${fmtDate(st.asOfDate)})</td><td style="text-align:right" class="mono">${fmt(bookBalance)}</td></tr>
       <tr><td>Items on your statement not yet in your books</td><td style="text-align:right" class="mono">${bankUnmatchedNet>=0?'+':''}${fmt(bankUnmatchedNet)}</td></tr>
       <tr><td>Items in your books not yet cleared by the bank</td><td style="text-align:right" class="mono">${-bookUnmatchedNet>=0?'+':''}${fmt(-bookUnmatchedNet)}</td></tr>
       <tr style="background:#f0f0f0;color:#1a1a1a"><td><strong>Adjusted Balance</strong></td><td style="text-align:right"><strong>${fmt(adjusted)}</strong></td></tr>
@@ -5164,7 +5206,7 @@ function saveBankReconciliation() {
   const st = window._reconState;
   if (!st) return;
   const rec = {
-    id: uid(), periodLabel: st.period, asOfDate: today(),
+    id: uid(), periodLabel: st.period, statementAsOfDate: st.asOfDate, savedAt: today(),
     statementLines: st.statementLines.map(l=>({ date:l.date, description:l.description, amount:l.amount, status:l.status, matchedVoucher:l.matchedJE?.voucherNumber||null })),
     unmatchedBookLines: st.bookLines.filter(bl=>!bl.consumed).map(bl=>({ date:bl.date, voucherNumber:bl.voucherNumber, description:bl.description, debit:bl.debit, credit:bl.credit })),
     closingBalance: st.closingBalance,
@@ -5181,7 +5223,7 @@ function renderReconHistory() {
   const list = (db.bankReconciliations||[]).slice().reverse();
   document.getElementById('recon-history-list').innerHTML = list.length ? list.map(r=>`
     <div style="padding:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-      <div><strong>${esc(r.periodLabel)}</strong><br><span class="form-hint">Saved ${fmtDate(r.asOfDate)} by ${esc(r.createdBy)} — ${r.statementLines.length} statement lines</span></div>
+      <div><strong>${esc(r.periodLabel)}</strong><br><span class="form-hint">As of ${fmtDate(r.statementAsOfDate||r.asOfDate)} — saved ${fmtDate(r.savedAt||r.createdAt)} by ${esc(r.createdBy)} — ${r.statementLines.length} statement lines</span></div>
       <button class="btn btn-secondary btn-sm" onclick="printSavedRecon('${r.id}')">🖨️ View / Print</button>
     </div>`).join('') : '<div class="empty"><div class="empty-title">No reconciliations saved yet</div></div>';
 }
@@ -5190,7 +5232,7 @@ function printSavedRecon(id) {
   const r = db.bankReconciliations.find(x=>x.id===id);
   if (!r) return;
   const html = `<h2>Bank Reconciliation — ${esc(r.periodLabel)}</h2>
-    <p>Saved ${fmtDate(r.asOfDate)} by ${esc(r.createdBy)}</p>
+    <p>As of ${fmtDate(r.statementAsOfDate||r.asOfDate)} — saved ${fmtDate(r.savedAt||r.createdAt)} by ${esc(r.createdBy)}</p>
     <h3>Statement Lines</h3>
     <table><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Status</th><th>Matched Voucher</th></tr></thead><tbody>
       ${r.statementLines.map(l=>`<tr><td>${fmtDate(l.date)}</td><td>${esc(l.description)}</td><td>${fmt(l.amount)}</td><td>${esc(l.status)}</td><td>${esc(l.matchedVoucher||'—')}</td></tr>`).join('')}
@@ -10077,6 +10119,7 @@ function openStockAdj(id) {
   if (!rec) return;
   document.getElementById('adj-current').textContent = `${rec.stock} ${rec.unit||'pcs'}`;
   document.getElementById('adj-amount').value = '';
+  document.getElementById('adj-cost').value = '';
   document.getElementById('adj-reason').value = '';
   setAdjDirection('add');
   openModal('stock-adj-overlay');
@@ -10088,6 +10131,10 @@ function setAdjDirection(dir) {
   document.getElementById('adj-dir-add').classList.toggle('btn-secondary', dir!=='add');
   document.getElementById('adj-dir-deduct').classList.toggle('btn-primary', dir==='deduct');
   document.getElementById('adj-dir-deduct').classList.toggle('btn-secondary', dir!=='deduct');
+  // Cost only means anything when adding stock — deducting (damage, theft, correction) doesn't
+  // change what the remaining units are carried at.
+  const costGroup = document.getElementById('adj-cost-group');
+  if (costGroup) costGroup.style.display = dir==='add' ? '' : 'none';
 }
 
 function saveStockAdj() {
@@ -10102,11 +10149,30 @@ function saveStockAdj() {
   const old = rec.stock;
   rec.stock = Math.max(0, rec.stock + delta);
   const actualDelta = rec.stock - old; // in case a deduction was capped at 0
+  // BUG FIXED: adding stock here never updated cost — it always valued the addition at whatever
+  // cost was already on file. Raw materials have Goods Received (GRN) as their real restocking
+  // path with its own weighted-average update, so that gap barely matters for them here. But a
+  // plain trading product (bought in and resold as-is, never run through a BOM) has NO other
+  // restocking path in this app at all — this screen is the only way to add its stock — so every
+  // such restock left cost frozen at whatever was last typed into the product's edit form,
+  // silently miscosting COGS and Inventory for every unit, old and new, from then on. An optional
+  // cost-per-unit field now folds a genuine restock into the weighted average, the same formula
+  // GRN and Production already use; leaving it blank keeps the old behavior for an actual
+  // correction (count fix, found stock at no new cost) where nothing should move.
+  const enteredCost = dir === 'add' ? parseFloat(document.getElementById('adj-cost').value) : NaN;
+  if (dir === 'add' && actualDelta > 0 && !isNaN(enteredCost) && enteredCost >= 0) {
+    const costField = adjRecordType === 'product' ? 'costPrice' : 'cost';
+    const existingValue = old * (rec[costField]||0);
+    const newValue = existingValue + actualDelta*enteredCost;
+    rec[costField] = rec.stock > 0 ? +(newValue / rec.stock).toFixed(adjRecordType==='product'?2:4) : rec[costField];
+  }
   db.stockHistory.push({ id:uid(), recordId:rec.id, recordName:rec.name, type:'adjustment', qty:actualDelta, balanceAfter:rec.stock, date:today(), reason, createdAt:now() });
   audit(adjRecordType==='product'?'Records':'Inventory','Adjustment',rec.id,rec.name,`Stock: ${old}`,`Stock: ${rec.stock}${reason?' — '+reason:''}`);
 
   // Ledger: keeps the Inventory asset account and your books in sync with what physically happened —
   // a deduction (damage, theft, count correction) is a real loss; an addition increases inventory value.
+  // Uses the (possibly just-updated) cost above, so a genuine restock posts at what it actually cost,
+  // not the stale figure that was on file before this adjustment.
   const unitCost = adjRecordType === 'product' ? (rec.costPrice||0) : (rec.cost||0);
   const value = Math.abs(actualDelta) * unitCost;
   if (value > 0.004) {
@@ -10928,6 +10994,7 @@ function openEmployeeModal(id=null) {
   document.getElementById('emp-join').value = e?.joinDate||today();
   document.getElementById('emp-contract').value = e?.contractType||'permanent';
   document.getElementById('emp-status').value = e?.status||'active';
+  document.getElementById('emp-leftdate').value = e?.leftDate||'';
   document.getElementById('emp-bank').value = e?.bankAccount||'';
   document.getElementById('emp-salary').value = e?.salary||'';
   document.getElementById('emp-pay-mode').value = e?.payMode||'monthly';
@@ -10936,11 +11003,25 @@ function openEmployeeModal(id=null) {
   document.getElementById('emp-attendance-deduction').checked = e?.attendanceDeductionEnabled !== false;
   document.getElementById('emp-notes').value = e?.notes||'';
   document.getElementById('emp-emergency').value = e?.emergencyContact||'';
+  onEmpStatusChange();
   setEmpTab('personal', document.querySelector('#emp-modal-overlay .tabs .tab'));
   openModal('emp-modal-overlay');
   attachSuggest('emp-role', [...new Set(db.employees.map(x=>x.role).filter(Boolean))]);
   attachSuggest('emp-dept', [...new Set(db.employees.map(x=>x.department).filter(Boolean))]);
   setTimeout(()=>document.getElementById('emp-name')?.focus(), 50);
+}
+
+// Shows the Last Working Day field once status is anything other than Active, and warns if it's
+// still blank — this is what keeps a departed employee visible on Payroll for the month they
+// actually worked through (see the payroll employee-list fix below); leaving it unset for someone
+// who hasn't had their final month processed yet would silently drop them from Payroll entirely.
+function onEmpStatusChange() {
+  const status = document.getElementById('emp-status').value;
+  const isActive = status === 'active';
+  document.getElementById('emp-leftdate-group').style.display = isActive ? 'none' : '';
+  if (isActive) document.getElementById('emp-leftdate').value = '';
+  const warning = document.getElementById('emp-nolastday-warning');
+  if (warning) warning.style.display = (!isActive && !document.getElementById('emp-leftdate').value) ? '' : 'none';
 }
 
 function saveEmployee() {
@@ -10954,6 +11035,7 @@ function saveEmployee() {
     address: document.getElementById('emp-address').value.trim(), role: document.getElementById('emp-role').value.trim(),
     department: document.getElementById('emp-dept').value.trim(), joinDate: document.getElementById('emp-join').value||today(),
     contractType: document.getElementById('emp-contract').value, status: document.getElementById('emp-status').value,
+    leftDate: document.getElementById('emp-status').value==='active' ? '' : document.getElementById('emp-leftdate').value,
     bankAccount: document.getElementById('emp-bank').value.trim(), salary: parseFloat(document.getElementById('emp-salary').value)||0,
     payMode: document.getElementById('emp-pay-mode').value, salaryNote: document.getElementById('emp-salary-note').value.trim(),
     ssfEnrolled: document.getElementById('emp-ssf').checked,
@@ -10970,6 +11052,20 @@ function saveEmployee() {
 
 function showAddEmployee() { openModule('hr'); setTimeout(()=>openEmployeeModal(),100); }
 
+// BUG FIXED: Payroll only ever listed status==='active' employees. The instant someone was
+// marked Resigned/Terminated/Inactive, they vanished from this list completely — including for
+// a month they'd actually worked through, if payroll for that month hadn't been processed yet
+// (the ordinary sequence: update their status once they leave, then run payroll for that final
+// month days or weeks later). That final salary was simply never recorded anywhere, with nothing
+// to indicate it had happened — no error, no gap shown, just one fewer row in a table. An
+// employee now stays eligible for any payroll month up to and including the one containing their
+// Last Working Day, so their final pay can still be processed after their status changes.
+function employeeEligibleForPayrollMonth(e, month) {
+  if (e.status === 'active') return true;
+  if (!e.leftDate) return false;
+  const dates = periodMonthAdDates(month);
+  return dates.length > 0 && dates[0] <= e.leftDate;
+}
 // Attendance and Leave have never actually affected payroll before this — processPayroll()
 // only ever looked at the employee's fixed salary, so an employee got full pay regardless of
 // how many days they were marked Absent, or how much Unpaid Leave they took. This computes
@@ -11038,7 +11134,7 @@ function computeAttendanceDeductionAmount(emp, month) {
 
 function renderPayrollTable() {
   const month = document.getElementById('pay-month')?.value || currentPeriodMonthKey();
-  const employees = db.employees.filter(e=>e.status==='active');
+  const employees = db.employees.filter(e=>employeeEligibleForPayrollMonth(e, month));
   const sc = db.settings.salaryComponents || { earnings:['Basic Salary','Bonus'], deductions:['Tax','Advance'] };
   if (!employees.length) { document.getElementById('payroll-table-wrap').innerHTML='<div class="empty"><div class="empty-icon">💵</div><div class="empty-title">No active employees</div></div>'; return; }
   const extraEarnings = sc.earnings.slice(1);
@@ -11084,7 +11180,7 @@ function renderPayrollTable() {
         const previewSSF = e.ssfEnrolled !== false ? Math.min(estSSF, preSSFPay) : 0;
         const netPay = +(preSSFPay - previewSSF).toFixed(2);
         return `<tr>
-          <td style="font-weight:500">${esc(e.name)}<div style="font-size:14px;color:var(--text-muted)">${esc(e.role||'')}</div></td>
+          <td style="font-weight:500">${esc(e.name)}${e.status!=='active'?` <span class="badge badge-warning" title="${e.leftDate?`Last working day ${fmtDate(e.leftDate)} — showing for their final payroll month`:'Not marked active — showing since no Last Working Day is set'}">Final month (${esc(e.status)})</span>`:''}<div style="font-size:14px;color:var(--text-muted)">${esc(e.role||'')}</div></td>
           <td class="mono amt-neutral">${fmt(e.salary||0)}</td>
           ${extraEarnings.map(earn=>`<td><input type="number" value="${entry?.earnings?.[earn]||0}" id="earn-${e.id}-${earn.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
           ${deductions.map(ded=>`<td><input type="number" value="${dedValues[ded]}" id="ded-${e.id}-${ded.replace(/\s/g,'_')}" style="width:75px" class="form-control" oninput="updateNetPayRow('${e.id}')"></td>`).join('')}
@@ -11118,7 +11214,7 @@ function processPayroll() {
   if (!hasPermission('Process Payroll')) { toast('You don\'t have permission to process payroll','error'); return; }
   const month = document.getElementById('pay-month')?.value || currentPeriodMonthKey();
   if (!month) { toast('Select a month','warning'); return; }
-  const employees = db.employees.filter(e=>e.status==='active');
+  const employees = db.employees.filter(e=>employeeEligibleForPayrollMonth(e, month));
   const sc = db.settings.salaryComponents || { earnings:['Basic Salary'], deductions:[] };
   const entries = employees.map(e=>{
     const earnings = {};
@@ -13294,6 +13390,20 @@ function generateReport() {
       <tr><td>Total Equity</td><td style="text-align:right" class="mono">${fmt(check.totalEquity)}</td></tr>
       <tr style="background:#f0f0f0"><td><strong>Assets − (Liabilities + Equity)</strong></td><td style="text-align:right"><strong style="color:${Math.abs(check.balanceSheetDiff)<1?'green':'red'}">${fmt(check.balanceSheetDiff)}</strong></td></tr>
     </tbody></table>
+    <h3 style="margin-top:18px">Accounts Receivable — Control vs Subsidiary<span class="help-tip" data-tip="Compares the AR balance in the General Ledger against the sum of what every customer's own credit sale record shows as still due. These should always match exactly — a gap here means something (like a credit note) adjusted one side without correctly adjusting the other, and would never trip any check above since the entry itself is still perfectly balanced.">?</span></h3>
+    <table><tbody>
+      <tr><td>AR Control Account Balance (GL)</td><td style="text-align:right" class="mono">${fmt(check.arControlBalance)}</td></tr>
+      <tr><td>Sum of Customer Due Amounts (Subsidiary)</td><td style="text-align:right" class="mono">${fmt(check.arSubsidiaryTotal)}</td></tr>
+      <tr style="background:#f0f0f0"><td><strong>Difference</strong></td><td style="text-align:right"><strong style="color:${Math.abs(check.arDiff)<1?'green':'red'}">${fmt(check.arDiff)}</strong></td></tr>
+    </tbody></table>
+    ${Math.abs(check.arDiff)>=1?'<p style="color:var(--danger-solid)">Check recent Credit Notes and any manual Advanced Ledger entries touching Accounts Receivable — one of them likely adjusted the GL without matching adjustment to the customer\'s own due amount.</p>':'<p style="color:var(--success-solid)">✓ Matches — every rupee of AR in the ledger is accounted for in a customer\'s due balance.</p>'}
+    <h3 style="margin-top:18px">Accounts Payable — Control vs Subsidiary<span class="help-tip" data-tip="Same idea as above, but for what's owed to suppliers: compares the AP balance in the General Ledger against the sum of every supplier invoice's own remaining balance.">?</span></h3>
+    <table><tbody>
+      <tr><td>AP Control Account Balance (GL)</td><td style="text-align:right" class="mono">${fmt(check.apControlBalance)}</td></tr>
+      <tr><td>Sum of Supplier Invoice Balances (Subsidiary)</td><td style="text-align:right" class="mono">${fmt(check.apSubsidiaryTotal)}</td></tr>
+      <tr style="background:#f0f0f0"><td><strong>Difference</strong></td><td style="text-align:right"><strong style="color:${Math.abs(check.apDiff)<1?'green':'red'}">${fmt(check.apDiff)}</strong></td></tr>
+    </tbody></table>
+    ${Math.abs(check.apDiff)>=1?'<p style="color:var(--danger-solid)">Check recent Debit Notes and any manual Advanced Ledger entries touching Accounts Payable — one of them likely adjusted the GL without matching adjustment to the supplier invoice\'s own balance.</p>':'<p style="color:var(--success-solid)">✓ Matches — every rupee of AP in the ledger is accounted for in a supplier invoice balance.</p>'}
     <h3 style="margin-top:18px">Orphan Entries ${check.orphanLines.length?`(${check.orphanLines.length})`:''}<span class="help-tip" data-tip="A journal line posted to an account code that no longer exists in the Chart of Accounts — invisible to Balance Sheet and Trial Balance alike until corrected.">?</span></h3>
     ${check.orphanLines.length ? `<table><thead><tr><th>Voucher</th><th>Date</th><th>Description</th><th>Unknown Account</th><th>Amount</th>${isAdmin?'<th></th>':''}</tr></thead><tbody>${check.orphanLines.map(o=>`<tr><td class="mono">${esc(o.voucherNumber)}</td><td>${fmtDate(o.date)}</td><td>${esc(o.description)}</td><td class="mono" style="color:var(--danger-solid)">${esc(o.accountCode)}</td><td class="mono">${fmt(o.debit||o.credit)}</td>${isAdmin?`<td><button class="btn btn-xs btn-danger" onclick="openOrphanCorrectionModal('${esc(o.voucherNumber)}')">Fix</button></td>`:''}</tr>`).join('')}</tbody></table>` : '<p style="color:var(--success-solid)">✓ None found — every journal line points to a real account.</p>'}
     <h3 style="margin-top:18px">Duplicate Postings ${check.duplicateGroups.length?`(${check.duplicateGroups.length})`:''}<span class="help-tip" data-tip="The same transaction posted more than once — usually from reprocessing something without voiding the original entry first.">?</span></h3>
@@ -15277,6 +15387,7 @@ function openMaterialAdj(id) {
   adjRecordId = id; adjRecordType = 'material';
   document.getElementById('adj-current').textContent = `${m.stock} ${m.unit}`;
   document.getElementById('adj-amount').value = '';
+  document.getElementById('adj-cost').value = '';
   document.getElementById('adj-reason').value = '';
   setAdjDirection('add');
   openModal('stock-adj-overlay');

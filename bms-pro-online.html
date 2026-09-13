@@ -7584,7 +7584,11 @@ function announcePaidAmount(paid, change, label) {
   if (db.settings?.pos?.announceAmount === false) return;
   if (!('speechSynthesis' in window)) return;
   try {
-    const currencyWord = db.settings.currencyCode || '';
+    // BUG FIXED: feeding the ISO currency code straight to speech synthesis let the browser's
+    // TTS engine expand it on its own — "NPR" was being read out as "Nepalese Rupees" instead of
+    // the plain word wanted here. Map to the actual word to say instead of trusting TTS to guess.
+    const rupeeCodes = ['NPR','INR','PKR','LKR'];
+    const currencyWord = rupeeCodes.includes(db.settings.currencyCode) ? 'rupees' : (db.settings.currencyCode || '');
     const round2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
     let text = `${label || 'Amount received'}: ${round2(paid)} ${currencyWord}`;
     if (change > 0.004) text += `. Change due: ${round2(change)} ${currencyWord}`;

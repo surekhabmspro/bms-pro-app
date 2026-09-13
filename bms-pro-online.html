@@ -1757,6 +1757,8 @@ textarea.form-control{resize:vertical;min-height:80px}
                 </select>
               </div>
               <div class="form-group"><label class="form-label"><input type="checkbox" id="st-auto-print"> Automatically print receipt the moment checkout completes</label><div class="form-hint">No extra click needed — the receipt prints immediately and the cart clears for the next sale.</div></div>
+              <div class="form-group"><label class="form-label"><input type="checkbox" id="st-sound-effects"> Sound effects (scan beep, checkout chime, error/warning tones)</label><div class="form-hint">Short synthesized tones for barcode scans, adding items, completed sales, and error/warning toasts anywhere in the app. Muted automatically if your browser blocks audio until you interact with the page first.</div></div>
+              <div class="form-group"><label class="form-label"><input type="checkbox" id="st-announce-amount"> Announce paid amount out loud</label><div class="form-hint">Speaks the amount received (and change due, for cash) the moment a sale completes — useful for both cashier and customer to hear the figure confirmed. Uses your device/browser's built-in text-to-speech; quality and available voices depend on the device.</div></div>
               <button class="btn btn-primary" onclick="savePOSSettings()">💾 Save POS Settings</button>
             </div>
             <!-- CURRENCY -->
@@ -2843,6 +2845,7 @@ textarea.form-control{resize:vertical;min-height:80px}
   <div class="modal modal-lg">
     <div class="modal-header"><div class="modal-title">New Stock Transfer</div><button class="modal-close" onclick="closeModalGuarded('transfer-modal-overlay')">✕</button></div>
     <div class="modal-body">
+      <div class="form-hint" style="background:#fff3cd;padding:8px 10px;border-radius:6px;margin-bottom:10px">ℹ️ Stock is tracked as one combined total, not separately per warehouse — recording a transfer here logs the movement for your own reference (and shows up in Stock History), but it won't change the total quantity shown for the item, and there's no per-warehouse count anywhere in the app to check it against.</div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">From Warehouse *</label><select class="form-control" id="tr-from"></select></div>
         <div class="form-group"><label class="form-label">To Warehouse *</label><select class="form-control" id="tr-to"></select></div>
@@ -3420,6 +3423,8 @@ function defaultDB() {
         receiptFooter: 'Thank you for your business!',
         welcomeMsg: 'Welcome! We are ready to serve you.',
         autoPrint: false,
+        soundEffects: true,
+        announceAmount: true,
         printerType: 'thermal80',
         paymentMethods: ['Cash', 'Card', 'QR / Scan to Pay', 'Bank Transfer', 'Credit'],
         qrCodes: []
@@ -7516,6 +7521,81 @@ function toastInvalid(fieldId, msg) {
   }
   toast(msg, 'error');
 }
+/* ══ SOUND EFFECTS ══
+   Short synthesized tones (no audio files to bundle) for feedback across the app — barcode
+   scans, adding to cart, completed sales, and every toast (success/error/warning). Controlled by
+   Settings → POS → Sound Effects (db.settings.pos.soundEffects, default on). Uses a single lazily
+   created AudioContext, since browsers block audio until the page has been interacted with at
+   least once — every call site here fires from inside a click/keydown handler already, so that's
+   satisfied naturally. Wrapped so a blocked or unsupported AudioContext just silently does
+   nothing rather than ever breaking the action it's attached to.
+*/
+let _sfxCtx = null;
+function _sfxGetCtx() {
+  if (db.settings?.pos?.soundEffects === false) return null;
+  try {
+    if (!_sfxCtx) _sfxCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_sfxCtx.state === 'suspended') _sfxCtx.resume().catch(()=>{});
+    return _sfxCtx;
+  } catch (e) { return null; }
+}
+// notes: array of { freq, start, dur, type?, gain? } — start/dur in seconds, relative to now.
+function _sfxPlay(notes) {
+  const ctx = _sfxGetCtx();
+  if (!ctx) return;
+  try {
+    notes.forEach(n => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = n.type || 'sine';
+      osc.frequency.value = n.freq;
+      const t0 = ctx.currentTime + (n.start||0);
+      const peak = n.gain ?? 0.12;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(peak, t0 + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + (n.dur||0.12));
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t0); osc.stop(t0 + (n.dur||0.12) + 0.02);
+    });
+  } catch (e) { /* never let a sound glitch break the action it's attached to */ }
+}
+function playSound(name) {
+  switch (name) {
+    case 'scan':    _sfxPlay([{ freq:1500, dur:0.07, gain:0.14 }]); break;                              // barcode scan / found
+    case 'add':     _sfxPlay([{ freq:900, dur:0.05, gain:0.08 }]); break;                               // manual add-to-cart click
+    case 'remove':  _sfxPlay([{ freq:500, dur:0.06, gain:0.08 }]); break;                                // remove from cart
+    case 'success': _sfxPlay([{ freq:660, dur:0.09, gain:0.11 }, { freq:988, start:0.08, dur:0.16, gain:0.13 }]); break; // checkout / save complete
+    case 'error':   _sfxPlay([{ freq:220, dur:0.22, gain:0.13, type:'sawtooth' }]); break;
+    case 'warning': _sfxPlay([{ freq:520, dur:0.07, gain:0.11 }, { freq:520, start:0.11, dur:0.07, gain:0.11 }]); break;
+    case 'notFound':_sfxPlay([{ freq:300, dur:0.14, gain:0.12, type:'square' }]); break;                 // barcode not found / out of stock
+    case 'notify':  _sfxPlay([{ freq:800, dur:0.06, gain:0.07 }]); break;                                 // generic info toast — kept subtle
+    default: break;
+  }
+}
+
+// Speaks the amount received on a completed sale out loud (Settings → POS → Announce Paid
+// Amount, default on) — separate from the beep/chime sound effects above, and separately
+// toggleable, since text-to-speech is a bigger, more opinionated interruption than a short tone
+// and some cashiers/shops will want the beeps but not a voice. Uses the browser's built-in
+// SpeechSynthesis — no audio files, and it degrades silently (just says nothing) on a
+// browser/device that doesn't support it, same philosophy as the sound effects above: this can
+// never be the thing that breaks a checkout.
+function announcePaidAmount(paid, change, label) {
+  if (db.settings?.pos?.announceAmount === false) return;
+  if (!('speechSynthesis' in window)) return;
+  try {
+    const currencyWord = db.settings.currencyCode || '';
+    const round2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
+    let text = `${label || 'Amount received'}: ${round2(paid)} ${currencyWord}`;
+    if (change > 0.004) text += `. Change due: ${round2(change)} ${currencyWord}`;
+    speechSynthesis.cancel(); // don't let a rapid second sale queue up behind an unfinished announcement
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 1;
+    utter.volume = 1;
+    speechSynthesis.speak(utter);
+  } catch (e) { /* never let a TTS glitch break the checkout it's attached to */ }
+}
+
 function toast(msg, type='success', title='', opts={}) {
   const container = document.getElementById('toast-container');
   const dupe = [...container.querySelectorAll('.toast')].find(t => t.dataset.msg === msg && t.dataset.type === type);
@@ -7537,6 +7617,7 @@ function toast(msg, type='success', title='', opts={}) {
   renderToast(msg, type, title, opts);
 }
 function renderToast(msg, type, title, opts={}) {
+  playSound(type === 'info' ? 'notify' : type);
   const icons = { success:'✅', error:'❌', warning:'⚠️', info:'ℹ️' };
   const titles = { success:'Success', error:'Error', warning:'Warning', info:'Info' };
   const el = document.createElement('div');
@@ -9287,6 +9368,7 @@ function addToCart(id) {
   } else {
     cart.push({ id, name: rec.name, price, qty: 1, unit: rec.unit||'pcs' });
   }
+  playSound('add');
   renderCart();
   updateCustomerScreen();
 }
@@ -9349,8 +9431,16 @@ function changeQty(i, delta) {
   updateCustomerScreen();
 }
 
-function removeFromCart(i) { cart.splice(i,1); renderCart(); updateCustomerScreen(); }
-function clearCart() { cart = []; renderCart(); updateCustomerScreen(); document.getElementById('pos-customer-input').value = ''; }
+function removeFromCart(i) { cart.splice(i,1); playSound('remove'); renderCart(); updateCustomerScreen(); }
+// BUG FIXED: loadSOIntoCart() sets window._fulfillingSOId so the checkout that follows knows
+// which Sales Order to credit — but if the cashier loaded an order into the cart, then cleared
+// it instead of checking out (wrong order, customer changed their mind, distracted by something
+// else), that flag was never reset. The very next, completely unrelated sale would still carry it,
+// so linkSaleToFulfilledSalesOrder() would silently attach that walk-in sale to the old order and
+// could mark it "Fulfilled" — even though the actual customer who placed it never received
+// anything. Clearing the cart now always drops this along with it, since an empty cart can't be
+// fulfilling anything.
+function clearCart() { cart = []; window._fulfillingSOId = null; renderCart(); updateCustomerScreen(); document.getElementById('pos-customer-input').value = ''; }
 
 /* ══ BARCODE SCANNER ══
    USB/Bluetooth barcode scanners work as "keyboard wedges" — they type the
@@ -9392,6 +9482,7 @@ function lookupBarcodeAndAdd(code) {
       if (status) { status.textContent = '⚠️ Out of stock'; status.style.color = 'var(--danger)'; }
       toast(`${rec.name} is out of stock`, 'warning');
     } else {
+      playSound('scan');
       addToCart(rec.id);
       if (status) { status.textContent = '✅ ' + rec.name; status.style.color = 'var(--success)'; }
     }
@@ -9445,6 +9536,7 @@ async function openBarcodeScanner(onDetect) {
       if (codes && codes.length) {
         const value = codes[0].rawValue;
         if (navigator.vibrate) navigator.vibrate(80);
+        playSound('scan');
         if (status) status.textContent = '✅ Scanned: ' + value;
         const cb = _scannerCallback;
         closeBarcodeScanner();
@@ -9644,12 +9736,19 @@ function getCartTotals() {
 
 function updateCartTotals() {
   const { subtotal, discount, tax, total, exemptSubtotal } = getCartTotals();
+  // BUG FIXED: a discount was never checked against the sale it applied to — nothing stopped a
+  // typo (100 typed into a % field meant for 10, or a flat amount several times the actual
+  // subtotal) from silently zeroing out the total. It would just ring up as a free sale with no
+  // indication anything unusual happened. This doesn't block it — a deliberate 100%-off
+  // promotional giveaway is a real thing — but it does make it impossible to miss.
+  const suspiciousDiscount = subtotal > 0 && discount >= subtotal;
   document.getElementById('cart-totals').innerHTML = `
     <div class="cart-total-row"><span>Subtotal</span><span class="font-mono amt-neutral">${fmt(subtotal)}</span></div>
     ${discount?`<div class="cart-total-row"><span>Discount</span><span class="font-mono amt-expense">-${fmt(discount)}</span></div>`:''}
     ${exemptSubtotal>0.004?`<div class="cart-total-row" style="font-size:12px;color:#888"><span>incl. VAT-exempt</span><span class="font-mono">${fmt(exemptSubtotal)}</span></div>`:''}
     ${tax?`<div class="cart-total-row"><span>Tax</span><span class="font-mono amt-balance">${fmt(tax)}</span></div>`:''}
-    <div class="cart-total-row grand"><span>TOTAL</span><span class="font-mono amt-revenue">${fmt(total)}</span></div>`;
+    <div class="cart-total-row grand"><span>TOTAL</span><span class="font-mono amt-revenue">${fmt(total)}</span></div>
+    ${suspiciousDiscount?'<div class="cart-total-row" style="color:var(--danger-solid);font-size:13px;font-weight:600">⚠ Discount covers the entire sale — double-check the amount/percentage before charging</div>':''}`;
   updateCustomerScreen();
 }
 
@@ -9790,6 +9889,7 @@ function completeCreditSale() {
   audit('POS','Credit Sale',sale.id,receiptNum);
   saveDB();
   toast(`Credit sale ${receiptNum} — Due: ${fmt(dueAmount)}`,'success');
+  if (paidNow > 0) announcePaidAmount(paidNow, 0, dueAmount > 0.004 ? 'Amount received now' : 'Amount received');
   if (db.settings.pos.autoPrint) {
     lastReceiptSale = sale;
     printReceipt();
@@ -9849,7 +9949,12 @@ function completeSale(method) {
   audit('POS','Create',sale.id,receiptNum);
   saveDB();
   toast(`Sale ${receiptNum} completed — ${fmt(total)}`,'success');
-  
+  // Cash is the only method with an actual "amount tendered" different from the total (change
+  // due) — for every other method (Card, QR, Bank Transfer), what was received IS the total.
+  const isCashPayment = (method||'').toLowerCase().includes('cash');
+  const amountReceived = isCashPayment ? (parseFloat(document.getElementById('cart-cash-received')?.value)||total) : total;
+  announcePaidAmount(amountReceived, isCashPayment ? Math.max(0, amountReceived-total) : 0);
+
   if (db.settings.pos.autoPrint) {
     lastReceiptSale = sale;
     printReceipt();
@@ -11833,7 +11938,7 @@ function biometricCheckInUI() {
     entry.textContent = `✅ ${emp.name} checked in at ${new Date().toLocaleTimeString()}`;
     log.prepend(entry);
   }
-  if (ok) { toast(`${emp.name} marked present via biometric`,'success'); if(document.getElementById('att-month').value===currentPeriodMonthKey()) renderAttendance(); }
+  if (ok) { playSound('scan'); toast(`${emp.name} marked present via biometric`,'success'); if(document.getElementById('att-month').value===currentPeriodMonthKey()) renderAttendance(); }
 }
 
 /* ══ LEAVE MANAGEMENT ══ */
@@ -11887,6 +11992,34 @@ function calcLeaveDays() {
   return 0;
 }
 
+// Marks attendance 'L' for a leave's current date range — bucketed by the same real period month
+// (BS or AD) the attendance grid itself uses, so a range spanning a period-month boundary
+// correctly splits across both. Shared by approving a leave and by re-saving one that's already
+// approved (see saveLeaveRequest below), so an edited date range always gets picked up.
+function markLeaveAttendance(l) {
+  let d = new Date(l.fromDate + 'T00:00:00');
+  const end = new Date(l.toDate + 'T00:00:00');
+  while (d <= end) {
+    const dateStr = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const m = periodMonthKeyForAdDate(dateStr);
+    if (!db.attendance[m]) db.attendance[m] = {};
+    if (!db.attendance[m][l.empId]) db.attendance[m][l.empId] = {};
+    db.attendance[m][l.empId][dateStr] = 'L';
+    d.setDate(d.getDate()+1);
+  }
+}
+
+// Clears a stale 'L' mark left behind when an approved leave's date range is edited to no longer
+// cover a date it used to. Only clears it if no OTHER approved leave for the same employee still
+// covers that date — never guesses what the day's real attendance should be, just un-marks it so
+// it shows as unset rather than an incorrect leftover Leave day.
+function clearStaleLeaveAttendance(empId, dateStr, excludeLeaveId) {
+  const stillCovered = (db.leaveRecords||[]).some(l => l.id!==excludeLeaveId && l.empId===empId && l.status==='approved' && l.fromDate<=dateStr && l.toDate>=dateStr);
+  if (stillCovered) return;
+  const m = periodMonthKeyForAdDate(dateStr);
+  if (db.attendance[m]?.[empId]?.[dateStr] === 'L') delete db.attendance[m][empId][dateStr];
+}
+
 function saveLeaveRequest() {
   const empId = document.getElementById('leave-emp').value;
   if (!empId) { toast('Select an employee','error'); return; }
@@ -11898,7 +12031,26 @@ function saveLeaveRequest() {
   };
   const id = window._leaveEditId;
   if (id) {
-    Object.assign(db.leaveRecords.find(l=>l.id===id), data);
+    const existing = db.leaveRecords.find(l=>l.id===id);
+    // BUG FIXED: editing an already-approved leave's dates (extending it, or shifting it) never
+    // touched the attendance grid — only approving it via the button did. Extending an approved
+    // Unpaid Leave from 3 days to 5, for example, left the 2 new days with whatever attendance
+    // status they already had (usually blank/Present), so Payroll's attendance deduction — which
+    // requires an actual 'L' mark on the day, not just the leave record covering it — silently
+    // never grew to match. Re-syncing here whenever the saved record ends up approved closes that
+    // gap; the old range is also swept for any day the new range dropped, so a shortened or
+    // shifted leave doesn't leave incorrect 'L' marks sitting on days no longer covered.
+    const oldFrom = existing?.fromDate, oldTo = existing?.toDate, wasApproved = existing?.status==='approved';
+    Object.assign(existing, data);
+    if (wasApproved && oldFrom && oldTo) {
+      let d = new Date(oldFrom+'T00:00:00'); const end = new Date(oldTo+'T00:00:00');
+      while (d <= end) {
+        const dateStr = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        if (dateStr < data.fromDate || dateStr > data.toDate) clearStaleLeaveAttendance(empId, dateStr, id);
+        d.setDate(d.getDate()+1);
+      }
+    }
+    if (data.status === 'approved') markLeaveAttendance(existing);
   } else {
     db.leaveRecords.push({ id:uid(), appliedDate:today(), createdAt:now(), ...data });
   }
@@ -11914,18 +12066,7 @@ function setLeaveStatus(id, status) {
   // If approved, mark attendance as Leave for the date range — bucketed by the same real period
   // month (BS or AD, whichever is active) that the attendance grid itself uses, not a raw AD
   // month slice. A leave range spanning a period-month boundary correctly splits across both.
-  if (status === 'approved') {
-    let d = new Date(l.fromDate + 'T00:00:00');
-    const end = new Date(l.toDate + 'T00:00:00');
-    while (d <= end) {
-      const dateStr = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-      const m = periodMonthKeyForAdDate(dateStr);
-      if (!db.attendance[m]) db.attendance[m] = {};
-      if (!db.attendance[m][l.empId]) db.attendance[m][l.empId] = {};
-      db.attendance[m][l.empId][dateStr] = 'L';
-      d.setDate(d.getDate()+1);
-    }
-  }
+  if (status === 'approved') markLeaveAttendance(l);
   audit('HR','Leave '+status,id,'');
   saveDB(); renderLeaveRecords(); toast(`Leave ${status}`,'success');
 }
@@ -13928,6 +14069,8 @@ function loadSettingsValues() {
   setVal('st-receipt-header', s.pos.receiptHeader); setVal('st-receipt-footer', s.pos.receiptFooter);
   setVal('st-welcome-msg', s.pos.welcomeMsg);
   setChk('st-auto-print', s.pos.autoPrint);
+  setChk('st-sound-effects', s.pos.soundEffects !== false);
+  setChk('st-announce-amount', s.pos.announceAmount !== false);
   setVal('st-printer-type', s.pos.printerType||'thermal80');
   setVal('st-currency-sym', s.currency); setVal('st-currency-code', s.currencyCode);
   setVal('st-decimals', s.decimals||2); setVal('st-thousands', s.thousands||',');
@@ -14182,6 +14325,8 @@ function savePOSSettings() {
   p.receiptFooter = document.getElementById('st-receipt-footer').value;
   p.welcomeMsg = document.getElementById('st-welcome-msg').value;
   p.autoPrint = document.getElementById('st-auto-print').checked;
+  p.soundEffects = document.getElementById('st-sound-effects').checked;
+  p.announceAmount = document.getElementById('st-announce-amount').checked;
   p.printerType = document.getElementById('st-printer-type').value||'thermal80';
   // Save payment method edits
   (p.paymentMethods||[]).forEach((_, i) => { const el=document.getElementById('pm-'+i); if(el) p.paymentMethods[i]=el.value; });
@@ -15321,8 +15466,30 @@ function saveTransfer() {
   if (from === to) { toast('From and To warehouses must differ','error'); return; }
   const items = (window._transferItems||[]).filter(i=>i.itemId && i.qty>0);
   if (!items.length) { toast('Add at least one item','error'); return; }
-  db.stockTransfers.push({ id:uid(), fromWarehouse:from, toWarehouse:to, items, notes:document.getElementById('tr-notes').value.trim(), date:today(), status:'completed', createdAt:now(), createdBy:session.username });
-  audit('Inventory','Transfer','',`${items.length} item(s) ${from}→${to}`);
+  // BUG FIXED: this never checked a transfer's quantity against anything — you could "transfer"
+  // 10,000 units of something with 5 in stock and it would record as completed with no warning.
+  // This app only tracks one combined stock number per item (see the disclaimer on this screen),
+  // not a separate count per warehouse, so the closest real check available is the total stock
+  // actually on hand — that's still worth enforcing; it catches a fat-fingered quantity before
+  // it's logged as a real movement.
+  for (const it of items) {
+    const isProduct = db.records.some(r=>r.id===it.itemId);
+    const rec = isProduct ? db.records.find(r=>r.id===it.itemId) : db.rawMaterials.find(m=>m.id===it.itemId);
+    if (rec && it.qty > rec.stock) { toast(`${rec.name}: only ${rec.stock} ${rec.unit||''} in stock — can't transfer ${it.qty}`,'error'); return; }
+  }
+  const t = { id:uid(), fromWarehouse:from, toWarehouse:to, items, notes:document.getElementById('tr-notes').value.trim(), date:today(), status:'completed', createdAt:now(), createdBy:session.username };
+  db.stockTransfers.push(t);
+  // BUG FIXED: no record of a transfer ever showed up in Stock History (unlike every other stock
+  // movement — adjustments, sales, production, GRN) — the only place it existed at all was this
+  // module's own Transfers tab. Logging it here too means it's actually visible wherever movement
+  // history is reviewed, instead of being an isolated dead end.
+  const fromName = db.warehouses.find(w=>w.id===from)?.name||'?', toName = db.warehouses.find(w=>w.id===to)?.name||'?';
+  items.forEach(it => {
+    const isProduct = db.records.some(r=>r.id===it.itemId);
+    const rec = isProduct ? db.records.find(r=>r.id===it.itemId) : db.rawMaterials.find(m=>m.id===it.itemId);
+    if (rec) db.stockHistory.push({ id:uid(), recordId:rec.id, recordName:rec.name, type:'transfer', qty:0, balanceAfter:rec.stock, date:today(), reason:`Recorded transfer: ${it.qty} ${fromName} → ${toName} (combined stock total unaffected — see disclaimer)`, createdAt:now() });
+  });
+  audit('Inventory','Transfer','',`${items.length} item(s) ${fromName}→${toName}`);
   saveDB(); closeModal('transfer-modal-overlay'); renderTransfers(); toast('Stock transfer recorded','success');
 }
 

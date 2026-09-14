@@ -16723,7 +16723,7 @@ function renderRolesList() {
           ${(r.permissions||[]).map(p=>`<span class="badge badge-info" style="font-size:13px">${esc(p)}</span>`).join('') || '<span class="form-hint">No permissions assigned</span>'}
         </div>
       </div>
-      <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;min-width:0;max-width:100%">
         ${isAdmin ? `
         <button class="btn btn-xs btn-secondary btn-edit" onclick="openRoleModal('${r.id}')">✏️ Edit</button>
         <button class="btn btn-xs btn-secondary" onclick="duplicateRole('${r.id}')">📋 Duplicate</button>

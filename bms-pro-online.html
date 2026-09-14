@@ -5384,7 +5384,7 @@ function openMyEquipment() {
   document.getElementById('eq-paidfrom').value = '1010';
   document.getElementById('eq-credit-fields').style.display = 'none';
   const eqSupSel = document.getElementById('eq-supplier');
-  if (eqSupSel) eqSupSel.innerHTML = db.secondary.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('') || '<option value="">No suppliers — add one first</option>';
+  if (eqSupSel) eqSupSel.innerHTML = db.secondary.filter(s=>!s.archived).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('') || '<option value="">No suppliers — add one first</option>'; // BUG FIXED: archived suppliers were selectable for a new equipment/asset purchase
   renderEquipmentList();
   openModal('equipment-overlay');
 }
@@ -10332,7 +10332,12 @@ function saveStockAdj() {
   }
 
   saveDB(); closeModal('stock-adj-overlay');
-  if (adjRecordType==='product') renderRecords(); else renderInvMaterials();
+  // BUG FIXED: a product's stock can be adjusted from either the Records list or the
+  // Inventory > Products tab (both call openStockAdj), but this only ever refreshed
+  // Records — adjusting from Inventory left that tab showing the old stock number until
+  // you navigated away and back.
+  if (adjRecordType==='product') { renderRecords(); if (document.getElementById('inv-prod-tbody')) renderInvProducts(); }
+  else renderInvMaterials();
   toast(`Stock adjusted to ${rec.stock}`, 'success');
 }
 
@@ -13096,16 +13101,28 @@ function onReportTypeChange() {
       targetGroup.style.display = '';
       // Real customers first (id-linked); then any legacy customer names that were typed
       // before customerId existed and don't match an entity, so their history isn't stranded.
-      const customers = (db.entities||[]).filter(e=>!e.archived).slice().sort((a,b)=>a.name.localeCompare(b.name));
-      const linkedNames = new Set(customers.map(e=>e.name.trim().toLowerCase()));
+      // Archived customers are included too (sorted to the end, marked) — archiving someone
+      // shouldn't cut off the ability to pull their historical statement.
+      const activeCustomers = (db.entities||[]).filter(e=>!e.archived).slice().sort((a,b)=>a.name.localeCompare(b.name));
+      const archivedCustomers = (db.entities||[]).filter(e=>e.archived).slice().sort((a,b)=>a.name.localeCompare(b.name));
+      const linkedNames = new Set([...activeCustomers, ...archivedCustomers].map(e=>e.name.trim().toLowerCase()));
       const orphanNames = Array.from(new Set((db.creditSales||[]).filter(c=>!c.customerId).map(c=>c.customerName)))
         .filter(n=>n && !linkedNames.has(n.trim().toLowerCase())).sort();
       targetSelect.innerHTML = `<option value="">— All Customers (Summary) —</option>`
-        + customers.map(e=>`<option value="id:${e.id}">${esc(e.name)}</option>`).join('')
-        + orphanNames.map(n=>`<option value="name:${esc(n)}">${esc(n)} (unlinked)</option>`).join('');
+        + activeCustomers.map(e=>`<option value="id:${e.id}">${esc(e.name)}</option>`).join('')
+        + orphanNames.map(n=>`<option value="name:${esc(n)}">${esc(n)} (unlinked)</option>`).join('')
+        + archivedCustomers.map(e=>`<option value="id:${e.id}">${esc(e.name)} (archived)</option>`).join('');
     } else if (type === 'supplier-ledger') {
       targetGroup.style.display = '';
-      targetSelect.innerHTML = `<option value="">— All Suppliers (Summary) —</option>` + (db.secondary||[]).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+      // BUG FIXED: previously listed every supplier with no distinction, while the Customer Due
+      // Ledger right above excluded archived customers entirely — inconsistent, and neither
+      // extreme was quite right (you should be able to pull an archived party's history, but
+      // it should still read as archived). Both now include archived, sorted to the end, marked.
+      const activeSuppliers = (db.secondary||[]).filter(s=>!s.archived).slice().sort((a,b)=>a.name.localeCompare(b.name));
+      const archivedSuppliers = (db.secondary||[]).filter(s=>s.archived).slice().sort((a,b)=>a.name.localeCompare(b.name));
+      targetSelect.innerHTML = `<option value="">— All Suppliers (Summary) —</option>`
+        + activeSuppliers.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')
+        + archivedSuppliers.map(s=>`<option value="${s.id}">${esc(s.name)} (archived)</option>`).join('');
     } else {
       targetGroup.style.display = 'none';
       targetSelect.innerHTML = '';
@@ -13579,27 +13596,40 @@ function generateReport() {
       ${grns.length?grns.map(g=>{const po=db.purchaseOrders.find(p=>p.id===g.poId); return `<tr><td>${esc(g.grnNumber)}</td><td>${esc(po?.poNumber||'—')}</td><td>${(g.items||[]).length}</td><td>${fmtDate(g.date)}</td></tr>`;}).join(''):'<tr><td colspan="4">No goods received in period</td></tr>'}
     </tbody></table>`;
   } else if (type==='stock') {
+    // BUG FIXED: this pulled straight from db.records / db.rawMaterials with no status filter,
+    // so archived products and archived raw materials — already excluded from every other stock
+    // view (Inventory tabs, Reorder Alerts, the Raw Materials list) — still showed up here and
+    // silently inflated "Total Product Value" / "Total Material Value" with stock that isn't
+    // actually sellable/usable stock anymore.
+    const activeRecords = db.records.filter(r=>r.status!=='archived');
+    const activeMaterials = db.rawMaterials.filter(m=>m.status!=='archived');
     bodyHtml = `<h2>Stock / Inventory Report</h2>
     <h3>Products</h3>
     <table><thead><tr><th>Name</th><th>SKU</th><th>Category</th><th>Stock</th><th>Unit</th><th>Cost</th><th>Price</th><th>Stock Value</th></tr></thead><tbody>
-      ${db.records.map(r=>`<tr style="${r.stock<=(r.lowStockThreshold||10)?'background:#fff3cd':''}"><td>${esc(r.name)}</td><td>${esc(r.sku||'—')}</td><td>${esc(r.category||'—')}</td><td><strong>${r.stock}</strong></td><td>${esc(r.unit||'pcs')}</td><td>${fmt(r.costPrice||0)}</td><td>${fmt(r.salePrice||0)}</td><td>${fmt((r.salePrice||0)*r.stock)}</td></tr>`).join('') || '<tr><td colspan="8">No products</td></tr>'}
+      ${activeRecords.map(r=>`<tr style="${r.stock<=(r.lowStockThreshold||db.settings.lowStockThreshold||10)?'background:#fff3cd':''}"><td>${esc(r.name)}</td><td>${esc(r.sku||'—')}</td><td>${esc(r.category||'—')}</td><td><strong>${r.stock}</strong></td><td>${esc(r.unit||'pcs')}</td><td>${fmt(r.costPrice||0)}</td><td>${fmt(r.salePrice||0)}</td><td>${fmt((r.salePrice||0)*r.stock)}</td></tr>`).join('') || '<tr><td colspan="8">No products</td></tr>'}
     </tbody></table>
-    <div style="margin-top:8px;font-weight:700">Total Product Value: ${fmt(db.records.reduce((a,r)=>a+(r.salePrice||0)*r.stock,0))}</div>
-    ${db.rawMaterials.length ? `<h3 style="margin-top:18px">Raw Materials</h3>
+    <div style="margin-top:8px;font-weight:700">Total Product Value: ${fmt(activeRecords.reduce((a,r)=>a+(r.salePrice||0)*r.stock,0))}</div>
+    ${activeMaterials.length ? `<h3 style="margin-top:18px">Raw Materials</h3>
     <table><thead><tr><th>Code</th><th>Name</th><th>Stock</th><th>Unit</th><th>Cost</th><th>Value</th></tr></thead><tbody>
-      ${db.rawMaterials.map(m=>`<tr style="${m.stock<=(m.reorderLevel||0)?'background:#fff3cd':''}"><td>${esc(m.code)}</td><td>${esc(m.name)}</td><td><strong>${m.stock}</strong></td><td>${esc(m.unit)}</td><td>${fmt(m.cost||0)}</td><td>${fmt((m.cost||0)*m.stock)}</td></tr>`).join('')}
+      ${activeMaterials.map(m=>`<tr style="${m.stock<=(m.reorderLevel||0)?'background:#fff3cd':''}"><td>${esc(m.code)}</td><td>${esc(m.name)}</td><td><strong>${m.stock}</strong></td><td>${esc(m.unit)}</td><td>${fmt(m.cost||0)}</td><td>${fmt((m.cost||0)*m.stock)}</td></tr>`).join('')}
     </tbody></table>
-    <div style="margin-top:8px;font-weight:700">Total Material Value: ${fmt(db.rawMaterials.reduce((a,m)=>a+(m.cost||0)*m.stock,0))}</div>` : ''}`;
+    <div style="margin-top:8px;font-weight:700">Total Material Value: ${fmt(activeMaterials.reduce((a,m)=>a+(m.cost||0)*m.stock,0))}</div>` : ''}`;
   } else if (type==='reorder') {
-    const lowP = db.records.filter(r=>r.status==='active'&&r.stock<=(r.lowStockThreshold||10));
+    // BUG FIXED: ignored the business's configured default low-stock threshold (Settings), unlike
+    // the Dashboard KPI, notifications, and the Inventory > Reorder tab, which all fall back to
+    // db.settings.lowStockThreshold before the hardcoded 10 — a business that set a higher default
+    // (e.g. 20) would see items here that the rest of the app already correctly flagged as low.
+    const lowP = db.records.filter(r=>r.status==='active'&&r.stock<=(r.lowStockThreshold||db.settings.lowStockThreshold||10));
     const lowM = db.rawMaterials.filter(m=>m.status!=='archived'&&m.stock<=(m.reorderLevel||0));
     bodyHtml = `<h2>Reorder Alert Report</h2>
     <table><thead><tr><th>Item</th><th>Type</th><th>Stock</th><th>Reorder Level</th></tr></thead><tbody>
-      ${[...lowP.map(r=>({name:r.name,type:'Product',stock:r.stock,reorder:r.lowStockThreshold||10})),...lowM.map(m=>({name:m.name,type:'Raw Material',stock:m.stock,reorder:m.reorderLevel}))].map(i=>`<tr><td>${esc(i.name)}</td><td>${esc(i.type)}</td><td style="color:var(--danger-solid)"><strong>${i.stock}</strong></td><td>${i.reorder}</td></tr>`).join('')||'<tr><td colspan="4">All stock levels healthy</td></tr>'}
+      ${[...lowP.map(r=>({name:r.name,type:'Product',stock:r.stock,reorder:r.lowStockThreshold||db.settings.lowStockThreshold||10})),...lowM.map(m=>({name:m.name,type:'Raw Material',stock:m.stock,reorder:m.reorderLevel}))].map(i=>`<tr><td>${esc(i.name)}</td><td>${esc(i.type)}</td><td style="color:var(--danger-solid)"><strong>${i.stock}</strong></td><td>${i.reorder}</td></tr>`).join('')||'<tr><td colspan="4">All stock levels healthy</td></tr>'}
     </tbody></table>`;
   } else if (type==='expiring-soon') {
     const cutoff = shiftDate(today(), 30);
-    const items = db.records.filter(r=>r.trackExpiry && r.expiryDate && r.stock>0).sort((a,b)=>a.expiryDate.localeCompare(b.expiryDate));
+    // BUG FIXED: didn't exclude archived products, so a discontinued item with leftover stock
+    // and expiry tracking kept showing up here indefinitely even though it's no longer sold.
+    const items = db.records.filter(r=>r.status!=='archived' && r.trackExpiry && r.expiryDate && r.stock>0).sort((a,b)=>a.expiryDate.localeCompare(b.expiryDate));
     bodyHtml = `<h2>Expiring Soon<span class="help-tip" data-tip="Anything you've marked for expiry tracking, sorted by soonest first — so you can discount or use it before it's wasted.">?</span></h2>
     <table><thead><tr><th>Item</th><th>Stock on Hand</th><th>Expiry Date</th><th>Status</th></tr></thead><tbody>
       ${items.length?items.map(r=>{const isPast=r.expiryDate<today(); const isSoon=!isPast&&r.expiryDate<=cutoff; return `<tr><td>${esc(r.name)}</td><td>${r.stock} ${esc(r.unit||'')}</td><td>${fmtDate(r.expiryDate)}</td><td>${isPast?'<span style="color:var(--danger-solid);font-weight:700">⚠ EXPIRED</span>':isSoon?'<span style="color:var(--warning-ink);font-weight:700">Expiring within 30 days</span>':'OK'}</td></tr>`;}).join(''):'<tr><td colspan="4">No items with expiry tracking, or nothing currently in stock</td></tr>'}
@@ -13607,7 +13637,10 @@ function generateReport() {
   } else if (type==='non-moving-stock') {
     const cutoffDays = 60;
     const cutoffDate = shiftDate(today(), -cutoffDays);
-    const items = db.records.filter(r=>r.stock>0).map(r=>{
+    // BUG FIXED: same gap as Expiring Soon — archived products with leftover stock kept
+    // appearing as "non-moving" candidates for discount/write-off long after they were
+    // already taken out of circulation.
+    const items = db.records.filter(r=>r.status!=='archived' && r.stock>0).map(r=>{
       const lastSale = db.stockHistory.filter(h=>h.recordId===r.id && h.type==='sale').sort((a,b)=>b.date.localeCompare(a.date))[0];
       return { r, lastSaleDate: lastSale?.date || null };
     }).filter(x => !x.lastSaleDate || x.lastSaleDate < cutoffDate);
@@ -13971,8 +14004,8 @@ function exportReportCSV() {
   const to = document.getElementById('rpt-to').value;
   let data = [];
   if (type==='sales') data = db.sales.filter(s=>(!from||s.date>=from)&&(!to||s.date<=to));
-  else if (type==='stock') data = db.records;
-  else if (type==='hr') data = db.employees;
+  else if (type==='stock') data = db.records.filter(r=>r.status!=='archived'); // BUG FIXED: was exporting archived products too, inconsistent with the on-screen report
+  else if (type==='hr') data = db.employees.filter(e=>e.status==='active'); // BUG FIXED: was exporting archived/inactive employees too — the on-screen HR Strength Report only counts active staff
   else if (type==='supplier-ledger') data = db.secondary;
   else if (type==='purchase-orders') data = db.purchaseOrders;
   else if (type==='sales-orders') data = db.salesOrders;
@@ -15046,7 +15079,7 @@ function renderRecords() {
       <td><a href="#" onclick="viewProfile('record','${r.id}');return false" style="font-weight:500">${esc(r.name)}</a></td>
       <td class="mono">${esc(r.sku||'—')}</td>
       <td>${esc(r.category||'—')}</td>
-      <td class="mono ${r.stock<=(r.lowStockThreshold||10)?'text-danger':''}">${r.stock} ${esc(r.unit||'pcs')} ${r.stock<=(r.lowStockThreshold||10)?'⚠️':''}</td>
+      <td class="mono ${r.stock<=(r.lowStockThreshold||db.settings.lowStockThreshold||10)?'text-danger':''}">${r.stock} ${esc(r.unit||'pcs')} ${r.stock<=(r.lowStockThreshold||db.settings.lowStockThreshold||10)?'⚠️':''}</td>
       <td class="mono amt-revenue">${fmt(r.salePrice||0)}</td>
       <td class="mono amt-revenue">${fmt(r.wholesalePrice||0)||'—'}</td>
       <td><span class="badge ${r.status==='active'?'badge-success':'badge-muted'}">${esc(r.status||'active')}</span></td>
@@ -15247,7 +15280,7 @@ function renderMaterialSuppliersList() {
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;align-items:center;margin-bottom:6px;padding:8px;background:var(--elevated);border-radius:8px">
       <select class="form-control" onchange="updateMatSupplier(${i},'supplierId',this.value)">
         <option value="">Select supplier...</option>
-        ${db.secondary.map(s=>`<option value="${s.id}" ${r.supplierId===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}
+        ${db.secondary.filter(s=>!s.archived || r.supplierId===s.id).map(s=>`<option value="${s.id}" ${r.supplierId===s.id?'selected':''}>${esc(s.name)}${s.archived?' (archived)':''}</option>`).join('')}
       </select>
       <div class="text-muted text-sm" style="padding:0 4px" title="Last rate paid, from Purchase Orders / GRN">${last!=null ? 'Last rate: '+fmt(last) : 'No purchases yet'}</div>
       <label style="display:flex;align-items:center;gap:4px;font-size:15px"><input type="checkbox" ${r.isPrimary?'checked':''} onchange="setPrimarySupplier(${i})"> Primary</label>
@@ -15425,7 +15458,7 @@ function openTransferModal() {
 function renderTransferItemsList() {
   const list = document.getElementById('transfer-items-list');
   const items = window._transferItems || [];
-  const allItems = [...db.records.map(r=>({id:r.id,name:r.name,type:'product'})), ...db.rawMaterials.map(m=>({id:m.id,name:m.name,type:'material'}))];
+  const allItems = [...db.records.filter(r=>r.status!=='archived').map(r=>({id:r.id,name:r.name,type:'product'})), ...db.rawMaterials.filter(m=>m.status!=='archived').map(m=>({id:m.id,name:m.name,type:'material'}))]; // BUG FIXED: archived products/materials were selectable for a new stock transfer
   list.innerHTML = items.length ? items.map((it,i)=>`
     <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:6px;margin-bottom:6px">
       <select class="form-control" onchange="updateTransferItem(${i},'itemId',this.value)">
@@ -15509,7 +15542,7 @@ function renderInvProducts() {
     <tr>
       <td><a href="#" onclick="viewProfile('record','${r.id}');return false" style="font-weight:500">${esc(r.name)}</a></td>
       <td class="mono">${esc(r.sku||'—')}</td>
-      <td class="mono ${r.stock<=(r.lowStockThreshold||10)?'text-danger':''}">${r.stock}</td>
+      <td class="mono ${r.stock<=(r.lowStockThreshold||db.settings.lowStockThreshold||10)?'text-danger':''}">${r.stock}</td>
       <td>${esc(r.unit||'pcs')}</td>
       <td class="mono amt-revenue">${fmt((r.salePrice||0)*r.stock)}</td>
       <td><button class="btn btn-xs btn-secondary btn-adjust" onclick="openStockAdj('${r.id}')">📦 Adjust</button></td>
@@ -15680,6 +15713,13 @@ function confirmMakeNow() {
   db.productionBatches.push({ id:uid(), orderId:null, batchNumber, productId:bom.productId, qtyProduced:qty, materialsConsumed:consumed, cost:totalCost, date:today(), status:'completed', createdBy:session.username });
   audit('Production','Make Now',bom.id,`${bom.name} — ${qty} units produced`);
   saveDB(); closeModal('makenow-modal-overlay'); renderBOMs();
+  // BUG FIXED: this consumes raw material AND/OR product stock and adds finished-goods stock,
+  // but only ever refreshed the BOM screen — the Raw Materials list, Inventory tabs, and
+  // Records list all kept showing pre-production stock numbers until manually reloaded.
+  if (document.getElementById('rm-tbody')) renderRawMaterials();
+  if (document.getElementById('inv-mat-tbody')) renderInvMaterials();
+  if (document.getElementById('inv-prod-tbody')) renderInvProducts();
+  if (document.getElementById('records-tbody')) renderRecords();
   toast(`✅ Produced ${qty} units. Cost: ${fmt(totalCost)}`,'success');
 }
 
@@ -15732,8 +15772,8 @@ function renderBOMItemsList() {
   list.innerHTML = items.length ? items.map((it,i)=>{
     const itemType = it.itemType || 'material';
     const options = itemType === 'product'
-      ? db.records.filter(r=>r.status==='active').map(r=>`<option value="${r.id}" ${it.materialId===r.id?'selected':''}>${esc(r.name)} (${esc(r.unit||'pcs')})</option>`).join('')
-      : db.rawMaterials.map(m=>`<option value="${m.id}" ${it.materialId===m.id?'selected':''}>${esc(m.name)} (${esc(m.unit)})</option>`).join('');
+      ? db.records.filter(r=>r.status==='active'||it.materialId===r.id).map(r=>`<option value="${r.id}" ${it.materialId===r.id?'selected':''}>${esc(r.name)}${r.status!=='active'?' (archived)':''} (${esc(r.unit||'pcs')})</option>`).join('')
+      : db.rawMaterials.filter(m=>m.status!=='archived'||it.materialId===m.id).map(m=>`<option value="${m.id}" ${it.materialId===m.id?'selected':''}>${esc(m.name)}${m.status==='archived'?' (archived)':''} (${esc(m.unit)})</option>`).join(''); // BUG FIXED: raw-material ingredient picker didn't filter archived materials at all (product-ingredient branch did) — new BOMs could pick a discontinued raw material; existing BOMs referencing an archived ingredient are still shown (marked) so the recipe doesn't silently blank out
     return `
     <div style="display:grid;grid-template-columns:90px 2fr 1fr auto;gap:6px;margin-bottom:6px">
       <select class="form-control" onchange="updateBOMItem(${i},'itemType',this.value)" style="font-size:14px">
@@ -15969,7 +16009,15 @@ function confirmCompleteProduction() {
   order.status = 'completed';
   order.actualQty = actualQty;
   audit('Production','Complete',order.id,`${order.orderNumber} — ${actualQty} units produced`);
-  saveDB(); closeModal('complete-production-overlay'); renderProductionOrders(); toast(`Production complete! ${actualQty} units added, cost ${fmt(totalCost)}`,'success');
+  saveDB(); closeModal('complete-production-overlay'); renderProductionOrders();
+  // BUG FIXED: same gap as Make Now — this changes raw material/product stock but never
+  // refreshed the Raw Materials, Inventory, or Records views, so they'd show stale numbers
+  // until reloaded.
+  if (document.getElementById('rm-tbody')) renderRawMaterials();
+  if (document.getElementById('inv-mat-tbody')) renderInvMaterials();
+  if (document.getElementById('inv-prod-tbody')) renderInvProducts();
+  if (document.getElementById('records-tbody')) renderRecords();
+  toast(`Production complete! ${actualQty} units added, cost ${fmt(totalCost)}`,'success');
 }
 
 function renderProductionBatches() {
@@ -16061,7 +16109,7 @@ function closePO(id) {
 
 function openPOModal() {
   const supSel = document.getElementById('pord-supplier');
-  supSel.innerHTML = db.secondary.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('') || '<option value="">No suppliers — add one first</option>';
+  supSel.innerHTML = db.secondary.filter(s=>!s.archived).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('') || '<option value="">No suppliers — add one first</option>'; // BUG FIXED: was listing archived suppliers too, letting a new PO be raised against a discontinued supplier
   document.getElementById('pord-expected').value = '';
   document.getElementById('pord-notes').value = '';
   window._poItems = [{materialId:'',qty:0,rate:null}];
@@ -16082,7 +16130,7 @@ function renderPOItemsList() {
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;margin-bottom:6px">
       <select class="form-control" onchange="updatePOItem(${i},'materialId',this.value)">
         <option value="">Select material...</option>
-        ${db.rawMaterials.map(m=>`<option value="${m.id}" ${it.materialId===m.id?'selected':''}>${esc(m.name)} (${esc(m.unit)})</option>`).join('')}
+        ${db.rawMaterials.filter(m=>m.status!=='archived').map(m=>`<option value="${m.id}" ${it.materialId===m.id?'selected':''}>${esc(m.name)} (${esc(m.unit)})</option>`).join('')}
       </select>
       <input class="form-control" type="number" placeholder="Qty" value="${it.qty||''}" oninput="updatePOItem(${i},'qty',this.value)">
       <input class="form-control" type="number" placeholder="Rate (optional)" value="${it.rate??''}" oninput="updatePOItem(${i},'rate',this.value)">
@@ -16220,7 +16268,7 @@ function renderSOItemsList() {
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;margin-bottom:6px">
       <select class="form-control" onchange="updateSOItem(${i},'id',this.value)">
         <option value="">Select product...</option>
-        ${db.records.map(r=>`<option value="${r.id}" ${it.id===r.id?'selected':''}>${esc(r.name)} (${esc(r.unit||'pcs')})</option>`).join('')}
+        ${db.records.filter(r=>r.status!=='archived').map(r=>`<option value="${r.id}" ${it.id===r.id?'selected':''}>${esc(r.name)} (${esc(r.unit||'pcs')})</option>`).join('')}
       </select>
       <input class="form-control" type="number" placeholder="Qty" value="${it.qty||''}" oninput="updateSOItem(${i},'qty',this.value)">
       <input class="form-control" type="number" placeholder="Rate" value="${it.price??''}" oninput="updateSOItem(${i},'price',this.value)">
@@ -16425,7 +16473,13 @@ function saveGRN() {
   const totalReceived = db.goodsReceived.filter(g=>g.poId===po.id).flatMap(g=>g.items||[]).reduce((a,i)=>a+i.qtyReceived,0);
   po.status = totalReceived >= totalOrdered ? 'Received' : 'Partially Received';
   audit('Purchase','GRN',grn.id,`${grn.grnNumber} for ${po.poNumber}`);
-  saveDB(); closeModal('grn-modal-overlay'); renderPurchaseOrders(); toast('Goods received recorded','success');
+  saveDB(); closeModal('grn-modal-overlay'); renderPurchaseOrders();
+  // BUG FIXED: receiving goods updates raw material stock and cost right away (Production can
+  // use it immediately), but only the Purchase Orders list was refreshed — the Raw Materials
+  // list and Inventory > Materials tab kept showing the pre-receipt stock/cost until reloaded.
+  if (document.getElementById('rm-tbody')) renderRawMaterials();
+  if (document.getElementById('inv-mat-tbody')) renderInvMaterials();
+  toast('Goods received recorded','success');
 }
 
 function renderGRNList() {

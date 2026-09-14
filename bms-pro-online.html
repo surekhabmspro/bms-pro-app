@@ -16705,7 +16705,7 @@ function renderRolesList() {
   const adminCount = userCount('admin');
   const isAdmin = session?.role === 'admin';
   let html = `
-    <div style="background:var(--elevated);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:start;opacity:.85">
+    <div style="background:var(--elevated);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:start;opacity:.85">
       <div>
         <div style="font-weight:600">Admin <span class="badge badge-info" style="font-size:13px">Built-in</span> <span class="badge badge-success" style="font-size:13px">${adminCount} user${adminCount===1?'':'s'}</span></div>
         <div style="font-size:15px;color:var(--text-muted);margin-top:3px">Always has full, unrestricted access to every module — cannot be edited or removed</div>
@@ -16715,7 +16715,7 @@ function renderRolesList() {
     const uc = userCount(r.id);
     const active = r.active !== false;
     return `
-    <div style="background:var(--elevated);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:start;${active?'':'opacity:.6'}">
+    <div style="background:var(--elevated);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:start;${active?'':'opacity:.6'}">
       <div>
         <div style="font-weight:600">${esc(r.name)} ${active?'':'<span class="badge badge-muted" style="font-size:13px">Inactive</span>'} <span class="badge badge-success" style="font-size:13px">${uc} user${uc===1?'':'s'}</span></div>
         <div style="font-size:15px;color:var(--text-muted);margin-top:3px">${esc(r.description||'')}</div>

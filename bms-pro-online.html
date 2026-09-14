@@ -710,7 +710,7 @@ textarea.form-control{resize:vertical;min-height:80px}
   #pos-cart .cart-items{max-height:32vh}
   #pos-cart .cart-footer{max-height:50vh}
   /* Settings: stack */
-  #settings-wrap{display:flex!important;flex-direction:column!important}
+  #settings-wrap{display:flex!important;flex-direction:column!important;height:auto!important}
   .settings-nav{display:flex;flex-wrap:wrap;gap:4px;padding:8px!important;border-right:none!important;border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}
   .settings-nav-item{padding:6px 10px!important;font-size:15px;flex-shrink:0}
   .settings-nav-group{flex-basis:100%;padding:6px 4px 0!important;font-size:11px}
@@ -1492,7 +1492,7 @@ textarea.form-control{resize:vertical;min-height:80px}
               <div class="report-cat-card" onclick="quickReport('financial-statements','business-summary')"><div class="report-cat-icon" data-hue="money">🩺</div><div class="report-cat-title">Business Health Check</div></div>
             </div>
           </div>
-          <div class="card mb-4" id="rpt-gov-panel" style="border:2px solid var(--primary,#2563eb)">
+          <div class="card mb-4" id="rpt-gov-panel" style="border:2px solid var(--accent)">
             <div class="card-header"><div class="card-title">🏛️ Government &amp; Tax Filing<span class="help-tip" data-tip="These are the reports the tax office actually asks for. This section always stays here, no matter how the rest of the app changes.">?</span></div></div>
             <div class="form-hint" style="margin-bottom:10px;padding:0 4px">Always here when you need to file — nothing above or below this ever moves it or hides it.</div>
             <div class="report-cat-grid">
@@ -2196,7 +2196,7 @@ textarea.form-control{resize:vertical;min-height:80px}
       </div>
       <div class="form-group"><label class="form-label">Description *</label><input class="form-control" id="acct-desc" placeholder="Brief description of this entry"></div>
       <div class="form-group"><label class="form-label">Reference</label><input class="form-control" id="acct-ref" placeholder="Invoice #, Receipt # (optional)"></div>
-      <div class="form-group" id="acct-tds-section" style="display:none;background:var(--bg-alt,#f7f7f9);padding:12px;border-radius:8px">
+      <div class="form-group" id="acct-tds-section" style="display:none;background:var(--elevated);padding:12px;border-radius:8px">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
           <input type="checkbox" id="acct-tds-toggle" onchange="toggleAcctTDSFields()">
           <span>Withhold TDS on this payment?<span class="help-tip" data-tip="Required by Nepal's Income Tax Act for rent (to a company), contractor, or professional/consultancy payments — you deduct this before paying and owe it to the tax office.">?</span></span>
@@ -5066,7 +5066,7 @@ function removeReconManualLine(id) {
 function renderReconManualLines() {
   const lines = window._reconManualLines || [];
   document.getElementById('recon-manual-lines').innerHTML = lines.length ? lines.map(l=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--bg-alt,#f7f7f9);border-radius:6px;margin-bottom:4px">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--elevated);border-radius:6px;margin-bottom:4px">
       <span>${fmtDate(l.date)} — ${esc(l.description)} — <strong class="mono">${fmt(l.amount)}</strong></span>
       <button class="btn btn-xs btn-secondary" onclick="removeReconManualLine('${l.id}')">✕</button>
     </div>`).join('') : '';
@@ -11578,7 +11578,7 @@ function renderSalaryHistory() {
   if (ssfPanel) {
     ssfPanel.innerHTML = monthsWithSSF.length ? monthsWithSSF.map(m=>{
       const ph = db.payrollHistory.find(p=>p.month===m);
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-alt,#f7f7f9);border-radius:6px;margin-bottom:6px">
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--elevated);border-radius:6px;margin-bottom:6px">
         <span>SSF for ${esc(periodMonthLabel(m))}: <strong>${fmt(ph.totalSSF||0)}</strong> ${ph.ssfPaid?`<span class="badge badge-success">Deposited ${fmtDate(ph.ssfPaidDate)}</span>`:`<span class="badge badge-warning">Pending</span>`}</span>
         ${ph.ssfPaid?'':((session.role==='admin'||hasPermission('Edit Accounting'))?`<button class="btn btn-xs btn-primary" onclick="openMarkSSFDeposited('${m}')">Mark Deposited</button>`:'')}
       </div>`;

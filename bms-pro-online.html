@@ -8184,18 +8184,50 @@ function lgHandleRestoreFile(e) {
     try { parsed = JSON.parse(ev.target.result); }
     catch { lgSetErr('That file is not valid JSON. Make sure you selected the .json backup file.'); e.target.value=''; return; }
     if (!parsed.users || !parsed.settings) { lgSetErr('That does not look like a BMS Pro backup file (missing users/settings).'); e.target.value=''; return; }
-    const uname = parsed.users?.[0]?.username ? ` — includes login "${parsed.users[0].username}"` : '';
-    confirm(`Import this backup onto this device? Any existing local data here will be overwritten${uname}. Type "IMPORT" to confirm.`, () => {
-      db = parsed;
-      saveDB();
-      lgSetErr('');
-      toast('Backup imported! Reloading...', 'success');
-      setTimeout(() => location.reload(), 1200);
-    }, 'IMPORT');
+    lgShowImportConfirm(parsed);
     e.target.value='';
   };
   reader.onerror = () => { lgSetErr('Could not read that file. Please try again.'); e.target.value=''; };
   reader.readAsText(file);
+}
+
+// A plain confirm() dialog is the app's normal modal-overlay system, which
+// sits at z-index:1000 — BEHIND the login overlay's z-index:1900. Using it
+// here would silently open an invisible, unclickable dialog (looks like
+// "nothing happens" when a file is picked). So the confirmation step is
+// built directly into the login screen itself instead, same pattern as
+// lgShowForgot()/lgShowSetup() etc., which is guaranteed to be visible.
+let _lgImportPendingData = null;
+function lgShowImportConfirm(parsed) {
+  _lgImportPendingData = parsed;
+  const uname = parsed.users?.[0]?.username || '';
+  lgEl().innerHTML = `
+    <div id="lg-err" class="lg-err"></div>
+    <div style="margin-bottom:16px;font-size:17px;line-height:1.5">
+      Import this backup onto this device?<br>
+      <span style="opacity:.75">Any existing local data on this device will be overwritten${uname ? ' — includes login "' + esc(uname) + '"' : ''}.</span>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="lg-label">Type IMPORT to confirm</div>
+      <input class="lg-input" id="lg-import-confirm-text" placeholder="IMPORT" autocomplete="off">
+    </div>
+    <button class="lg-btn" id="lg-import-confirm-btn" onclick="lgConfirmImport()">Import &amp; Overwrite</button>
+    <div class="lg-foot">
+      <button onclick="lgShowMain()">Cancel</button>
+    </div>
+  `;
+  const inp = document.getElementById('lg-import-confirm-text');
+  inp.focus();
+  inp.onkeydown = ev => { if (ev.key === 'Enter') lgConfirmImport(); };
+}
+function lgConfirmImport() {
+  const val = document.getElementById('lg-import-confirm-text')?.value || '';
+  if (val !== 'IMPORT') { lgSetErr('Type "IMPORT" exactly (all caps) to confirm.'); return; }
+  db = _lgImportPendingData;
+  _lgImportPendingData = null;
+  saveDB();
+  toast('Backup imported! Reloading...', 'success');
+  setTimeout(() => location.reload(), 1200);
 }
 
 // ── COMPANY PICKER — shown when a login exists in more than one company ──

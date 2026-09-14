@@ -1446,7 +1446,6 @@ textarea.form-control{resize:vertical;min-height:80px}
             <input class="form-control" id="pay-month" placeholder="Select month" onfocus="openCalendar('pay-month','monthyear')" readonly style="width:160px">
             <button class="btn btn-primary btn-sm" onclick="renderPayrollTable()">📋 Load</button>
             <button class="btn btn-success btn-sm" onclick="processPayroll()">💵 Process Payroll</button>
-            <button class="btn btn-secondary btn-sm" onclick="openPayrollDuplicateCheck()">🔍 Check for Duplicates</button>
             <button class="btn btn-secondary btn-sm" onclick="exportCSV('payroll')">📤 Export</button>
           </div>
           <div id="payroll-table-wrap"></div>
@@ -3297,7 +3296,6 @@ let wizardData = {};
 let wizardStep = 1;
 let wizardMode = 'local'; // 'local' = first-time device setup (original behavior)
                           // 'newCompany' = admin creating an additional company from within the app
-let wizardTemplateOptions = []; // companies this admin could copy structure from (newCompany mode only)
 let currentQRPayment = {};
 let currentArchiveTab = 'customers';
 let currentHRTab = 'employees';
@@ -7734,12 +7732,6 @@ function initWizard(mode) {
 async function startNewCompanyWizard() {
   if (session?.role !== 'admin') { toast('Admin only', 'error'); return; }
   if (!syncConfigured() || !SYNC.token) { toast('Connect to your server first (Sync Setup) before creating a company.', 'error'); return; }
-  wizardTemplateOptions = [];
-  try {
-    const resp = await fetch(SYNC.apiBase + '/api/companies/mine', { headers: { Authorization: 'Bearer ' + SYNC.token } });
-    const out = await resp.json();
-    if (resp.ok && Array.isArray(out.companies)) wizardTemplateOptions = out.companies;
-  } catch (e) { /* template picker just won't offer options — blank setup still works fine */ }
   initWizard('newCompany');
 }
 
@@ -7763,15 +7755,6 @@ function renderWizardStep() {
   const body = document.getElementById('wiz-body');
   if (wizardStep === 1) {
     body.innerHTML = `
-      ${wizardMode === 'newCompany' && wizardTemplateOptions.length ? `
-      <div class="form-group" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:14px">
-        <label class="form-label">Start From</label>
-        <select class="form-control" id="w-template" onchange="wizardData.templateId=this.value">
-          <option value="">Blank — empty Chart of Accounts (default)</option>
-          ${wizardTemplateOptions.map(c=>`<option value="${esc(c.id)}" ${wizardData.templateId===c.id?'selected':''}>Copy structure from "${esc(c.name)}"</option>`).join('')}
-        </select>
-        <div class="form-hint">Only copies settings/Chart of Accounts (tax rates, account categories, etc.) — never any balances, transactions, or records. Those always start at zero.</div>
-      </div>` : ''}
       <div class="form-group"><label class="form-label">Organization / Business Name *</label><input class="form-control" id="w-orgname" placeholder="My Business" value="${esc(wizardData.orgName||'')}"></div>
       <div class="form-group"><label class="form-label">Tagline / Type</label><input class="form-control" id="w-orgtag" placeholder="e.g. Retail Store, Clinic, Military Unit" value="${esc(wizardData.orgTag||'')}"></div>
       <div class="form-group"><label class="form-label">Logo Initial (1-2 characters)</label><input class="form-control" id="w-logo" maxlength="2" placeholder="B" value="${esc(wizardData.logoInit||'')}" style="width:80px" oninput="updateWizLogo()"></div>
@@ -7915,26 +7898,6 @@ async function finishWizard() {
     // this NEVER touches the global `db` variable, so the admin's current
     // company session and data on this device are untouched either way.
     const freshDb = defaultDB();
-
-    if (wizardData.templateId) {
-      // Copy ONLY structure (Chart of Accounts, tax rates, account mappings, etc.) from an
-      // existing company — never balances, transactions, employees, inventory, or sales. Those
-      // stay exactly as defaultDB() already set them: empty and zeroed.
-      try {
-        const tResp = await fetch(SYNC.apiBase + '/api/companies/' + wizardData.templateId + '/template', {
-          headers: { Authorization: 'Bearer ' + SYNC.token }
-        });
-        const tOut = await tResp.json();
-        if (tResp.ok && tOut.chartOfAccounts) {
-          freshDb.chartOfAccounts = tOut.chartOfAccounts;
-          freshDb.settings = { ...freshDb.settings, ...tOut.settings };
-        } else {
-          toast('Could not load that template — continuing with a blank Chart of Accounts instead.', 'warning');
-        }
-      } catch (e) {
-        toast('Could not reach server for the template — continuing with a blank Chart of Accounts instead.', 'warning');
-      }
-    }
 
     freshDb.users = [admin];
     freshDb.settings.orgName = wizardData.orgName;
@@ -11481,67 +11444,6 @@ function processPayroll() {
   });
 }
 
-// ── One-time diagnostic for the payroll-reprocess double-counting bug fixed above. Finds any
-// month where Accounting/Journal still hold leftover entries from a reprocess that happened
-// before the fix, and lets an admin collapse them back down to the single correct entry that
-// db.payrollHistory already stores as the source of truth for that month.
-function findPayrollDuplicates() {
-  const months = new Set([
-    ...((db.accounting||[]).filter(a=>a.category==='Salary'&&(a.reference||'').startsWith('PAY-')).map(a=>a.reference.slice(4))),
-    ...((db.journalEntries||[]).filter(j=>j.refType==='payroll').map(j=>j.refId))
-  ]);
-  const results = [];
-  months.forEach(month=>{
-    const ph = db.payrollHistory.find(p=>p.month===month);
-    const acctEntries = (db.accounting||[]).filter(a=>a.category==='Salary'&&a.reference===`PAY-${month}`);
-    const acctSum = acctEntries.reduce((a,x)=>a+x.amount,0);
-    const jeEntries = (db.journalEntries||[]).filter(j=>j.refType==='payroll'&&j.refId===month&&!j.isVoid);
-    const expectedAcctCount = ph ? ph.entries.length : 0;
-    const isDupe = acctEntries.length > expectedAcctCount || jeEntries.length > 1;
-    if (isDupe) results.push({ month, ph, acctCount:acctEntries.length, expectedAcctCount, acctSum, expectedSum: ph?.totalPay||0, jeCount:jeEntries.length });
-  });
-  return results.sort((a,b)=>a.month.localeCompare(b.month));
-}
-
-function openPayrollDuplicateCheck() {
-  const dupes = findPayrollDuplicates();
-  const isAdmin = session?.role === 'admin';
-  const html = dupes.length ? `
-    <p style="color:var(--text-muted);margin-bottom:14px">These months have more salary expense entries or payroll journal vouchers than they should — almost always from reprocessing the same month more than once before this was fixed. "Correct" figures come from the saved Payroll History for that month.</p>
-    <div class="table-wrap"><table><thead><tr><th>Month</th><th>Expense Entries Found</th><th>Amount Recorded</th><th>Correct Amount</th><th>Journal Vouchers</th><th></th></tr></thead><tbody>
-    ${dupes.map(d=>`<tr>
-      <td>${esc(d.month)}</td>
-      <td>${d.acctCount} <span class="text-muted text-sm">(expected ${d.expectedAcctCount})</span></td>
-      <td class="mono text-danger">${fmt(d.acctSum)}</td>
-      <td class="mono">${d.ph?fmt(d.expectedSum):"no history — can't auto-fix"}</td>
-      <td>${d.jeCount} <span class="text-muted text-sm">(expected ${d.ph?1:0})</span></td>
-      <td>${isAdmin&&d.ph?`<button class="btn btn-xs btn-danger" onclick="cleanupPayrollDuplicates('${d.month}')">Clean Up</button>`:(isAdmin?'<span class="text-muted text-sm">Manual review needed</span>':'')}</td>
-    </tr>`).join('')}
-    </tbody></table></div>
-    ${!isAdmin?'<p class="text-muted text-sm" style="margin-top:10px">Only an Admin can run cleanup.</p>':''}
-  ` : `<div class="empty"><div class="empty-title">✅ No duplicate payroll entries found</div><div class="empty-sub">Every month's Accounting and Journal entries match what's recorded in Payroll History.</div></div>`;
-  document.getElementById('profile-view-title').textContent = 'Payroll Duplicate Check';
-  document.getElementById('profile-view-body').innerHTML = html;
-  currentProfile = { type:'print', id:'' };
-  document.getElementById('profile-print-btn').style.display = 'none';
-  document.getElementById('profile-archive-btn').style.display = 'none';
-  document.getElementById('profile-delete-btn').style.display = 'none';
-  openModal('profile-view-overlay');
-}
-
-function cleanupPayrollDuplicates(month) {
-  if (session?.role !== 'admin') { toast('Only an Admin can run this cleanup','error'); return; }
-  const ph = db.payrollHistory.find(p=>p.month===month);
-  if (!ph) { toast('No Payroll History for this month — nothing to rebuild from','error'); return; }
-  confirm(`Rebuild ${month}'s salary expense and journal entries from Payroll History? This removes the extra entries and reposts exactly one correct set.`, ()=>{
-    db.accounting = (db.accounting||[]).filter(a=>!(a.category==='Salary'&&a.reference===`PAY-${month}`));
-    voidJournalEntriesForRef('payroll', month, 'Cleaned up duplicate payroll entries');
-    ph.entries.forEach(e=>{ db.accounting.push({ id:uid(), type:'expense', category:'Salary', description:`Salary ${e.empName} - ${month}`, amount:e.netPay, date:today(), reference:`PAY-${month}`, createdAt:now(), source:'payroll' }); });
-    postPayrollJournal(month, ph.entries);
-    audit('HR','Payroll Duplicate Cleanup',month,`Rebuilt from Payroll History`);
-    saveDB(); toast(`${month} cleaned up`,'success'); openPayrollDuplicateCheck();
-  });
-}
 function openMarkSSFDeposited(month) {
   if (!(session?.role==='admin' || hasPermission('Edit Accounting'))) { toast("You don't have permission to record SSF deposits",'error'); return; }
   const ph = db.payrollHistory.find(p=>p.month===month);

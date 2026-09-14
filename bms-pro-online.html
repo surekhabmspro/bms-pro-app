@@ -8147,7 +8147,9 @@ function lgShowMain() {
     <div class="lg-foot">
       <button onclick="lgShowSetup()">⚙ First-time Setup</button>
       <button onclick="lgShowDiag()">🔍 Diagnose</button>
+      <button onclick="lgImportBackupClick()">📥 Import Backup File</button>
     </div>
+    <input type="file" id="lg-restore-file-input" accept=".json" style="display:none" onchange="lgHandleRestoreFile(event)">
   `;
   if (!locked) {
     const un = document.getElementById('lg-un');
@@ -8158,6 +8160,42 @@ function lgShowMain() {
     pw.onkeydown = e => { if (e.key==='Enter') lgDoLogin(); };
     lgTryBiometricButton();
   } else { lgRunCountdown(); }
+}
+
+// ── IMPORT BACKUP FILE (login screen) ──
+// Lets a brand-new device load a backup exported from another device (e.g. via
+// doBackup() on the phone) directly into local storage, without needing any
+// network/server call at all. This is the offline path around cloud sync: once
+// the data is imported here, login proceeds entirely against the local copy —
+// the same as if this device had synced successfully. No session exists yet at
+// this point, so this intentionally skips the admin-password check that the
+// logged-in restoreBackup()/handleRestoreFile() flow requires; the "type to
+// confirm" step below is the only safeguard against an accidental overwrite.
+function lgImportBackupClick() {
+  document.getElementById('lg-restore-file-input').click();
+}
+
+function lgHandleRestoreFile(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    let parsed;
+    try { parsed = JSON.parse(ev.target.result); }
+    catch { lgSetErr('That file is not valid JSON. Make sure you selected the .json backup file.'); e.target.value=''; return; }
+    if (!parsed.users || !parsed.settings) { lgSetErr('That does not look like a BMS Pro backup file (missing users/settings).'); e.target.value=''; return; }
+    const uname = parsed.users?.[0]?.username ? ` — includes login "${parsed.users[0].username}"` : '';
+    confirm(`Import this backup onto this device? Any existing local data here will be overwritten${uname}. Type "IMPORT" to confirm.`, () => {
+      db = parsed;
+      saveDB();
+      lgSetErr('');
+      toast('Backup imported! Reloading...', 'success');
+      setTimeout(() => location.reload(), 1200);
+    }, 'IMPORT');
+    e.target.value='';
+  };
+  reader.onerror = () => { lgSetErr('Could not read that file. Please try again.'); e.target.value=''; };
+  reader.readAsText(file);
 }
 
 // ── COMPANY PICKER — shown when a login exists in more than one company ──
@@ -8240,14 +8278,10 @@ async function lgDoLogin() {
     if (!result.ok) {
       if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
       lgFail();
-      // TEMP DEBUG: surface the real reason instead of a generic message,
-      // so we can tell "wrong credentials" apart from "couldn't reach server"
-      // or "server rejected for another reason". Revert to the generic
-      // 'Incorrect username or password.' message once the cause is found.
       if (result.error === 'Could not reach server') {
-        lgSetErr('DEBUG: Could not reach the server (' + SYNC.apiBase + '). This is likely a network/CORS issue or the server is asleep — try again in ~30s.');
+        lgSetErr('Could not reach the server. If your internet is down or blocked, use "📥 Import Backup File" below to sign in offline using a backup from another device.');
       } else {
-        lgSetErr('DEBUG: Server said: ' + (result.error || 'unknown error, no message returned') + ' (endpoint: ' + SYNC.apiBase + '/api/login)');
+        lgSetErr('Incorrect username or password.');
       }
       return;
     }
@@ -8259,10 +8293,10 @@ async function lgDoLogin() {
     user = db.users.find(u => u.username.toLowerCase() === un.toLowerCase() && u.status === 'active');
     if (!user) {
       if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-      lgSetErr('DEBUG: Logged into server OK and pulled data, but no active user named "' + un + '" was found afterward — check spelling/case or account status.'); return;
+      lgSetErr('Incorrect username or password.'); return;
     }
   } else if (!user) {
-    lgFail(); lgSetErr('DEBUG: No local account on this device, and no server is configured (SYNC.apiBase is empty) — sync can\'t run.'); return;
+    lgFail(); lgSetErr('Incorrect username or password.'); return;
   }
 
   if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }

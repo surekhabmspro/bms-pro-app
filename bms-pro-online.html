@@ -1599,6 +1599,7 @@ textarea.form-control{resize:vertical;min-height:80px}
 
             <div class="settings-nav-group">💰 Accounting &amp; Tax</div>
             <div class="settings-nav-item" onclick="setSettingsSection('accounting-sec',this)">🔒 Accounting Security</div>
+            <div class="settings-nav-item" onclick="setSettingsSection('chart-of-accounts',this)">📒 Chart of Accounts</div>
             <div class="settings-nav-item" onclick="setSettingsSection('advanced-ledger',this)">⚙️ Advanced Ledger</div>
             <div class="settings-nav-item" onclick="setSettingsSection('ownership',this)">🤝 Business Ownership</div>
             <div class="settings-nav-item" onclick="setSettingsSection('salary-comp',this)">💵 Salary Components</div>
@@ -1899,7 +1900,52 @@ textarea.form-control{resize:vertical;min-height:80px}
                 <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="saveOverdueInterestRate()">Save</button>
               </div>
             </div>
-            <!-- ADVANCED LEDGER (tucked away — not part of normal workflow) -->
+            <!-- CHART OF ACCOUNTS -->
+            <div class="settings-section" id="sec-chart-of-accounts">
+              <div class="settings-title">📒 Chart of Accounts<span class="help-tip" data-tip="Every account your bookkeeping uses — Cash, Sales Revenue, Accounts Payable, etc. Add your own custom accounts, fix a wrongly-typed one flagged by the Accounting Integrity Check, or retire one you no longer use.">?</span></div>
+              <div class="settings-desc">The account's <strong>code</strong> can't be changed once created — sales, purchases, and payroll all book themselves automatically to specific codes behind the scenes. Renaming, retyping, or deactivating an account is safe; it never touches past entries.</div>
+              <button class="btn btn-primary btn-sm" style="margin-bottom:12px" onclick="openCOAModal()">+ Add Account</button>
+              <div class="table-wrap"><table>
+                <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Normal Balance</th><th>Status</th><th></th></tr></thead>
+                <tbody id="coa-tbody"></tbody>
+              </table></div>
+            </div>
+            <div class="modal-overlay" id="coa-modal-overlay" onclick="closeModalOnOverlay(event,'coa-modal-overlay')">
+              <div class="modal" style="max-width:440px">
+                <div class="modal-header"><div class="modal-title" id="coa-modal-title">Add Account</div><button class="modal-close" onclick="closeModal('coa-modal-overlay')">✕</button></div>
+                <div class="modal-body">
+                  <input type="hidden" id="coa-orig-code">
+                  <div class="form-group">
+                    <label class="form-label">Code</label>
+                    <input class="form-control" id="coa-code" placeholder="e.g. 5099" inputmode="numeric">
+                    <div class="form-hint">Locked once the account is created.</div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input class="form-control" id="coa-name" placeholder="e.g. Bank Charges">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select class="form-control" id="coa-type">
+                      <option value="asset">Asset</option>
+                      <option value="liability">Liability</option>
+                      <option value="equity">Equity</option>
+                      <option value="income">Income</option>
+                      <option value="expense">Expense</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Normal Balance</label>
+                    <select class="form-control" id="coa-normal-balance">
+                      <option value="debit">Debit</option>
+                      <option value="credit">Credit</option>
+                    </select>
+                    <div class="form-hint">Assets &amp; Expenses are normally Debit. Liabilities, Equity &amp; Income are normally Credit.</div>
+                  </div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('coa-modal-overlay')">Cancel</button><button class="btn btn-primary" onclick="saveCOAAccount()">💾 Save Account</button></div>
+              </div>
+            </div>
             <div class="settings-section" id="sec-advanced-ledger">
               <div class="settings-title">⚙️ Advanced: Ledger &amp; Journal Entries</div>
               <div class="settings-desc">For your accountant or edge cases only — corrections, opening balances, depreciation. Never needed for normal day-to-day use; every sale, purchase, payment, and expense already books itself automatically.</div>
@@ -4221,9 +4267,72 @@ function renderAdvancedLedger() {
   }).join('') : '<div class="empty"><div class="empty-title">No journal entries yet</div></div>';
 }
 
+/* ══ CHART OF ACCOUNTS (Admin/System Settings) ══ */
+function renderChartOfAccountsList() {
+  const tbody = document.getElementById('coa-tbody');
+  if (!tbody) return;
+  const accounts = (db.chartOfAccounts||[]).slice().sort((a,b)=>a.code.localeCompare(b.code));
+  tbody.innerHTML = accounts.map(a=>`
+    <tr>
+      <td class="mono">${esc(a.code)}</td>
+      <td>${esc(a.name)}</td>
+      <td style="text-transform:capitalize">${esc(a.type)}</td>
+      <td style="text-transform:capitalize">${esc(a.normalBalance)}</td>
+      <td>${a.active===false?'<span class="badge badge-warning">Inactive</span>':'<span class="badge badge-success">Active</span>'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-xs btn-secondary" onclick="openCOAModal('${esc(a.code)}')">✏️ Edit</button>
+        <button class="btn btn-xs btn-secondary" onclick="toggleCOAActive('${esc(a.code)}')">${a.active===false?'▶️ Reactivate':'⏸️ Deactivate'}</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="6">No accounts yet</td></tr>';
+}
+function openCOAModal(code=null) {
+  const acc = code ? (db.chartOfAccounts||[]).find(a=>a.code===code) : null;
+  document.getElementById('coa-modal-title').textContent = acc ? `Edit Account — ${acc.code}` : 'Add Account';
+  document.getElementById('coa-orig-code').value = acc ? acc.code : '';
+  document.getElementById('coa-code').value = acc ? acc.code : '';
+  document.getElementById('coa-code').disabled = !!acc; // code is the primary key automated postings rely on — locked once created
+  document.getElementById('coa-name').value = acc ? acc.name : '';
+  document.getElementById('coa-type').value = acc ? acc.type : 'expense';
+  document.getElementById('coa-normal-balance').value = acc ? acc.normalBalance : 'debit';
+  openModal('coa-modal-overlay');
+}
+function saveCOAAccount() {
+  const origCode = document.getElementById('coa-orig-code').value;
+  const code = document.getElementById('coa-code').value.trim();
+  const name = document.getElementById('coa-name').value.trim();
+  const type = document.getElementById('coa-type').value;
+  const normalBalance = document.getElementById('coa-normal-balance').value;
+  if (!code || !name) { toast('Code and name are required', 'error'); return; }
+  if (!origCode) {
+    // New account — code must be unique
+    if ((db.chartOfAccounts||[]).some(a=>a.code===code)) { toast(`Account code ${code} already exists`, 'error'); return; }
+    db.chartOfAccounts.push({ id: uid(), code, name, type, normalBalance, active: true });
+    audit('Accounting','Chart of Accounts — Create', code, name);
+  } else {
+    const acc = (db.chartOfAccounts||[]).find(a=>a.code===origCode);
+    if (!acc) { toast('Account not found', 'error'); return; }
+    acc.name = name; acc.type = type; acc.normalBalance = normalBalance;
+    audit('Accounting','Chart of Accounts — Edit', origCode, name);
+  }
+  saveDB(); closeModal('coa-modal-overlay'); renderChartOfAccountsList();
+  toast('Account saved', 'success');
+}
+function toggleCOAActive(code) {
+  const acc = (db.chartOfAccounts||[]).find(a=>a.code===code);
+  if (!acc) return;
+  acc.active = acc.active===false ? true : false;
+  // Deactivating only hides the account from pickers for new manual entries (Advanced Ledger,
+  // the Integrity Checker's correction dropdown) — it never touches past entries, and anything
+  // that posts to this code automatically (sales, purchases, payroll, etc.) still works exactly
+  // as before, since those all resolve accounts by code, not by active status.
+  audit('Accounting','Chart of Accounts', code, acc.active ? 'Reactivated' : 'Deactivated');
+  saveDB(); renderChartOfAccountsList();
+  toast(acc.active ? 'Account reactivated' : 'Account deactivated', 'success');
+}
+
 function addAdvJELine() {
   const wrap = document.getElementById('adv-je-lines');
-  const opts = (db.chartOfAccounts||[]).slice().sort((a,b)=>a.code.localeCompare(b.code))
+  const opts = (db.chartOfAccounts||[]).filter(a=>a.active!==false).slice().sort((a,b)=>a.code.localeCompare(b.code))
     .map(a=>`<option value="${a.code}">${a.code} — ${esc(a.name)}</option>`).join('');
   const row = document.createElement('div');
   row.className = 'form-row adv-je-row';
@@ -17103,6 +17212,7 @@ function initSettingsView() {
   renderDataStats();
   renderRolesList();
   renderSalaryComponentsSettings();
+  renderChartOfAccountsList();
   // Load accounting PIN settings
   const s = db.settings;
   const pinChk = document.getElementById('st-acct-pin-enabled');
